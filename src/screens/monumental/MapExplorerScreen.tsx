@@ -1,0 +1,469 @@
+/**
+ * MapExplorerScreen — Figma 795:7983 (map + states list) with the in-place
+ * expanded tile variant from 795:7400.
+ *
+ * Route /monumental/map. Left: Select State filter row + scrollable list of
+ * the selected state's installations (Excel tab 04) with the gold custom
+ * scroll rail on the LEFT (audit: chevrons at x51, track at x63, tiles at
+ * x129). Tapping a row expands it in place into the 435×415 gold card
+ * (photo + Know More → detail route); one expanded at a time. Right: the
+ * India map cluster (IndiaMap). Select State opens the modal overlay;
+ * per user decision the selection only applies on CONTINUE.
+ *
+ * Background: assets/video/india-map-loop.mp4 (user-provided, may not exist)
+ * full-bleed; until it lands, the terrain still is positioned via the
+ * calibrated TERRAIN_PLACEMENT so India sits under the map box.
+ */
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useContent } from '../../data/ContentContext.tsx'
+import type { Installation } from '../../data/schema.ts'
+import { HomeButton } from '../../components/HomeButton.tsx'
+import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
+import { ScrollList } from '../../components/ScrollList.tsx'
+import { MonumentalHeader } from './MonumentalHeader.tsx'
+import { IndiaMap } from './IndiaMap.tsx'
+import { SelectStateOverlay } from './SelectStateOverlay.tsx'
+import {
+  TERRAIN_PLACEMENT,
+  TERRAIN_STILL,
+  getLastSelectedState,
+  setLastSelectedState,
+} from './monumentalGeo.ts'
+import './monumental.css'
+
+const INDIA_LOOP_VIDEO = 'assets/video/india-map-loop.mp4'
+
+const installationPhoto = (id: number): string => `assets/images/installations/${id}.jpg`
+
+// ---------------------------------------------------------------------------
+// Backdrop — looping map video with calibrated-still fallback
+// ---------------------------------------------------------------------------
+
+function MapBackdrop() {
+  const [videoFailed, setVideoFailed] = useState(false)
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#04070E' }}>
+      {/* Calibrated terrain still — always underneath, the video covers it
+          once (if ever) the user-provided loop arrives. */}
+      <img
+        src={TERRAIN_STILL}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute',
+          left: TERRAIN_PLACEMENT.left,
+          top: TERRAIN_PLACEMENT.top,
+          width: TERRAIN_PLACEMENT.width,
+          height: TERRAIN_PLACEMENT.height,
+          maxWidth: 'none',
+        }}
+      />
+      {!videoFailed && (
+        <video
+          src={INDIA_LOOP_VIDEO}
+          muted
+          autoPlay
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          onError={() => setVideoFailed(true)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Installation tile — collapsed row ⇄ expanded gold card (795:7400)
+// ---------------------------------------------------------------------------
+
+const TILE_W = 435.49
+const TILE_H = 96.51
+const CARD_H = 415
+
+function HeightBadge({ heightFt, dark }: { heightFt: number | null; dark: boolean }) {
+  if (heightFt === null) return null
+  const color = dark ? '#512312' : '#FFFFFF'
+  return (
+    <span style={{ display: 'flex', alignItems: 'baseline', whiteSpace: 'nowrap' }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-numeral)',
+          fontWeight: 800,
+          fontSize: 31.615,
+          letterSpacing: -2.213,
+          color,
+        }}
+      >
+        {heightFt}
+      </span>
+      <span
+        style={{
+          fontFamily: 'var(--font-numeral)',
+          fontWeight: 700,
+          fontSize: 17.655,
+          color,
+          marginLeft: 3,
+        }}
+      >
+        FT
+      </span>
+    </span>
+  )
+}
+
+function InstallationTile({
+  row,
+  expanded,
+  onToggle,
+  onKnowMore,
+}: {
+  row: Installation
+  expanded: boolean
+  onToggle: () => void
+  onKnowMore: () => void
+}) {
+  const [photoFailed, setPhotoFailed] = useState(false)
+  useEffect(() => {
+    setPhotoFailed(false)
+  }, [row.id])
+
+  return (
+    <div
+      className="mon-tile"
+      style={{
+        position: 'relative',
+        width: TILE_W,
+        height: expanded ? CARD_H : TILE_H,
+        flexShrink: 0,
+        borderRadius: 'var(--radius-card)',
+        border: '0.785px solid var(--cream-border)',
+        background: expanded ? 'var(--gold-gradient)' : 'var(--glass-navy-tint)',
+        backdropFilter: expanded ? undefined : 'var(--glass-filter-sm)',
+        WebkitBackdropFilter: expanded ? undefined : 'var(--glass-filter-sm)',
+        boxShadow: expanded ? 'var(--gold-glow)' : undefined,
+        overflow: 'hidden',
+        cursor: 'pointer',
+      }}
+      onClick={onToggle}
+    >
+      {/* Collapsed layer: name + height */}
+      <div
+        className="mon-tile-layer"
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: TILE_W,
+          height: TILE_H,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 24px 0 37px',
+          opacity: expanded ? 0 : 1,
+          pointerEvents: 'none',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 400,
+            fontSize: 23.54,
+            lineHeight: 0.93,
+            color: '#FFFFFF',
+            maxWidth: 250,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {row.location}
+        </span>
+        <HeightBadge heightFt={row.heightFt} dark={false} />
+      </div>
+
+      {/* Expanded layer: title + photo + Know More (Figma 795:7400) */}
+      <div
+        className="mon-tile-layer"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: expanded ? 1 : 0,
+          pointerEvents: expanded ? 'auto' : 'none',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            left: 38,
+            top: 27,
+            width: 360,
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 600,
+            fontSize: 29.232,
+            lineHeight: 1.1,
+            color: '#512312',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {row.location}
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: 29,
+            top: 76.5,
+            width: 345,
+            height: 250.27,
+            borderRadius: 19.795,
+            border: '1.414px solid #FFFFFF',
+            overflow: 'hidden',
+            background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
+          }}
+        >
+          {!photoFailed ? (
+            <img
+              src={installationPhoto(row.id)}
+              alt=""
+              draggable={false}
+              onError={() => setPhotoFailed(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <img
+                src="assets/sequences/flag-marker/static.png"
+                alt=""
+                draggable={false}
+                style={{ height: 170, opacity: 0.8 }}
+              />
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          className="mon-pressable"
+          onClick={(e) => {
+            e.stopPropagation()
+            onKnowMore()
+          }}
+          style={{
+            position: 'absolute',
+            left: 29,
+            top: 346.5,
+            width: 180.77,
+            height: 42.26,
+            borderRadius: 'var(--radius-know-more)',
+            background: 'linear-gradient(90deg, #FFFDE0 0%, #FFF5C3 100%)',
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 500,
+            fontSize: 22.982,
+            color: '#572F16',
+            cursor: 'pointer',
+          }}
+        >
+          Know More
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
+export function MapExplorerScreen() {
+  const navigate = useNavigate()
+  const { content } = useContent()
+  const [selectedState, setSelectedState] = useState(getLastSelectedState)
+  const [overlayOpen, setOverlayOpen] = useState(false)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const listKeyRef = useRef(0)
+
+  const installations = useMemo(
+    () => (content?.installations ?? []).filter((r) => r.state === selectedState),
+    [content, selectedState],
+  )
+
+  const countByState = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const r of content?.installations ?? []) {
+      map.set(r.state, (map.get(r.state) ?? 0) + 1)
+    }
+    return map
+  }, [content])
+
+  const statesWithInstallations = useMemo(
+    () => new Set(countByState.keys()),
+    [countByState],
+  )
+
+  // First row starts expanded (Figma 795:7400 shows the top tile open).
+  useEffect(() => {
+    setExpandedId(installations[0]?.id ?? null)
+  }, [installations])
+
+  const applyState = (state: string) => {
+    setSelectedState(state)
+    setLastSelectedState(state)
+    listKeyRef.current += 1 // remount ScrollList → scroll back to top
+  }
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      <MapBackdrop />
+      {/* Scrims per audit: vertical tint + left legibility */}
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--map-tint-gradient)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--map-edge-gradient)' }} />
+
+      <IndiaMap
+        selectedState={selectedState}
+        onSelectState={applyState}
+        statesWithInstallations={statesWithInstallations}
+      />
+
+      <MonumentalHeader />
+      <HomeButton
+        onClick={() => navigate('/')}
+        style={{ position: 'absolute', left: 1491, top: 36 }}
+      />
+      <QuickAccessPill style={{ position: 'absolute', left: 1626, top: 36 }} />
+
+      {/* Filter row — Select State dropdown pill + selected-state gold chip */}
+      <button
+        type="button"
+        className="mon-pressable"
+        onClick={() => setOverlayOpen(true)}
+        style={{
+          position: 'absolute',
+          left: 125,
+          top: 239,
+          width: 184.4,
+          height: 47.86,
+          borderRadius: 'var(--radius-pill-filter)',
+          background: '#2C2406',
+          border: '1px solid #FFFFFF',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 18px 0 20px',
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 300,
+          fontSize: 21.009,
+          color: '#FFFFFF',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Select State
+        <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
+          <path
+            d="M4 7.5 10 13.5 16 7.5"
+            stroke="#FFFFFF"
+            strokeWidth={2}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      <div
+        style={{
+          position: 'absolute',
+          left: 330,
+          top: 239,
+          width: 233.83,
+          height: 47.86,
+          borderRadius: 'var(--radius-pill-filter)',
+          background: 'var(--gold-gradient)',
+          border: '0.666px solid var(--cream-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 300,
+          fontSize: 21.009,
+          color: '#000000',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {selectedState}
+      </div>
+
+      {/* Installations list — gold scroll rail on the LEFT (audit x51/x63) */}
+      <ScrollList
+        key={listKeyRef.current}
+        width={543.49}
+        height={768}
+        railSide="left"
+        trackWidth={10}
+        trackGap={45}
+        style={{ position: 'absolute', left: 51, top: 312 }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 23.5, paddingBottom: 24 }}>
+          {installations.map((row) => (
+            <InstallationTile
+              key={row.id}
+              row={row}
+              expanded={expandedId === row.id}
+              onToggle={() => setExpandedId((cur) => (cur === row.id ? null : row.id))}
+              onKnowMore={() => navigate(`/monumental/detail/${row.id}`)}
+            />
+          ))}
+          {installations.length === 0 && (
+            <div
+              style={{
+                width: TILE_W,
+                padding: '32px 37px',
+                borderRadius: 'var(--radius-card)',
+                border: '0.785px solid var(--cream-border)',
+                background: 'var(--glass-navy-tint)',
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 300,
+                fontSize: 22,
+                color: '#FFFFFF',
+              }}
+            >
+              No installations recorded for {selectedState} yet.
+            </div>
+          )}
+        </div>
+      </ScrollList>
+
+      {overlayOpen && (
+        <SelectStateOverlay
+          currentState={selectedState}
+          countByState={countByState}
+          totalInstallations={content?.installations.length ?? 0}
+          onContinue={(state) => {
+            applyState(state)
+            setOverlayOpen(false)
+          }}
+          onClose={() => setOverlayOpen(false)}
+        />
+      )}
+    </div>
+  )
+}

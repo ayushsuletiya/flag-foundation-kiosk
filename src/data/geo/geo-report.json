@@ -1,0 +1,478 @@
+{
+  "generatedAt": "2026-07-16T13:36:11.417Z",
+  "method": "District lat/long centroids projected to map space via a robust least-squares affine fit (x = a*lon + b*lat + c; y = d*lon + e*lat + f) calibrated on state geographic-bbox centers vs hit-shape bbox centers from assets/map/states/hit/_layout.json. States whose anchor the fit rejected as an outlier (drawn displaced from geography) use bbox-relative interpolation instead — see localBboxInterpolation.",
+  "affineTransform": {
+    "a": 0.03475005555929554,
+    "b": 0.0008728928234101383,
+    "c": -2.394455157904438,
+    "d": -0.0008612394773754343,
+    "e": -0.03429182900010478,
+    "f": 1.3381375862390046,
+    "apply": "x = a*lon + b*lat + c ; y = d*lon + e*lat + f"
+  },
+  "fit": {
+    "anchorsUsed": 33,
+    "anchorsDropped": [
+      {
+        "state": "andaman-nicobar",
+        "residual": 0.0808
+      }
+    ],
+    "rmsResidual": 0.0078,
+    "worstAnchor": {
+      "state": "lakshadweep",
+      "residual": 0.024
+    }
+  },
+  "totals": {
+    "uniqueStateDistrictPairs": 158,
+    "positioned": 158,
+    "insideOwnStateBbox": 154,
+    "nearMisses": 3,
+    "clampedViolations": 0,
+    "noStateShape": 1,
+    "localBboxInterpolation": 1
+  },
+  "clampedViolations": [],
+  "nearMisses": [
+    {
+      "state": "Dadra & Nagar Haveli and Daman & Diu",
+      "district": "Daman",
+      "position": {
+        "x": 0.1549,
+        "y": 0.5758
+      },
+      "note": "outside strict state bbox but within 2% tolerance — kept as computed"
+    },
+    {
+      "state": "Puducherry",
+      "district": "Puducherry",
+      "position": {
+        "x": 0.3894,
+        "y": 0.8603
+      },
+      "note": "outside strict state bbox but within 2% tolerance — kept as computed"
+    },
+    {
+      "state": "Tripura",
+      "district": "Agartala",
+      "position": {
+        "x": 0.7983,
+        "y": 0.4423
+      },
+      "note": "outside strict state bbox but within 2% tolerance — kept as computed"
+    }
+  ],
+  "localBboxInterpolation": [
+    {
+      "state": "Andaman & Nicobar Islands",
+      "district": "South Andaman",
+      "position": {
+        "x": 0.8578,
+        "y": 0.7627
+      },
+      "note": "state shape is drawn displaced from its geographic position (anchor rejected by the fit); marker interpolated within the drawn state bbox instead of using the global transform"
+    }
+  ],
+  "statesWithoutMapShape": [
+    {
+      "state": "Chandigarh",
+      "district": "Chandigarh",
+      "position": {
+        "x": 0.3005,
+        "y": 0.2182
+      }
+    }
+  ],
+  "districtsWithMultipleInstallations": [
+    {
+      "state": "Haryana",
+      "district": "Kurukshetra",
+      "installationIds": [
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58
+      ],
+      "count": 7
+    },
+    {
+      "state": "Delhi",
+      "district": "New Delhi",
+      "installationIds": [
+        28,
+        29,
+        30,
+        31
+      ],
+      "count": 4
+    },
+    {
+      "state": "Haryana",
+      "district": "Gurugram",
+      "installationIds": [
+        44,
+        45,
+        46,
+        47
+      ],
+      "count": 4
+    },
+    {
+      "state": "Ladakh",
+      "district": "Leh",
+      "installationIds": [
+        107,
+        108,
+        109,
+        110
+      ],
+      "count": 4
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nashik",
+      "installationIds": [
+        126,
+        127,
+        128,
+        129
+      ],
+      "count": 4
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Pune",
+      "installationIds": [
+        130,
+        131,
+        132,
+        133
+      ],
+      "count": 4
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Dehradun",
+      "installationIds": [
+        207,
+        208,
+        209,
+        210
+      ],
+      "count": 4
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Solan",
+      "installationIds": [
+        76,
+        77,
+        78
+      ],
+      "count": 3
+    },
+    {
+      "state": "Nagaland",
+      "district": "Kohima",
+      "installationIds": [
+        144,
+        145,
+        146
+      ],
+      "count": 3
+    },
+    {
+      "state": "Odisha",
+      "district": "Bhubaneswar",
+      "installationIds": [
+        150,
+        151,
+        152
+      ],
+      "count": 3
+    },
+    {
+      "state": "West Bengal",
+      "district": "Darjeeling",
+      "installationIds": [
+        214,
+        215,
+        216
+      ],
+      "count": 3
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Tawang",
+      "installationIds": [
+        6,
+        7
+      ],
+      "count": 2
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "West Siang",
+      "installationIds": [
+        9,
+        10
+      ],
+      "count": 2
+    },
+    {
+      "state": "Assam",
+      "district": "Cachar",
+      "installationIds": [
+        11,
+        12
+      ],
+      "count": 2
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Raigarh",
+      "installationIds": [
+        23,
+        24
+      ],
+      "count": 2
+    },
+    {
+      "state": "Haryana",
+      "district": "Hisar",
+      "installationIds": [
+        48,
+        49
+      ],
+      "count": 2
+    },
+    {
+      "state": "Haryana",
+      "district": "Panipat",
+      "installationIds": [
+        63,
+        64
+      ],
+      "count": 2
+    },
+    {
+      "state": "Haryana",
+      "district": "Sonipat",
+      "installationIds": [
+        67,
+        68
+      ],
+      "count": 2
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Shimla",
+      "installationIds": [
+        74,
+        75
+      ],
+      "count": 2
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Baramulla",
+      "installationIds": [
+        79,
+        80
+      ],
+      "count": 2
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Jammu",
+      "installationIds": [
+        82,
+        83
+      ],
+      "count": 2
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Srinagar",
+      "installationIds": [
+        88,
+        89
+      ],
+      "count": 2
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Ranchi",
+      "installationIds": [
+        95,
+        96
+      ],
+      "count": 2
+    },
+    {
+      "state": "Ladakh",
+      "district": "Kargil",
+      "installationIds": [
+        105,
+        106
+      ],
+      "count": 2
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Bhopal",
+      "installationIds": [
+        112,
+        113
+      ],
+      "count": 2
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Gwalior",
+      "installationIds": [
+        114,
+        115
+      ],
+      "count": 2
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Indore",
+      "installationIds": [
+        116,
+        117
+      ],
+      "count": 2
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Ahmednagar",
+      "installationIds": [
+        119,
+        120
+      ],
+      "count": 2
+    },
+    {
+      "state": "Manipur",
+      "district": "Imphal West",
+      "installationIds": [
+        138,
+        219
+      ],
+      "count": 2
+    },
+    {
+      "state": "Meghalaya",
+      "district": "Shillong",
+      "installationIds": [
+        140,
+        141
+      ],
+      "count": 2
+    },
+    {
+      "state": "Punjab",
+      "district": "Ferozpur",
+      "installationIds": [
+        159,
+        160
+      ],
+      "count": 2
+    },
+    {
+      "state": "Punjab",
+      "district": "Jalandhar",
+      "installationIds": [
+        162,
+        163
+      ],
+      "count": 2
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jaipur",
+      "installationIds": [
+        171,
+        172
+      ],
+      "count": 2
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jaisalmer",
+      "installationIds": [
+        173,
+        174
+      ],
+      "count": 2
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Sri Ganganagar",
+      "installationIds": [
+        177,
+        178
+      ],
+      "count": 2
+    },
+    {
+      "state": "Sikkim",
+      "district": "East Sikkim",
+      "installationIds": [
+        180,
+        181
+      ],
+      "count": 2
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Jhansi",
+      "installationIds": [
+        197,
+        198
+      ],
+      "count": 2
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Lucknow",
+      "installationIds": [
+        200,
+        201
+      ],
+      "count": 2
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Prayagraj",
+      "installationIds": [
+        204,
+        205
+      ],
+      "count": 2
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Haridwar",
+      "installationIds": [
+        211,
+        212
+      ],
+      "count": 2
+    }
+  ],
+  "dataNotes": [
+    "Tab 04 spells the same HP district two ways: \"Lahaul and Spiti\" (row id 72) and \"Lahul Spiti\" (row id 73). Both get the same coordinates; render-time dedupe by (state, district) will still show two markers unless the sheet is normalized.",
+    "Karnataka has both \"Bengaluru Urban\" (id 99) and \"Bengaluru\" (id 100) — same place, same coordinates; consider normalizing in the sheet.",
+    "\"Mehdipatnam\" (Telangana, id 188) is a Hyderabad locality, not a district; positioned at Mehdipatnam itself, next to the Hyderabad marker.",
+    "Several \"districts\" are actually cities (Shillong, Agartala, Bhubaneswar, Berhampur, Chandigarh, Kanpur, Faizabad/Ayodhya) — markers use the city location, which is what the kiosk map wants anyway.",
+    "Chandigarh has no shape in the map asset set, so its marker position cannot be validated against (or highlight) any state shape. Its computed position sits at the Punjab/Haryana border, matching reality.",
+    "Dadra & Nagar Haveli and Daman districts validate against the tiny inferred fragments fragment-365/364 (see hit/_layout.json notes) — the fragment identification itself is unverified."
+  ]
+}

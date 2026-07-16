@@ -1,0 +1,174 @@
+/* ============================================================
+   Flag Foundation Kiosk — design tokens
+   Source: 16-frame Figma dev-mode extraction (frame_audit.json,
+   file SGS26MDJpekIP2K2HKW65Z "Final Page 3") + KIOSK_BUILD_PLAN.md §4.
+   Fixed 1920x1080 canvas — values are literal Figma pixels.
+   ============================================================ */
+
+:root {
+  /* ---- Core colors -------------------------------------- */
+  --navy-chakra: #06038D;            /* official Ashok Chakra navy (IS1) */
+  --cream-border: #FFF8DB;           /* cream hairline on cards/pills/panels */
+  --white: #FFFFFF;
+
+  /* Quick Access pill */
+  --quick-access-bg: #FFDFC4;
+  --quick-access-text: #171001;      /* near-black brown */
+
+  /* Glass-brown nav circles (Home / Back) — surface lives in .glass-nav */
+  --nav-circle-border: #FFFFFF;
+
+  /* ---- Gold family --------------------------------------- */
+  --gold-1: #F6D568;                 /* gradient start */
+  --gold-2: #DCA32E;                 /* gradient mid @50.962% */
+  --gold-3: #EFC453;                 /* gradient end */
+  --gold-flat: #E0A526;              /* flat fallback under gradient text */
+  --gold-border: #BA8601;            /* 1px gold border (chips, glass cards) */
+  --gold-cream: #FFEDC5;             /* stat label gold-cream */
+  /* signature gold gradient: selected pills, expanded cards, scrollbars,
+     gradient-clipped stat values */
+  --gold-gradient: linear-gradient(
+    90deg,
+    var(--gold-1) 0%,
+    var(--gold-2) 50.962%,
+    var(--gold-3) 100%
+  );
+  --gold-glow: 0 3.139px 48.885px 0 rgba(255, 246, 118, 0.53);
+
+  /* Title gradient text ("Monumental", modal titles) */
+  --title-gradient: linear-gradient(93.286deg, #FFFBEB 0.42%, #F7C590 102.43%);
+
+  /* ---- Glass system ---------------------------------------- */
+  /* Ground truth: Figma plugin extraction (GLASS effect: blur R,
+     refraction .8, depth 20 / 15.69 on scaled screens, light -45deg @ .8,
+     dispersion .5, splay 0). Those params have no CSS equivalent, so each
+     variant approximates GLASS as:
+       backdrop-filter: blur(<Figma R>px) saturate(165%)
+       + exact Figma fill tint + white 12%→4% vertical falloff gradient
+       + Figma stroke + inset 0 1px 0 white top highlight + soft drop.
+     PERF GUARD (kiosk i5 iGPU): backdrop-filter on panel-scale elements
+     only, NEVER full-screen, and never nested inside another glass
+     surface (child glass uses plain translucency — see .hy-pill). */
+
+  /* shared recipe pieces */
+  --glass-filter: blur(4px) saturate(165%);        /* Figma GLASS blur 4 */
+  --glass-filter-sm: blur(3.14px) saturate(165%);  /* scaled screens (depth 15.69) */
+  /* Falloff calibrated against the 795:4273 / 795:3849 renders: the GLASS
+     effect paints NO top-lit wash — panel tops sit at or slightly below the
+     backdrop level and the bottom picks up a faint (~3%) lift. The earlier
+     12%→4% top-down white read milky on tall dark panels (tiger stat/DYK
+     cards measured ~3x lighter than the render at the top strip). */
+  --glass-falloff: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --glass-highlight-soft: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  --glass-drop: 0 10px 28px rgba(0, 0, 0, 0.22);
+
+  /* rim stroke — Figma rimGrad, vertical cream→tan */
+  --rim-gradient: linear-gradient(180deg, #fff8db 0%, #e7b87a 100%);
+
+  /* variant tints — exact Figma fills */
+  --glass-warm-bar-tint: rgba(37, 24, 5, 0.17);    /* timeline bar 795:4279 */
+  --glass-warm-pill-tint: rgba(74, 59, 46, 0.45);  /* timeline pills / facts box */
+  --glass-warm-panel-tint: rgba(75, 59, 46, 0.36); /* virtues panel (2 x 0.2 stacked) */
+  --glass-navy-tint: rgba(17, 26, 49, 0.13);       /* state chips / installation rows */
+  --glass-clear-tint: rgba(0, 0, 0, 0.004);        /* symbols detail cards — GLASS only */
+  --glass-nav-tint: rgba(79, 48, 23, 0.42);        /* Home/Back capsule (Figma: NO blur) */
+
+  /* selected/active surfaces (opaque — no blur, gold glow instead) */
+  --glass-active-sheen: linear-gradient(133.4deg, #ffffff 0%, #fff2e2 100%);
+  --modal-panel-bg: rgba(19, 13, 5, 0.96);         /* Select State modal 821:4 */
+  --modal-panel-shadow: 0 18px 48px 0 rgba(0, 0, 0, 0.5);
+
+  /* ---- Scrims / gradients --------------------------------- */
+  /* Home full-screen background scrim, top to bottom */
+  --home-scrim-gradient: linear-gradient(
+    180deg,
+    rgba(204, 102, 0, 0.05) 0%,
+    rgba(43, 19, 6, 0.44) 100%
+  );
+  /* Category-card bottom scrim (label legibility) */
+  --card-scrim-gradient: linear-gradient(
+    180deg,
+    rgba(94, 56, 9, 0) 29.808%,
+    rgba(94, 56, 9, 0.6) 78.365%
+  );
+  /* Map explorer frame scrims */
+  --map-tint-gradient: linear-gradient(
+    180deg,
+    rgba(204, 102, 0, 0.08) 16.902%,
+    rgba(1, 68, 116, 0.16) 100%
+  );
+  --map-edge-gradient: linear-gradient(
+    to left,
+    rgba(11, 19, 44, 0) 45.088%,
+    rgba(30, 20, 5, 0.67) 92.266%
+  );
+
+  /* ---- Radii ---------------------------------------------- */
+  --radius-tile: 49.61px;            /* home category tiles */
+  --radius-card: 15.693px;           /* list cards / state chips */
+  --radius-card-lg: 16px;            /* generic panels (14-16px band) */
+  --radius-know-more: 14.566px;      /* Know More button */
+  --radius-pill-filter: 22.755px;    /* filter pills */
+  --radius-quick-access: 60px;       /* Quick Access pill */
+  --radius-nav-circle: 140px;        /* Home/Back stadium buttons */
+  --radius-scrollbar: 7px;           /* custom scroll thumb */
+
+  /* ---- Tab pills (Ashok Chakra explorer: Values / Design / …) */
+  --tab-pill-inactive-bg: #AB7544;   /* solid warm brown, 1px white stroke */
+
+  /* ---- Font stacks ----------------------------------------- */
+  --font-ui: 'Poppins', system-ui, sans-serif;           /* workhorse UI 300-800 */
+  --font-script: 'Parisienne', cursive;                  /* "The ... of india" script */
+  --font-numeral: 'Inter', system-ui, sans-serif;        /* stat/height numerals */
+  --font-accent: 'Port Lligat Slab', serif;              /* slab accents */
+  --font-headline: 'Gilroy', 'Poppins', sans-serif;      /* "Flag Foundation" headline */
+}
+
+/* ============================================================
+   Glass classes — the frosted-surface recipes.
+   Per-side border colors fake the vertical rimGrad stroke where
+   border-image can't follow a border-radius.
+   ============================================================ */
+
+/* Base frosted panel — warm variant by default (History/Monumental). */
+.glass {
+  background-color: var(--glass-warm-panel-tint);
+  background-image: var(--glass-falloff);
+  border: 1px solid;
+  border-color: rgba(255, 248, 219, 0.85) rgba(243, 216, 171, 0.75)
+    rgba(231, 184, 122, 0.8);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-highlight), var(--glass-drop);
+}
+
+/* Navy glass — Symbols scene lists, state chips, installation rows. */
+.glass--navy {
+  background-color: var(--glass-navy-tint);
+  border-color: rgba(255, 255, 255, 0.9) rgba(249, 232, 197, 0.8)
+    rgba(231, 184, 122, 0.85);
+  backdrop-filter: var(--glass-filter-sm);
+  -webkit-backdrop-filter: var(--glass-filter-sm);
+}
+
+/* Clear glass — Figma fill rgba(0,0,0,.004): the visible surface IS the
+   GLASS effect; hairline + highlight stand in for its -45° rim light. */
+.glass--clear {
+  background-color: var(--glass-clear-tint);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--glass-highlight-soft), 0 14px 34px rgba(0, 0, 0, 0.3);
+}
+
+/* Nav capsule (Home/Back buttons) — Figma: tint + 1px white inside
+   stroke, NO backdrop blur. Falloff + highlight keep the glass read. */
+.glass-nav {
+  background-color: var(--glass-nav-tint);
+  background-image: var(--glass-falloff);
+  border: 1px solid var(--nav-circle-border);
+  box-shadow: var(--glass-highlight), var(--glass-drop);
+}

@@ -1,0 +1,47 @@
+/* Kiosk base reset — fixed 1920x1080, no scroll, no user selection. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000000;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+body {
+  font-family: var(--font-ui);
+  color: var(--white);
+}
+
+#root {
+  /* Fills the window; the black area is the letterbox around the Stage.
+     The fixed 1920x1080 Figma coordinate system lives inside <Stage>. */
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000000;
+}
+
+img,
+video,
+canvas {
+  display: block;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+}

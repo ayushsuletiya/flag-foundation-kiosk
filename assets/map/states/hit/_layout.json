@@ -1,0 +1,631 @@
+{
+  "source": {
+    "figmaFile": "SGS26MDJpekIP2K2HKW65Z",
+    "frameNodeId": "395:322",
+    "frameName": "ref \u00b7 India state vectors (source)",
+    "frameBoxPx": {
+      "w": 774.6795654296875,
+      "h": 867.1751708984375
+    },
+    "exported": "svg via Figma MCP download_assets (background rects stripped)"
+  },
+  "coordinateSystem": "x/y/w/h are the child node's bounding box normalized 0-1 relative to the 774.68x867.18 source frame; nodePx is the same in Figma px. SVG viewBox matches the node's own bbox, so place each SVG at nodePx (or the normalized box scaled to your map size) to reassemble the full map.",
+  "notes": [
+    "Figma layer names carry typos; use the canonical field (karela->kerala, gujrat->gujarat, orissa->odisha).",
+    "Goa exists but was UNNAMED in Figma (node 395:323, plain 'Vector'); identified by position + shape and exported as goa.svg.",
+    "fragment-324 is a 18x4px sliver near the Assam/Meghalaya border - probably a stray artifact, not a state.",
+    "fragment-363/364/365 are tiny coastal shapes south of Gujarat, most likely Diu, Daman and Dadra & Nagar Haveli - names inferred from geography only.",
+    "andaman-nicobar and lakshadweep were unnamed 'Group' frames; identified by east/west position.",
+    "Telangana and Andhra Pradesh boxes overlap heavily; hit-testing must use the SVG path geometry, not the bounding boxes."
+  ],
+  "states": [
+    {
+      "file": "goa.svg",
+      "nodeId": "395:323",
+      "sourceName": "Vector",
+      "canonical": "goa",
+      "x": 0.171487,
+      "y": 0.727042,
+      "w": 0.024265,
+      "h": 0.031433,
+      "nodePx": {
+        "x": 132.848,
+        "y": 630.473,
+        "w": 18.798,
+        "h": 27.258
+      }
+    },
+    {
+      "file": "fragment-324.svg",
+      "nodeId": "395:324",
+      "sourceName": " ",
+      "canonical": "unknown-fragment (4px sliver at Assam/Meghalaya border)",
+      "x": 0.816595,
+      "y": 0.394509,
+      "w": 0.023728,
+      "h": 0.004751,
+      "nodePx": {
+        "x": 632.6,
+        "y": 342.108,
+        "w": 18.381,
+        "h": 4.12
+      }
+    },
+    {
+      "file": "assam.svg",
+      "nodeId": "395:325",
+      "sourceName": "assam",
+      "canonical": "assam",
+      "x": 0.742668,
+      "y": 0.288336,
+      "w": 0.210502,
+      "h": 0.140686,
+      "nodePx": {
+        "x": 575.33,
+        "y": 250.038,
+        "w": 163.072,
+        "h": 122.0
+      }
+    },
+    {
+      "file": "arunachal-pradesh.svg",
+      "nodeId": "395:326",
+      "sourceName": "arunachal pradesh",
+      "canonical": "arunachal-pradesh",
+      "x": 0.802174,
+      "y": 0.236759,
+      "w": 0.197826,
+      "h": 0.100041,
+      "nodePx": {
+        "x": 621.428,
+        "y": 205.312,
+        "w": 153.252,
+        "h": 86.753
+      }
+    },
+    {
+      "file": "nagaland.svg",
+      "nodeId": "395:327",
+      "sourceName": "nagaland",
+      "canonical": "nagaland",
+      "x": 0.868461,
+      "y": 0.322903,
+      "w": 0.062388,
+      "h": 0.068383,
+      "nodePx": {
+        "x": 672.779,
+        "y": 280.014,
+        "w": 48.331,
+        "h": 59.3
+      }
+    },
+    {
+      "file": "manipur.svg",
+      "nodeId": "395:328",
+      "sourceName": "manipur",
+      "canonical": "manipur",
+      "x": 0.862274,
+      "y": 0.370637,
+      "w": 0.058757,
+      "h": 0.064418,
+      "nodePx": {
+        "x": 667.986,
+        "y": 321.407,
+        "w": 45.518,
+        "h": 55.862
+      }
+    },
+    {
+      "file": "meghalaya.svg",
+      "nodeId": "395:329",
+      "sourceName": "meghalaya",
+      "canonical": "meghalaya",
+      "x": 0.747935,
+      "y": 0.362947,
+      "w": 0.104501,
+      "h": 0.037548,
+      "nodePx": {
+        "x": 579.41,
+        "y": 314.739,
+        "w": 80.955,
+        "h": 32.56
+      }
+    },
+    {
+      "file": "mizoram.svg",
+      "nodeId": "395:330",
+      "sourceName": "mizoram",
+      "canonical": "mizoram",
+      "x": 0.836777,
+      "y": 0.416578,
+      "w": 0.045333,
+      "h": 0.085851,
+      "nodePx": {
+        "x": 648.234,
+        "y": 361.246,
+        "w": 35.118,
+        "h": 74.448
+      }
+    },
+    {
+      "file": "tripura.svg",
+      "nodeId": "395:331",
+      "sourceName": "tripura",
+      "canonical": "tripura",
+      "x": 0.800013,
+      "y": 0.416071,
+      "w": 0.040248,
+      "h": 0.056127,
+      "nodePx": {
+        "x": 619.754,
+        "y": 360.807,
+        "w": 31.179,
+        "h": 48.672
+      }
+    },
+    {
+      "file": "sikkim.svg",
+      "nodeId": "395:332",
+      "sourceName": "sikkim",
+      "canonical": "sikkim",
+      "x": 0.68226,
+      "y": 0.302446,
+      "w": 0.030059,
+      "h": 0.036402,
+      "nodePx": {
+        "x": 528.533,
+        "y": 262.273,
+        "w": 23.286,
+        "h": 31.567
+      }
+    },
+    {
+      "file": "orissa.svg",
+      "nodeId": "395:333",
+      "sourceName": "orissa",
+      "canonical": "odisha",
+      "x": 0.460173,
+      "y": 0.495841,
+      "w": 0.21528,
+      "h": 0.166473,
+      "nodePx": {
+        "x": 356.486,
+        "y": 429.981,
+        "w": 166.773,
+        "h": 144.361
+      }
+    },
+    {
+      "file": "telangana.svg",
+      "nodeId": "395:334",
+      "sourceName": "telangana",
+      "canonical": "telangana",
+      "x": 0.305451,
+      "y": 0.588116,
+      "w": 0.15154,
+      "h": 0.141542,
+      "nodePx": {
+        "x": 236.627,
+        "y": 510.0,
+        "w": 117.395,
+        "h": 122.742
+      }
+    },
+    {
+      "file": "jharkhand.svg",
+      "nodeId": "395:335",
+      "sourceName": "Jharkhand",
+      "canonical": "jharkhand",
+      "x": 0.52317,
+      "y": 0.399274,
+      "w": 0.160465,
+      "h": 0.116407,
+      "nodePx": {
+        "x": 405.289,
+        "y": 346.24,
+        "w": 124.309,
+        "h": 100.945
+      }
+    },
+    {
+      "file": "karela.svg",
+      "nodeId": "395:336",
+      "sourceName": "karela",
+      "canonical": "kerala",
+      "x": 0.210503,
+      "y": 0.832181,
+      "w": 0.094981,
+      "h": 0.159787,
+      "nodePx": {
+        "x": 163.072,
+        "y": 721.646,
+        "w": 73.58,
+        "h": 138.563
+      }
+    },
+    {
+      "file": "chhattisgarh.svg",
+      "nodeId": "395:337",
+      "sourceName": "chhattisgarh",
+      "canonical": "chhattisgarh",
+      "x": 0.417184,
+      "y": 0.445369,
+      "w": 0.145931,
+      "h": 0.217614,
+      "nodePx": {
+        "x": 323.184,
+        "y": 386.213,
+        "w": 113.05,
+        "h": 188.709
+      }
+    },
+    {
+      "file": "ladakh.svg",
+      "nodeId": "395:338",
+      "sourceName": "ladakh",
+      "canonical": "ladakh",
+      "x": 0.173214,
+      "y": 0.0,
+      "w": 0.24281,
+      "h": 0.163925,
+      "nodePx": {
+        "x": 134.186,
+        "y": 0.0,
+        "w": 188.1,
+        "h": 142.152
+      }
+    },
+    {
+      "file": "jammu-kashmir.svg",
+      "nodeId": "395:339",
+      "sourceName": "Jammu & kashmir",
+      "canonical": "jammu-and-kashmir",
+      "x": 0.195789,
+      "y": 0.065946,
+      "w": 0.107572,
+      "h": 0.098464,
+      "nodePx": {
+        "x": 151.674,
+        "y": 57.187,
+        "w": 83.334,
+        "h": 85.385
+      }
+    },
+    {
+      "file": "punjab.svg",
+      "nodeId": "395:340",
+      "sourceName": "punjab",
+      "canonical": "punjab",
+      "x": 0.202311,
+      "y": 0.154283,
+      "w": 0.102266,
+      "h": 0.10442,
+      "nodePx": {
+        "x": 156.727,
+        "y": 133.79,
+        "w": 79.224,
+        "h": 90.55
+      }
+    },
+    {
+      "file": "delhi.svg",
+      "nodeId": "395:341",
+      "sourceName": "Delhi",
+      "canonical": "delhi",
+      "x": 0.299668,
+      "y": 0.283449,
+      "w": 0.018065,
+      "h": 0.016616,
+      "nodePx": {
+        "x": 232.146,
+        "y": 245.8,
+        "w": 13.995,
+        "h": 14.409
+      }
+    },
+    {
+      "file": "haryana.svg",
+      "nodeId": "395:342",
+      "sourceName": "haryana",
+      "canonical": "haryana",
+      "x": 0.223601,
+      "y": 0.214921,
+      "w": 0.104176,
+      "h": 0.11029,
+      "nodePx": {
+        "x": 173.219,
+        "y": 186.374,
+        "w": 80.703,
+        "h": 95.641
+      }
+    },
+    {
+      "file": "uttarakhand.svg",
+      "nodeId": "395:343",
+      "sourceName": "uttarakhand",
+      "canonical": "uttarakhand",
+      "x": 0.327512,
+      "y": 0.194907,
+      "w": 0.114147,
+      "h": 0.095393,
+      "nodePx": {
+        "x": 253.717,
+        "y": 169.019,
+        "w": 88.427,
+        "h": 82.722
+      }
+    },
+    {
+      "file": "himachal-pradesh.svg",
+      "nodeId": "395:344",
+      "sourceName": "himachal pradesh",
+      "canonical": "himachal-pradesh",
+      "x": 0.261812,
+      "y": 0.134315,
+      "w": 0.107764,
+      "h": 0.097179,
+      "nodePx": {
+        "x": 202.82,
+        "y": 116.475,
+        "w": 83.482,
+        "h": 84.271
+      }
+    },
+    {
+      "file": "rajasthan.svg",
+      "nodeId": "395:345",
+      "sourceName": "rajasthan",
+      "canonical": "rajasthan",
+      "x": 0.04612,
+      "y": 0.236293,
+      "w": 0.30034,
+      "h": 0.24311,
+      "nodePx": {
+        "x": 35.729,
+        "y": 204.908,
+        "w": 232.668,
+        "h": 210.819
+      }
+    },
+    {
+      "file": "tamil-nadu.svg",
+      "nodeId": "395:346",
+      "sourceName": "tamil nadu",
+      "canonical": "tamil-nadu",
+      "x": 0.261265,
+      "y": 0.808798,
+      "w": 0.160526,
+      "h": 0.191202,
+      "nodePx": {
+        "x": 202.396,
+        "y": 701.37,
+        "w": 124.356,
+        "h": 165.805
+      }
+    },
+    {
+      "file": "madhya-pradesh.svg",
+      "nodeId": "395:347",
+      "sourceName": "madhya pradesh",
+      "canonical": "madhya-pradesh",
+      "x": 0.19621,
+      "y": 0.352754,
+      "w": 0.310308,
+      "h": 0.196437,
+      "nodePx": {
+        "x": 152.0,
+        "y": 305.899,
+        "w": 240.389,
+        "h": 170.345
+      }
+    },
+    {
+      "file": "bihar.svg",
+      "nodeId": "395:348",
+      "sourceName": "bihar",
+      "canonical": "bihar",
+      "x": 0.523629,
+      "y": 0.32924,
+      "w": 0.169633,
+      "h": 0.109647,
+      "nodePx": {
+        "x": 405.645,
+        "y": 285.509,
+        "w": 131.411,
+        "h": 95.083
+      }
+    },
+    {
+      "file": "west-bengal.svg",
+      "nodeId": "395:349",
+      "sourceName": "West bengal",
+      "canonical": "west-bengal",
+      "x": 0.612597,
+      "y": 0.329939,
+      "w": 0.134632,
+      "h": 0.196351,
+      "nodePx": {
+        "x": 474.566,
+        "y": 286.115,
+        "w": 104.297,
+        "h": 170.271
+      }
+    },
+    {
+      "file": "maharashtra.svg",
+      "nodeId": "395:350",
+      "sourceName": "maharashtra",
+      "canonical": "maharashtra",
+      "x": 0.141369,
+      "y": 0.51497,
+      "w": 0.297804,
+      "h": 0.21839,
+      "nodePx": {
+        "x": 109.516,
+        "y": 446.569,
+        "w": 230.703,
+        "h": 189.382
+      }
+    },
+    {
+      "file": "andhra-pradesh.svg",
+      "nodeId": "395:351",
+      "sourceName": "andhra pradesh",
+      "canonical": "andhra-pradesh",
+      "x": 0.285612,
+      "y": 0.613965,
+      "w": 0.294746,
+      "h": 0.226062,
+      "nodePx": {
+        "x": 221.258,
+        "y": 532.415,
+        "w": 228.334,
+        "h": 196.035
+      }
+    },
+    {
+      "file": "karnataka.svg",
+      "nodeId": "395:352",
+      "sourceName": "karnataka",
+      "canonical": "karnataka",
+      "x": 0.185888,
+      "y": 0.639658,
+      "w": 0.167127,
+      "h": 0.237012,
+      "nodePx": {
+        "x": 144.004,
+        "y": 554.695,
+        "w": 129.469,
+        "h": 205.531
+      }
+    },
+    {
+      "file": "gujrat.svg",
+      "nodeId": "395:353",
+      "sourceName": "gujrat",
+      "canonical": "gujarat",
+      "x": 0.0,
+      "y": 0.420268,
+      "w": 0.212106,
+      "h": 0.159699,
+      "nodePx": {
+        "x": 0.0,
+        "y": 364.446,
+        "w": 164.315,
+        "h": 138.487
+      }
+    },
+    {
+      "file": "uttar-pradesh.svg",
+      "nodeId": "395:354",
+      "sourceName": "uttar pradesh",
+      "canonical": "uttar-pradesh",
+      "x": 0.310857,
+      "y": 0.232587,
+      "w": 0.256731,
+      "h": 0.222853,
+      "nodePx": {
+        "x": 240.814,
+        "y": 201.694,
+        "w": 198.884,
+        "h": 193.253
+      }
+    },
+    {
+      "file": "andaman-nicobar.svg",
+      "nodeId": "395:355",
+      "sourceName": "Group",
+      "canonical": "andaman-nicobar (inferred: east-side island chain)",
+      "x": 0.844195,
+      "y": 0.698805,
+      "w": 0.055144,
+      "h": 0.214896,
+      "nodePx": {
+        "x": 653.98,
+        "y": 605.986,
+        "w": 42.719,
+        "h": 186.353
+      }
+    },
+    {
+      "file": "lakshadweep.svg",
+      "nodeId": "395:358",
+      "sourceName": "Group",
+      "canonical": "lakshadweep (inferred: west-side island chain)",
+      "x": 0.094169,
+      "y": 0.818121,
+      "w": 0.065979,
+      "h": 0.179263,
+      "nodePx": {
+        "x": 72.951,
+        "y": 709.455,
+        "w": 51.113,
+        "h": 155.452
+      }
+    },
+    {
+      "file": "fragment-363.svg",
+      "nodeId": "395:363",
+      "sourceName": "Vector",
+      "canonical": "diu (inferred from position, unverified)",
+      "x": 0.084354,
+      "y": 0.551256,
+      "w": 0.004177,
+      "h": 0.002514,
+      "nodePx": {
+        "x": 65.348,
+        "y": 478.035,
+        "w": 3.236,
+        "h": 2.18
+      }
+    },
+    {
+      "file": "fragment-364.svg",
+      "nodeId": "395:364",
+      "sourceName": "Vector",
+      "canonical": "daman (inferred from position, unverified)",
+      "x": 0.148363,
+      "y": 0.566674,
+      "w": 0.004046,
+      "h": 0.004584,
+      "nodePx": {
+        "x": 114.934,
+        "y": 491.405,
+        "w": 3.135,
+        "h": 3.975
+      }
+    },
+    {
+      "file": "fragment-365.svg",
+      "nodeId": "395:365",
+      "sourceName": "Vector",
+      "canonical": "dadra-and-nagar-haveli (inferred from position, unverified)",
+      "x": 0.150924,
+      "y": 0.570742,
+      "w": 0.010011,
+      "h": 0.010367,
+      "nodePx": {
+        "x": 116.918,
+        "y": 494.933,
+        "w": 7.755,
+        "h": 8.99
+      }
+    },
+    {
+      "file": "puducherry.svg",
+      "nodeId": "395:366",
+      "sourceName": "Puducherry",
+      "canonical": "puducherry",
+      "x": 0.390239,
+      "y": 0.861294,
+      "w": 0.010169,
+      "h": 0.010718,
+      "nodePx": {
+        "x": 302.311,
+        "y": 746.893,
+        "w": 7.878,
+        "h": 9.294
+      }
+    }
+  ]
+}

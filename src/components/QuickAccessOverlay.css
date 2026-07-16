@@ -1,0 +1,73 @@
+/* QuickAccessOverlay — entrance + pressed feedback (kiosk: no hover). */
+
+@keyframes qa-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes qa-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.qa-scrim {
+  animation: qa-fade-in 0.2s ease both;
+}
+
+.qa-panel {
+  animation: qa-pop-in 0.25s ease both;
+}
+
+.qa-pressable {
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+.qa-pressable:active {
+  transform: scale(0.96);
+  filter: brightness(0.92);
+}
+
+/* Card bottom scrims — same straight-alpha ramps as the home tiles
+   (Figma interpolates gradient alpha straight; CSS premultiplied would
+   darken the mids, so the lerped stops are baked in). */
+.qa-tile-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 29.808%,
+    rgba(235, 230, 224, 0.075) 35.878%,
+    rgba(215, 205, 194, 0.15) 41.947%,
+    rgba(195, 180, 163, 0.225) 48.017%,
+    rgba(175, 156, 132, 0.3) 54.087%,
+    rgba(154, 131, 101, 0.375) 60.156%,
+    rgba(134, 106, 71, 0.45) 66.226%,
+    rgba(114, 81, 40, 0.525) 72.295%,
+    rgba(94, 56, 9, 0.6) 78.365%
+  );
+}
+
+/* National Symbols card ends solid #5E3809 — masks the text baked into
+   that card's photo asset (Figma card 2 uses this variant deliberately). */
+.qa-tile-scrim--solid {
+  background: linear-gradient(
+    180deg,
+    rgba(74, 55, 10, 0) 29.808%,
+    rgba(79, 55, 10, 0.25) 41.947%,
+    rgba(84, 56, 10, 0.5) 54.087%,
+    rgba(89, 56, 9, 0.75) 66.226%,
+    #5e3809 78.365%
+  );
+}

@@ -1,0 +1,954 @@
+{
+  "coordinateSystem": "x/y are normalized 0-1 within the India map box — the same space as assets/map/states/hit/_layout.json (source frame 774.68x867.18). Multiply by the rendered map width/height to get pixels. See README.md in this folder.",
+  "generatedAt": "2026-07-16T13:36:11.409Z",
+  "districts": [
+    {
+      "state": "Andaman & Nicobar Islands",
+      "district": "South Andaman",
+      "x": 0.8578,
+      "y": 0.7627
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Visakhapatnam",
+      "x": 0.5129,
+      "y": 0.6598
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "East Siang",
+      "x": 0.9428,
+      "y": 0.2935
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Lower Subansiri",
+      "x": 0.8902,
+      "y": 0.3112
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Papum Pare",
+      "x": 0.8825,
+      "y": 0.3282
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Tawang",
+      "x": 0.8221,
+      "y": 0.3129
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "West Kameng",
+      "x": 0.8409,
+      "y": 0.3237
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "West Siang",
+      "x": 0.923,
+      "y": 0.2909
+    },
+    {
+      "state": "Assam",
+      "district": "Cachar",
+      "x": 0.8513,
+      "y": 0.4068
+    },
+    {
+      "state": "Assam",
+      "district": "Jorhat",
+      "x": 0.903,
+      "y": 0.3397
+    },
+    {
+      "state": "Assam",
+      "district": "Kamrup Metropolitan",
+      "x": 0.8163,
+      "y": 0.3627
+    },
+    {
+      "state": "Assam",
+      "district": "Sibasagar",
+      "x": 0.9175,
+      "y": 0.3314
+    },
+    {
+      "state": "Assam",
+      "district": "Sonitpur",
+      "x": 0.8532,
+      "y": 0.345
+    },
+    {
+      "state": "Assam",
+      "district": "Tinsukia",
+      "x": 0.9433,
+      "y": 0.3133
+    },
+    {
+      "state": "Bihar",
+      "district": "Patna",
+      "x": 0.5865,
+      "y": 0.3873
+    },
+    {
+      "state": "Bihar",
+      "district": "West Champaran",
+      "x": 0.5653,
+      "y": 0.3463
+    },
+    {
+      "state": "Chandigarh",
+      "district": "Chandigarh",
+      "x": 0.3005,
+      "y": 0.2182
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Bilaspur",
+      "x": 0.4795,
+      "y": 0.5102
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Durg",
+      "x": 0.4485,
+      "y": 0.5415
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Raigarh",
+      "x": 0.5228,
+      "y": 0.5153
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Raipur",
+      "x": 0.4607,
+      "y": 0.5391
+    },
+    {
+      "state": "Dadra & Nagar Haveli and Daman & Diu",
+      "district": "Dadra & Nagar Haveli",
+      "x": 0.1607,
+      "y": 0.5802
+    },
+    {
+      "state": "Dadra & Nagar Haveli and Daman & Diu",
+      "district": "Daman",
+      "x": 0.1549,
+      "y": 0.5758
+    },
+    {
+      "state": "Delhi",
+      "district": "New Delhi",
+      "x": 0.3136,
+      "y": 0.2906
+    },
+    {
+      "state": "Delhi",
+      "district": "North Delhi",
+      "x": 0.3113,
+      "y": 0.2855
+    },
+    {
+      "state": "Delhi",
+      "district": "South West Delhi",
+      "x": 0.3073,
+      "y": 0.2924
+    },
+    {
+      "state": "Goa",
+      "district": "North Goa",
+      "x": 0.1847,
+      "y": 0.743
+    },
+    {
+      "state": "Gujarat",
+      "district": "Ahmedabad",
+      "x": 0.1475,
+      "y": 0.4862
+    },
+    {
+      "state": "Gujarat",
+      "district": "Gandhinagar",
+      "x": 0.1504,
+      "y": 0.4793
+    },
+    {
+      "state": "Gujarat",
+      "district": "Kachchh",
+      "x": 0.0469,
+      "y": 0.4812
+    },
+    {
+      "state": "Gujarat",
+      "district": "Porbandar",
+      "x": 0.0434,
+      "y": 0.5361
+    },
+    {
+      "state": "Gujarat",
+      "district": "Surat",
+      "x": 0.1549,
+      "y": 0.5495
+    },
+    {
+      "state": "Gujarat",
+      "district": "Vadodara",
+      "x": 0.1684,
+      "y": 0.5101
+    },
+    {
+      "state": "Haryana",
+      "district": "Ambala",
+      "x": 0.3002,
+      "y": 0.2302
+    },
+    {
+      "state": "Haryana",
+      "district": "Bhiwani",
+      "x": 0.2762,
+      "y": 0.2853
+    },
+    {
+      "state": "Haryana",
+      "district": "Faridabad",
+      "x": 0.3169,
+      "y": 0.2973
+    },
+    {
+      "state": "Haryana",
+      "district": "Gurugram",
+      "x": 0.3072,
+      "y": 0.2959
+    },
+    {
+      "state": "Haryana",
+      "district": "Hisar",
+      "x": 0.2623,
+      "y": 0.2733
+    },
+    {
+      "state": "Haryana",
+      "district": "Kaithal",
+      "x": 0.2865,
+      "y": 0.2504
+    },
+    {
+      "state": "Haryana",
+      "district": "Karnal",
+      "x": 0.3065,
+      "y": 0.2537
+    },
+    {
+      "state": "Haryana",
+      "district": "Kurukshetra",
+      "x": 0.3022,
+      "y": 0.2442
+    },
+    {
+      "state": "Haryana",
+      "district": "Mahendragarh",
+      "x": 0.2748,
+      "y": 0.311
+    },
+    {
+      "state": "Haryana",
+      "district": "Nuh",
+      "x": 0.3058,
+      "y": 0.3082
+    },
+    {
+      "state": "Haryana",
+      "district": "Palwal",
+      "x": 0.3173,
+      "y": 0.3066
+    },
+    {
+      "state": "Haryana",
+      "district": "Panchkula",
+      "x": 0.3029,
+      "y": 0.2195
+    },
+    {
+      "state": "Haryana",
+      "district": "Panipat",
+      "x": 0.3056,
+      "y": 0.264
+    },
+    {
+      "state": "Haryana",
+      "district": "Rohtak",
+      "x": 0.2916,
+      "y": 0.2812
+    },
+    {
+      "state": "Haryana",
+      "district": "Sirsa",
+      "x": 0.2386,
+      "y": 0.2609
+    },
+    {
+      "state": "Haryana",
+      "district": "Sonipat",
+      "x": 0.3073,
+      "y": 0.2777
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Kangra",
+      "x": 0.284,
+      "y": 0.1717
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Kinnaur",
+      "x": 0.353,
+      "y": 0.1892
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Kullu",
+      "x": 0.313,
+      "y": 0.1758
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Lahaul and Spiti",
+      "x": 0.3308,
+      "y": 0.1589
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Lahul Spiti",
+      "x": 0.3308,
+      "y": 0.1589
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Shimla",
+      "x": 0.3144,
+      "y": 0.2052
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Solan",
+      "x": 0.3117,
+      "y": 0.2121
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Baramulla",
+      "x": 0.2187,
+      "y": 0.1013
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Ganderbal",
+      "x": 0.234,
+      "y": 0.0999
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Jammu",
+      "x": 0.2359,
+      "y": 0.1513
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Kupwara",
+      "x": 0.2159,
+      "y": 0.0901
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Poonch",
+      "x": 0.2097,
+      "y": 0.1163
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Pulwama",
+      "x": 0.2379,
+      "y": 0.1122
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Rajouri",
+      "x": 0.217,
+      "y": 0.1295
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Srinagar",
+      "x": 0.2346,
+      "y": 0.1051
+    },
+    {
+      "state": "Jammu & Kashmir",
+      "district": "Udhampur",
+      "x": 0.2454,
+      "y": 0.1445
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Bokaro",
+      "x": 0.6199,
+      "y": 0.4523
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Dumka",
+      "x": 0.6587,
+      "y": 0.4307
+    },
+    {
+      "state": "Jharkhand",
+      "district": "East Singhbhum",
+      "x": 0.6209,
+      "y": 0.482
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Ramgarh",
+      "x": 0.598,
+      "y": 0.4542
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Ranchi",
+      "x": 0.5904,
+      "y": 0.4643
+    },
+    {
+      "state": "Jharkhand",
+      "district": "West Singhbhum",
+      "x": 0.6068,
+      "y": 0.491
+    },
+    {
+      "state": "Karnataka",
+      "district": "Ballari",
+      "x": 0.2917,
+      "y": 0.7527
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bengaluru",
+      "x": 0.3131,
+      "y": 0.8265
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bengaluru Urban",
+      "x": 0.3131,
+      "y": 0.8265
+    },
+    {
+      "state": "Kerala",
+      "district": "Ernakulam",
+      "x": 0.265,
+      "y": 0.9302
+    },
+    {
+      "state": "Kerala",
+      "district": "Kannur",
+      "x": 0.235,
+      "y": 0.8662
+    },
+    {
+      "state": "Kerala",
+      "district": "Kozhikode",
+      "x": 0.2487,
+      "y": 0.8871
+    },
+    {
+      "state": "Kerala",
+      "district": "Thiruvananthapuram",
+      "x": 0.2867,
+      "y": 0.9797
+    },
+    {
+      "state": "Ladakh",
+      "district": "Kargil",
+      "x": 0.2812,
+      "y": 0.0874
+    },
+    {
+      "state": "Ladakh",
+      "district": "Leh",
+      "x": 0.3313,
+      "y": 0.0999
+    },
+    {
+      "state": "Lakshadweep",
+      "district": "Lakshadweep",
+      "x": 0.139,
+      "y": 0.9131
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Bhopal",
+      "x": 0.3159,
+      "y": 0.4738
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Gwalior",
+      "x": 0.3452,
+      "y": 0.3717
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Indore",
+      "x": 0.2615,
+      "y": 0.4937
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Jabalpur",
+      "x": 0.4037,
+      "y": 0.4747
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Ahmednagar",
+      "x": 0.2194,
+      "y": 0.6191
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Aurangabad",
+      "x": 0.241,
+      "y": 0.5915
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Kolhapur",
+      "x": 0.2,
+      "y": 0.7015
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Latur",
+      "x": 0.2828,
+      "y": 0.6412
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nagpur",
+      "x": 0.3724,
+      "y": 0.5447
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nanded",
+      "x": 0.3084,
+      "y": 0.6149
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nashik",
+      "x": 0.1872,
+      "y": 0.5888
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Pune",
+      "x": 0.1883,
+      "y": 0.6394
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Raigad",
+      "x": 0.1636,
+      "y": 0.6425
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Sangli",
+      "x": 0.2116,
+      "y": 0.6961
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Solapur",
+      "x": 0.2588,
+      "y": 0.6672
+    },
+    {
+      "state": "Manipur",
+      "district": "Bishnupur",
+      "x": 0.8855,
+      "y": 0.4135
+    },
+    {
+      "state": "Manipur",
+      "district": "Imphal West",
+      "x": 0.8906,
+      "y": 0.4065
+    },
+    {
+      "state": "Manipur",
+      "district": "Senapati",
+      "x": 0.8948,
+      "y": 0.3906
+    },
+    {
+      "state": "Meghalaya",
+      "district": "Shillong",
+      "x": 0.8211,
+      "y": 0.3818
+    },
+    {
+      "state": "Mizoram",
+      "district": "Aizawl",
+      "x": 0.8483,
+      "y": 0.4445
+    },
+    {
+      "state": "Nagaland",
+      "district": "Dimapur",
+      "x": 0.8849,
+      "y": 0.3693
+    },
+    {
+      "state": "Nagaland",
+      "district": "Kohima",
+      "x": 0.8979,
+      "y": 0.3768
+    },
+    {
+      "state": "Odisha",
+      "district": "Angul",
+      "x": 0.581,
+      "y": 0.5502
+    },
+    {
+      "state": "Odisha",
+      "district": "Balangir",
+      "x": 0.5249,
+      "y": 0.556
+    },
+    {
+      "state": "Odisha",
+      "district": "Berhampur (Brahmapur)",
+      "x": 0.5689,
+      "y": 0.6029
+    },
+    {
+      "state": "Odisha",
+      "district": "Bhubaneswar",
+      "x": 0.6055,
+      "y": 0.5681
+    },
+    {
+      "state": "Odisha",
+      "district": "Cuttack",
+      "x": 0.6077,
+      "y": 0.5626
+    },
+    {
+      "state": "Odisha",
+      "district": "Keonjhar",
+      "x": 0.5983,
+      "y": 0.5227
+    },
+    {
+      "state": "Odisha",
+      "district": "Puri",
+      "x": 0.6054,
+      "y": 0.5849
+    },
+    {
+      "state": "Odisha",
+      "district": "Sundargarh",
+      "x": 0.5449,
+      "y": 0.5072
+    },
+    {
+      "state": "Puducherry",
+      "district": "Puducherry",
+      "x": 0.3894,
+      "y": 0.8603
+    },
+    {
+      "state": "Punjab",
+      "district": "Amritsar",
+      "x": 0.2349,
+      "y": 0.189
+    },
+    {
+      "state": "Punjab",
+      "district": "Ferozpur",
+      "x": 0.2252,
+      "y": 0.2132
+    },
+    {
+      "state": "Punjab",
+      "district": "Gurdaspur",
+      "x": 0.2537,
+      "y": 0.1745
+    },
+    {
+      "state": "Punjab",
+      "district": "Jalandhar",
+      "x": 0.2593,
+      "y": 0.1987
+    },
+    {
+      "state": "Punjab",
+      "district": "Ludhiana",
+      "x": 0.2683,
+      "y": 0.2132
+    },
+    {
+      "state": "Punjab",
+      "district": "Pathankot",
+      "x": 0.2626,
+      "y": 0.1664
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Ajmer",
+      "x": 0.2224,
+      "y": 0.3668
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Alwar",
+      "x": 0.2925,
+      "y": 0.3274
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Barmer",
+      "x": 0.1088,
+      "y": 0.3936
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Bikaner",
+      "x": 0.1775,
+      "y": 0.3141
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Dholpur",
+      "x": 0.3355,
+      "y": 0.3555
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jaipur",
+      "x": 0.2627,
+      "y": 0.3501
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jaisalmer",
+      "x": 0.0932,
+      "y": 0.3539
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jodhpur",
+      "x": 0.1659,
+      "y": 0.3741
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Kota",
+      "x": 0.2637,
+      "y": 0.4083
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Sri Ganganagar",
+      "x": 0.199,
+      "y": 0.2485
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Udaipur",
+      "x": 0.1884,
+      "y": 0.4318
+    },
+    {
+      "state": "Sikkim",
+      "district": "East Sikkim",
+      "x": 0.7086,
+      "y": 0.3246
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Chennai",
+      "x": 0.4063,
+      "y": 0.8205
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Coimbatore",
+      "x": 0.2895,
+      "y": 0.894
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Madurai",
+      "x": 0.3289,
+      "y": 0.9303
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Nilgiris",
+      "x": 0.2808,
+      "y": 0.8808
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tiruchirappalli",
+      "x": 0.3498,
+      "y": 0.9003
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Vellore",
+      "x": 0.3666,
+      "y": 0.8269
+    },
+    {
+      "state": "Telangana",
+      "district": "Hyderabad",
+      "x": 0.3479,
+      "y": 0.6746
+    },
+    {
+      "state": "Telangana",
+      "district": "Mehdipatnam",
+      "x": 0.3465,
+      "y": 0.6739
+    },
+    {
+      "state": "Tripura",
+      "district": "Agartala",
+      "x": 0.7983,
+      "y": 0.4423
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Agra",
+      "x": 0.3401,
+      "y": 0.3389
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Ballia",
+      "x": 0.5522,
+      "y": 0.3823
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bareilly",
+      "x": 0.3901,
+      "y": 0.2972
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Faizabad",
+      "x": 0.4829,
+      "y": 0.3494
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Farrukhabad",
+      "x": 0.3949,
+      "y": 0.3303
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Gorakhpur",
+      "x": 0.526,
+      "y": 0.3487
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Jhansi",
+      "x": 0.3581,
+      "y": 0.3977
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kanpur",
+      "x": 0.4201,
+      "y": 0.3619
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Lucknow",
+      "x": 0.442,
+      "y": 0.3477
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mathura",
+      "x": 0.3286,
+      "y": 0.3286
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Meerut",
+      "x": 0.3313,
+      "y": 0.2774
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Prayagraj",
+      "x": 0.472,
+      "y": 0.3953
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Varanasi",
+      "x": 0.5116,
+      "y": 0.3984
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Dehradun",
+      "x": 0.3436,
+      "y": 0.2312
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Haridwar",
+      "x": 0.3478,
+      "y": 0.2438
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Nainital",
+      "x": 0.3924,
+      "y": 0.2622
+    },
+    {
+      "state": "West Bengal",
+      "district": "Darjeeling",
+      "x": 0.6962,
+      "y": 0.3349
+    },
+    {
+      "state": "West Bengal",
+      "district": "Jalpaiguri",
+      "x": 0.7117,
+      "y": 0.3523
+    },
+    {
+      "state": "West Bengal",
+      "district": "Kolkata",
+      "x": 0.6958,
+      "y": 0.4881
+    }
+  ]
+}

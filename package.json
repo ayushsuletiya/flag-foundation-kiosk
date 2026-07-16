@@ -1,0 +1,44 @@
+{
+  "name": "flag-foundation-kiosk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Flag Foundation of India museum kiosk - fixed 1920x1080 touchscreen app",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "npm run build:electron && concurrently -k \"vite\" \"electron .\"",
+    "build": "tsc -b && vite build && npm run build:electron",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p electron/tsconfig.json",
+    "check:content": "node scripts/check-content.ts",
+    "mirror:photos": "node scripts/mirror-photos.ts",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/parisienne": "^5.2.8",
+    "@fontsource/poppins": "^5.2.7",
+    "@fontsource/port-lligat-slab": "^5.2.8",
+    "chokidar": "^4.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.9.7",
+    "three": "^0.182.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.182.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^9.2.1",
+    "electron": "^38.4.0",
+    "electron-builder": "^26.0.12",
+    "oxlint": "^1.71.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}

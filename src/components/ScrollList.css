@@ -1,0 +1,16 @@
+/* ScrollList — hide the native scrollbar; the gold custom thumb replaces it. */
+.scroll-list-viewport {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+  /* Rows re-render on selection; browser scroll anchoring would fight (and
+     cancel) programmatic smooth scrolls when content above the fold mutates. */
+  overflow-anchor: none;
+}
+
+.scroll-list-viewport::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}

@@ -1,0 +1,115 @@
+/* Monumental Flags section — shared animations + interactive states.
+   Geometry lives inline in the screens (literal Figma px); this file only
+   holds what CSS-in-JS can't do: keyframes and pressed states. */
+
+/* Intro fallback shimmer ("Loading map…" while the 5s mp4 is absent) */
+@keyframes mon-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.mon-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 251, 235, 0.25) 0%,
+    rgba(255, 251, 235, 0.9) 50%,
+    rgba(255, 251, 235, 0.25) 100%
+  );
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: rgba(255, 251, 235, 0.25);
+  animation: mon-shimmer 1.4s linear infinite;
+}
+
+/* Generic fade/scale entrances */
+@keyframes mon-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mon-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.mon-fade-in {
+  animation: mon-fade-in 0.35s ease both;
+}
+
+/* Map overlays (active state PNG, tooltip, markers) */
+@keyframes mon-marker-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mon-marker-in {
+  animation: mon-marker-in 0.4s ease both;
+}
+
+/* Touch pressed feedback — kiosk has no hover */
+.mon-pressable {
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+.mon-pressable:active {
+  transform: scale(0.96);
+  filter: brightness(0.92);
+}
+
+/* Installation tile expand/collapse */
+.mon-tile {
+  transition:
+    height 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.mon-tile-layer {
+  transition: opacity 0.25s ease;
+}
+
+/* Map state silhouettes */
+.mon-state-hit {
+  cursor: pointer;
+}
+
+.mon-state-hit path {
+  transition: fill 0.2s ease;
+}
+
+.mon-state-hit:active path {
+  fill: rgba(255, 255, 255, 0.16);
+}
+
+/* Overlay entrances (Select State / Quick Access share the recipe) */
+.mon-overlay-scrim {
+  animation: mon-fade-in 0.2s ease both;
+}
+
+.mon-overlay-panel {
+  animation: mon-pop-in 0.25s ease both;
+}

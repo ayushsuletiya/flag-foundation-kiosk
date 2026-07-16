@@ -1,0 +1,193 @@
+/* ============================================================
+   SymbolsCarouselScreen — Figma frame 795:3822 (un-mirrored render)
+   All values are literal Figma pixels on the 1920x1080 Stage.
+   ============================================================ */
+
+.sy-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #020715; /* baked-bg corner navy while the image decodes */
+}
+
+/* Baked stage scene. stage-intro.png is the pre-flipped 2113x1056 source;
+   the design cover-crops to region x=217..2094 → scale 1920/1877 = 1.0229,
+   so the image renders 2161.4x1080.2 shifted -222px left. */
+.sy-stage-bg {
+  position: absolute;
+  left: -222px;
+  top: 0;
+  width: 2161.4px;
+  height: 1080.2px;
+}
+
+/* ---- Header (Poppins SemiBold 65.889, title gradient) --------- */
+.sy-header {
+  position: absolute;
+  left: 81px;
+  top: 65px;
+  width: 982px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 65.889px;
+  line-height: 1.226;
+  background: var(--title-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* ---- Carousel -------------------------------------------------- */
+/* Swipe surface spans the podium area. */
+.sy-carousel {
+  position: absolute;
+  left: 100px;
+  top: 200px;
+  width: 1060px;
+  height: 620px;
+  touch-action: pan-y;
+}
+
+.sy-card {
+  position: absolute;
+  border-radius: 60px;
+  overflow: hidden;
+}
+
+/* Center card: 51% black scrim UNDER the subject (audit 795:3841). */
+.sy-card-center {
+  left: 354px; /* page 454 - carousel 100 */
+  top: 51px; /*  page 251 - carousel 200 */
+  width: 379px;
+  height: 472px;
+  background: rgba(0, 0, 0, 0.51);
+}
+
+/* Side cards: 36% black scrim OVER the image (dims inactive symbol). */
+.sy-card-side {
+  width: 241px;
+  height: 372px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease;
+}
+
+.sy-card-side:active {
+  transform: scale(0.97);
+}
+
+.sy-card-left {
+  left: 73px; /* page 173 */
+  top: 192px; /* page 392 */
+}
+
+.sy-card-right {
+  left: 773px; /* page 873 */
+  top: 192px;
+}
+
+.sy-card-media {
+  position: absolute;
+  inset: 0;
+  animation: sy-fade-in 320ms ease both;
+}
+
+.sy-card-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.36);
+  pointer-events: none;
+}
+
+/* ---- Pagination dots on the podium front face ------------------ */
+/* Figma strip is centered on the podium axis x=643.5, top 764. */
+.sy-dots {
+  position: absolute;
+  left: 643.5px;
+  top: 764px;
+  transform: translateX(-50%);
+}
+
+/* ---- Right text column ----------------------------------------- */
+.sy-info {
+  position: absolute;
+  left: 1216px;
+  top: 0;
+  width: 660px;
+  height: 100%;
+  animation: sy-fade-in 320ms ease both;
+  pointer-events: none;
+}
+
+/* Symbol name — Poppins SemiBold 96.716 (auto-fit down for long names),
+   5-stop gold gradient (Figma 115.75deg recorded in mirrored space →
+   rendered warm sweep matches the year numeral ramp). */
+.sy-name {
+  position: absolute;
+  left: 0;
+  top: 397px;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  line-height: 1.5;
+  background: linear-gradient(
+    109.896deg,
+    #ffffff 6.3%,
+    #ffe26e 25.29%,
+    #ffdb4d 44.64%,
+    #fff1ba 63.26%,
+    #ffe26e 82.25%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Category subtitle — Poppins Regular 45.37 white. Single line like the
+   mock ("National Animal"); the audited 392px box fit that string only, and
+   longer Excel categories ("National Aquatic Animal") were wrapping into the
+   Know More button. Longest current category ≈ 580px, well inside x=1920. */
+.sy-subtitle {
+  position: absolute;
+  left: 0;
+  top: 517px;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 45.37px;
+  color: var(--white);
+}
+
+/* Know More — 216x61, r19.536, gold gradient, Poppins Light 26.774. */
+.sy-know-more {
+  position: absolute;
+  left: 0;
+  top: 618px;
+  width: 216px;
+  height: 61px;
+  border-radius: 19.536px;
+  background: var(--gold-gradient);
+  font-family: var(--font-ui);
+  font-weight: 300;
+  font-size: 26.774px;
+  color: #0b1d4a;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease;
+}
+
+.sy-know-more:active {
+  transform: scale(0.96);
+}
+
+@keyframes sy-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,283 @@
+/* ============================================================
+   SymbolDetailScreen — Figma frame 795:3849 (tiger detail card)
+   All values are literal Figma pixels on the 1920x1080 Stage.
+   ============================================================ */
+
+.syd-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #06070e;
+}
+
+/* Baked stage render (1672x941) — the design upscales it ~1.148x which is
+   an exact cover fit on 1920x1080. Podium is part of the image. */
+.syd-stage-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Radial scrim overlay — NOT baked into stage-detail.png. The Figma export
+   was ambiguous (both stops at offset 1; audit risk #3), so the effective
+   gradient was fitted from render-vs-source pixel pairs: a near-black
+   #06070E veil, ~0.55 alpha at center easing to ~0.63 at the edges. */
+.syd-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 960px 540px at 50% 50%,
+    rgba(6, 7, 14, 0.55) 0%,
+    rgba(6, 7, 14, 0.63) 100%
+  );
+}
+
+/* Giant decorative quote — live text glyph (Figma node 795:3850):
+   Port Lligat Slab Regular 613.33px, rgba(202,238,255,0.07). Top is tuned
+   so the painted glyph matches the render (text-box y=95 in Figma). */
+.syd-quote {
+  position: absolute;
+  left: 33px;
+  top: 33px;
+  font-family: var(--font-accent);
+  font-weight: 400;
+  font-size: 613.333px;
+  line-height: 1;
+  color: rgba(202, 238, 255, 0.07);
+  pointer-events: none;
+}
+
+/* ---- Center title stack (centered on x=965) --------------------- */
+.syd-kicker {
+  position: absolute;
+  left: 965px;
+  top: 138px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 28.114px;
+  color: var(--white);
+}
+
+.syd-title {
+  position: absolute;
+  left: 965px;
+  top: 177px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 40px;
+  background: var(--title-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* ---- Gold symbolism headline ------------------------------------ */
+/* Width 600 reproduces the mock's wrap ("Symbol of Grace," /
+   "Strength, Agility & Power"): measured Poppins Bold 45.232 runs are
+   620px for line1+"Strength," (must NOT fit) and 576px for the mock's
+   line 2 (must fit) — so the Figma text box is ~576-607px, not 670. */
+.syd-headline {
+  position: absolute;
+  left: 108px;
+  top: 283px;
+  width: 600px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 45.232px;
+  background: var(--gold-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* ---- Glass panels — Figma 795:3857/3852/3856/3858/3855 ground truth:
+   fill rgba(0,0,0,.004) (effectively transparent) — the ENTIRE visible
+   surface is the Figma GLASS effect (blur 4, refraction .8, depth 20,
+   light -45° @ .8, dispersion .5). Web approximation: backdrop
+   blur(4px)+saturate, white 12→4% falloff, hairline + inset top
+   highlight standing in for the -45° rim light, soft drop. The 1px
+   border is kept (same width as before) so the pixel-tuned child
+   offsets inside .syd-dyk don't move. ---------------------------- */
+.syd-stat,
+.syd-dyk {
+  position: absolute;
+  border-radius: 20px;
+  background-color: var(--glass-clear-tint);
+  background-image: var(--glass-falloff);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: var(--glass-highlight-soft), 0 14px 34px rgba(0, 0, 0, 0.3);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+}
+
+/* ---- Stat cards -------------------------------------------------- */
+.syd-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 20px; /* Figma ~18-20px — 28px made "Estimated Wild Tigers" wrap */
+}
+
+.syd-stat-label {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+.syd-stat-value {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.syd-stat-gold {
+  background: var(--gold-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.syd-stat-cream {
+  color: #fff5d2;
+}
+
+/* ---- Turntable subject on the podium ----------------------------- */
+/* Warm pedestal glow (Figma 315x34 ellipse @802,658 + blur bleed). */
+.syd-glow {
+  position: absolute;
+  left: 802px;
+  top: 658px;
+  width: 315px;
+  height: 34px;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 178, 90, 0.55) 0%, rgba(255, 178, 90, 0) 72%);
+  filter: blur(14px);
+}
+
+/* Subject box — left/top set inline per media state (SymbolDetailScreen.tsx):
+   artwork uses the mock's padded frame 407x509 @ (771.5, 216.5) so the
+   visible subject lands paws-on-podium like the render; placeholder tiles
+   use the podium-top footprint 352x439 @ (784, 253). */
+.syd-subject {
+  position: absolute;
+}
+
+/* ---- Did You Know? card ------------------------------------------ */
+.syd-dyk {
+  left: 1326px;
+  top: 291px;
+  width: 509px;
+  height: 583px;
+}
+
+.syd-dyk-content {
+  position: absolute;
+  inset: 0;
+  animation: syd-fade-in 350ms ease both;
+}
+
+.syd-dyk-heading {
+  position: absolute;
+  left: 28px;
+  top: 32px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 35px;
+  background: var(--gold-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.syd-dyk-photo {
+  position: absolute;
+  left: 28px;
+  top: 99px;
+  width: 454px;
+  height: 285px;
+  border-radius: 32px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.syd-dyk-photo > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.syd-dyk-body {
+  position: absolute;
+  left: 28px;
+  top: 406px;
+  width: 454px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 23px;
+  line-height: 1.328;
+  color: var(--white);
+}
+
+/* Dots row CENTERED in the card (card-relative y=544). Measured from the
+   795:3849 render (ground truth — frame node coords are mirrored): the 4
+   dots sit at 1080-space x=1557..1602, centers 1560/1573/1585/1599 — i.e.
+   the 47px group is centered on the card midline x=1580.5, not at the 28px
+   content inset (that would start them at x=1354). Un-mirrored node
+   "Decor / dot" 795:3897 (x=1565, y=835) confirms. */
+.syd-dyk-dots {
+  position: absolute;
+  left: 50%;
+  top: 544px;
+  transform: translateX(-50%);
+}
+
+/* ---- Carousel chevrons (visual 45px, hit 90px) -------------------- */
+.syd-chevron-hit {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Visual comes from the exact Figma SVG (cream #FFF8DB → tan #E7B87A,
+   vertical; chevron glyph is a transparent cutout) — no CSS recreation. */
+.syd-chevron {
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms ease;
+}
+
+.syd-chevron-hit:active .syd-chevron {
+  transform: scale(0.92);
+}
+
+/* ---- Symbol-switch crossfade -------------------------------------- */
+.syd-fade {
+  animation: syd-fade-in 350ms ease both;
+}
+
+@keyframes syd-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

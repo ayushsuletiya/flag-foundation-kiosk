@@ -1,0 +1,609 @@
+/* ============================================================
+   ChakraExplorerScreen — Figma frames 795:5832 (Values),
+   795:5991 (spoke selected), 795:6157 (Design), 795:6208 (Chakra in Flag).
+   Fixed 1920x1080 stage; values are literal Figma pixels.
+   ============================================================ */
+
+.ck-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ---- shared chrome ------------------------------------------------ */
+
+.ck-bg {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: cover;
+  /* Figma's scrim carries backdrop-blur 13px; blur the static plate instead
+     (one-off raster, compositor-cached) — full-screen backdrop-filter is
+     banned by the perf guard. Slight scale hides the blur's edge bleed. */
+  filter: blur(3.5px);
+  transform: scale(1.01);
+}
+
+/* Figma scrim layer 795:5834 (flipped vertically → dark band at top).
+   No backdrop-filter: full-screen blur is banned by the perf guard. */
+.ck-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(43, 19, 6, 0.44) 0%, rgba(204, 102, 0, 0.05) 100%);
+}
+
+.ck-title {
+  position: absolute;
+  left: 98px;
+  top: 65px;
+  line-height: 1.226;
+  white-space: nowrap;
+  background: var(--title-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.ck-title-main {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 65.889px;
+}
+.ck-title-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 87.89px;
+}
+
+/* Gold 5-stop gradient text (headlines, '24' numeral, active row label) */
+.ck-gold-text {
+  background: linear-gradient(
+    122deg,
+    #ffffff 6.3%,
+    #ffe26e 25.29%,
+    #ffdb4d 44.64%,
+    #fff1ba 63.26%,
+    #ffe26e 82.25%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ---- stacking ------------------------------------------------------ */
+/* The transparent 910px wheel canvas overlaps the tab row and the panel's
+   left edge; interactive chrome must sit above it or it eats their taps. */
+
+.ck-tabs,
+.ck-panel,
+.ck-dots-pill,
+.ck-cta {
+  z-index: 2;
+}
+
+/* ---- wheel stage --------------------------------------------------- */
+
+.ck-wheel {
+  position: absolute;
+  left: 455px;
+  top: 183px;
+  width: 910px;
+  height: 910px;
+  z-index: 1;
+}
+
+/* Sized to its slot: the 910px wheel box on Values/Design, the 801×1197
+   flag-hero box while the three.js chunk loads on a cold Flag-tab entry. */
+.ck-wheel-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Soft ground contact shadow under the wheel (Figma 795:5835). */
+.ck-ground-shadow {
+  position: absolute;
+  left: 528px;
+  top: 941px;
+  width: 763px;
+  height: 42px;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(24, 10, 2, 0.55) 0%, rgba(24, 10, 2, 0) 72%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* ---- VALUES tab: left column --------------------------------------- */
+
+.ck-big-24 {
+  position: absolute;
+  left: 98px;
+  /* Figma node top is 271 with normal leading; 293 puts the digit ink at the
+     comp's y 329–451 (numeral bottom aligns with the VALUES bottom). */
+  top: 293px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 164.303px;
+  line-height: 1.226;
+}
+
+.ck-spokes-word,
+.ck-values-word {
+  position: absolute;
+  left: 314px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 50px;
+  line-height: 78px;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+.ck-spokes-word {
+  top: 319px;
+}
+.ck-values-word {
+  top: 397px;
+}
+.ck-gold-rule {
+  position: absolute;
+  left: 316px;
+  top: 396px;
+  width: 199px;
+  height: 3px;
+  background: var(--gold-gradient);
+  border-radius: 2px;
+}
+
+.ck-values-intro {
+  position: absolute;
+  left: 109px;
+  top: 516px;
+  width: 430px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+.ck-cta {
+  position: absolute;
+  left: 90px;
+  top: 800px;
+  width: 309px;
+  height: 101px;
+  border-radius: 50px;
+  background: linear-gradient(105.83deg, #ffffff 3.02%, #ffeac1 103.17%);
+  border: 2px solid #ba8601;
+  box-shadow: 0 15px 38px rgba(255, 247, 213, 0.64);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 29.091px;
+  color: #572f16;
+  cursor: pointer;
+}
+
+/* ---- VALUES tab: selected-virtue state ------------------------------ */
+
+.ck-virtue-headline {
+  position: absolute;
+  left: 102px;
+  /* Figma node top 318 w/ normal leading → ink y 346; 330 matches at lh 1.226. */
+  top: 330px;
+  max-width: 440px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  line-height: 1.226;
+  white-space: nowrap;
+}
+
+.ck-underline {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.ck-virtue-desc {
+  position: absolute;
+  left: 109px;
+  top: 492px;
+  width: 377px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+/* ---- VALUES tab: right glass list panel ------------------------------ */
+
+.ck-panel {
+  position: absolute;
+  left: 1349px;
+  top: 205px;
+  width: 524px;
+  height: 759px;
+  border-radius: 45px;
+  background-color: var(--glass-warm-panel-tint);
+  background-image: var(--glass-falloff);
+  border: 2px solid var(--cream-border);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-highlight), var(--glass-drop);
+}
+
+.ck-virtue-row {
+  position: relative;
+  width: 435px;
+  height: 112px;
+  flex: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ck-virtue-row::after {
+  content: '';
+  position: absolute;
+  left: 25px;
+  top: 104px;
+  width: 409px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border-radius: 1px;
+}
+.ck-virtue-row:last-child::after {
+  content: none;
+}
+
+/* Active row pill (Figma 795:6047) */
+.ck-virtue-row-pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 381px;
+  height: 101px;
+  border-radius: 50px;
+  background: linear-gradient(100.27deg, rgba(255, 219, 190, 0.4) 2.29%, rgba(181, 81, 0, 0.4) 100.84%);
+  box-shadow: 10px 9px 11.8px rgba(0, 0, 0, 0.25);
+}
+
+.ck-virtue-ring {
+  position: absolute;
+  left: 25px;
+  top: 14px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #fffdf4 0%, #fdf3dd 62%, #f3e2c0 100%);
+  box-shadow: 0 4px 9px rgba(0, 0, 0, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ck-virtue-icon-mask {
+  width: 48px;
+  height: 48px;
+  background-color: #b45a1c;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.ck-virtue-label {
+  position: absolute;
+  left: 127px;
+  top: 27px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 45px;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.ck-virtue-row.is-active .ck-virtue-label {
+  font-weight: 700;
+  background: linear-gradient(
+    122.71deg,
+    #ffffff 6.3%,
+    #ffe26e 25.29%,
+    #ffdb4d 44.64%,
+    #fff1ba 63.26%,
+    #ffe26e 82.25%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(3px 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+/* Page-dot pill, bottom center (Figma 795:6013) */
+.ck-dots-pill {
+  position: absolute;
+  left: 918px;
+  top: 1021px;
+  width: 84px;
+  height: 20px;
+  border-radius: 20px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- DESIGN tab ------------------------------------------------------ */
+
+.ck-design-headline {
+  position: absolute;
+  left: 107px;
+  /* Comp ink: line 1 y 347, line 2 y 424 → 77px pitch (0.87em). */
+  top: 344px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 88.5px;
+  line-height: 0.87;
+}
+
+.ck-design-subtitle {
+  position: absolute;
+  left: 109px;
+  top: 562px;
+  width: 419px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+/* (The engineering callouts formerly rendered here as DOM chips + an SVG
+   guide layer now live inside the 3D scene — Chakra3D's dims mode — so they
+   rotate with the wheel when visitors drag-spin it.) */
+
+/* Light glass info cards (stats / spec / symbolism / did-you-know) */
+.ck-card {
+  position: absolute;
+  border-radius: 41px;
+  border: 1px solid #ba8601;
+}
+.ck-card--stats {
+  left: 1348px;
+  top: 225px;
+  width: 520px;
+  height: 275px;
+  background: linear-gradient(99.94deg, rgba(255, 255, 255, 0.6) 3.02%, rgba(255, 234, 193, 0.6) 103.17%);
+}
+.ck-card--spec {
+  left: 1348px;
+  top: 534px;
+  width: 520px;
+  height: 445px;
+  background: linear-gradient(96.18deg, rgba(255, 255, 255, 0.83) 3.02%, rgba(255, 234, 193, 0.83) 103.17%);
+}
+.ck-card--symbolism {
+  left: 1348px;
+  top: 235px;
+  width: 520px;
+  height: 436px;
+  background: linear-gradient(96.31deg, rgba(255, 255, 255, 0.77) 3.02%, rgba(255, 234, 193, 0.77) 103.17%);
+}
+.ck-card--dyk {
+  left: 1348px;
+  top: 690px;
+  width: 520px;
+  height: 275px;
+  background: linear-gradient(99.94deg, rgba(255, 255, 255, 0.77) 3.02%, rgba(255, 234, 193, 0.77) 103.17%);
+}
+
+.ck-stat-card {
+  position: absolute;
+  top: 23px;
+  width: 227px;
+  height: 226px;
+  border-radius: 36.82px;
+  background: #f6eddf;
+  border: 0.898px solid var(--cream-border);
+  overflow: hidden;
+}
+.ck-stat-card--color {
+  left: 28px;
+}
+.ck-stat-card--spokes {
+  left: 266px;
+}
+.ck-stat-label {
+  margin-top: 30px;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 31.92px;
+  color: #543a21;
+}
+.ck-stat-swatch {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 227px;
+  height: 139px;
+  border-radius: 36.82px;
+  background: var(--navy-chakra);
+  border: 4.9px solid var(--cream-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 31.431px;
+  color: #fff7e5;
+}
+.ck-stat-value {
+  margin-top: 0;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 116.745px;
+  line-height: 1.1;
+  color: #543a21;
+}
+
+.ck-card-heading {
+  position: absolute;
+  left: 36px;
+  top: 40px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 37.917px;
+  color: #543a21;
+}
+
+.ck-spec-list {
+  position: absolute;
+  left: 36px;
+  top: 118px;
+  width: 458px;
+  list-style: none;
+}
+.ck-spec-list li {
+  position: relative;
+  padding-left: 24px;
+  /* Comp: single-line bullet pitch 49.5px, wrapped lines 33px (leading 1.576). */
+  margin-bottom: 16px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 21px;
+  line-height: 1.576;
+  color: #543a21;
+}
+.ck-spec-list li::before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+}
+
+/* ---- CHAKRA IN FLAG tab ---------------------------------------------- */
+
+.ck-flag-headline {
+  position: absolute;
+  left: 107px;
+  /* Figma node top 332.25 w/ leading 1.067 → ink y 329; 313 matches at 1.226. */
+  top: 313px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 88.5px;
+  line-height: 1.226;
+  white-space: nowrap;
+}
+
+.ck-flag-intro {
+  position: absolute;
+  left: 109px;
+  top: 484px;
+  width: 516px;
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+/* Live Chakra3D flag scene in the old flag-pole.png footprint (the box runs
+   past the 1080 stage bottom exactly like the image did — the pole exits the
+   screen). pointer-events none: flag mode has no interactions, and the tab
+   pills overlap this box's top-left corner. */
+.ck-flag-hero {
+  position: absolute;
+  left: 497px;
+  top: 183px;
+  width: 801px;
+  height: 1197px;
+  pointer-events: none;
+}
+
+.ck-symbolism-title {
+  position: absolute;
+  left: 27px;
+  top: 36px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 41.243px;
+  color: #543a21;
+}
+
+.ck-swatch-row {
+  position: absolute;
+  left: 27px;
+  /* 27 + swatch 116 + gap 15 + Figma text width 344 (green blurb = 2 lines). */
+  width: 475px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.ck-swatch {
+  flex: none;
+  width: 116px;
+  height: 84px;
+  border-radius: 14px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+}
+.ck-swatch-text {
+  font-family: var(--font-ui);
+  font-size: 21px;
+  line-height: 26px;
+  color: #543a21;
+}
+.ck-swatch-text b {
+  display: block;
+  font-weight: 800;
+}
+.ck-swatch-text span {
+  font-weight: 500;
+}
+
+.ck-dyk-fact {
+  position: absolute;
+  left: 42px;
+  top: 105px;
+  width: 438px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 21px;
+  line-height: 26px;
+  color: #543a21;
+}
+
+.ck-fact-dots {
+  position: absolute;
+  left: 43px;
+  top: 224px;
+  width: 419px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+.ck-fact-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #543a21;
+  padding: 0;
+  cursor: pointer;
+  /* larger invisible touch target */
+  box-shadow: 0 0 0 12px rgba(0, 0, 0, 0);
+}
+.ck-fact-dot.is-active {
+  width: 17px;
+  height: 17px;
+  background: #e9b10e;
+}
+.ck-fact-line {
+  flex: 1;
+  height: 2px;
+  background: rgba(84, 58, 33, 0.75);
+}

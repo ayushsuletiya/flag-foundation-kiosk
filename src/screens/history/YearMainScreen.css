@@ -1,0 +1,294 @@
+/* ============================================================
+   YearMainScreen — Figma frame 795:4273 "History — 1947 · Main"
+   All values are literal Figma pixels on the 1920x1080 Stage.
+   ============================================================ */
+
+.hy-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #140c02; /* under-photo fill during probe */
+}
+
+/* ---- Background stack ---------------------------------------- */
+.hy-bg-layer {
+  position: absolute;
+  inset: 0;
+  animation: hy-fade-in 350ms ease both; /* year-switch crossfade */
+}
+
+.hy-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.hy-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 900ms ease-in-out;
+}
+
+/* Full-canvas tint: rgba(204,102,0,.05) → rgba(43,19,6,.44) (795:4276).
+   Figma's 13px backdrop-blur on this layer composites under the photo and
+   has no visible effect — deliberately omitted (audit risk #3). */
+.hy-tint {
+  position: absolute;
+  inset: 0;
+  background: var(--home-scrim-gradient);
+}
+
+/* Left legibility scrim (795:4278) */
+.hy-left-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to left,
+    rgba(166, 92, 0, 0) 0%,
+    rgba(82, 45, 0, 0) 33.654%,
+    #281c00 100%
+  );
+}
+
+/* ---- Header (795:4301) ---------------------------------------- */
+.hy-header {
+  position: absolute;
+  left: 108px;
+  top: 83px;
+  line-height: 1.226;
+  white-space: pre;
+  /* Parisienne swashes overflow the line box; background-clip:text only
+     paints inside the border box, so grow the paint box with padding and
+     pull it back with equal negative margins — otherwise the script's
+     ascenders/descenders render transparent (clipped). */
+  padding: 45px 60px;
+  margin: -45px -60px;
+  background: linear-gradient(94.066deg, #fffbeb 0.42%, #f7c590 102.43%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.hy-header-plain {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 65.889px;
+}
+
+.hy-header-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 95.89px;
+  /* keep the Poppins strut in charge of the h1 line box */
+  line-height: 0;
+}
+
+/* ---- Hero column ---------------------------------------------- */
+.hy-hero {
+  position: absolute;
+  left: 122px;
+  top: 236px;
+  width: 880px;
+  animation: hy-fade-in 350ms ease both;
+}
+
+/* Digits + flag flow in a row so the gap between them stays constant
+   no matter how wide the year renders (1921 vs 1947). */
+.hy-year-row {
+  height: 192px; /* Figma: year top 236 → title block top 427.66 */
+  display: flex;
+  align-items: flex-start;
+  gap: 20px; /* = Figma's 1947 digits→flag gap */
+}
+
+/* Gold gradient year (795:4280). Top 57.5 puts the Poppins baseline at
+   page y=416.7 so the digits bottom-align with the flag box like Figma. */
+.hy-year {
+  margin-top: 57.5px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 164.303px;
+  line-height: 1;
+  background: linear-gradient(
+    109.896deg,
+    #ffffff 6.3%,
+    #ffe26e 25.29%,
+    #ffdb4d 44.64%,
+    #fff1ba 63.26%,
+    #ffe26e 82.25%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Flag area (795:4302) — a fixed box that ANY year's flag image FILLS
+   (object-fit: cover), vertically locked to the measured digit ink band
+   of the 164.3px year numeral (ink top 74.5, height 123 hero-relative;
+   measured live via canvas metrics). Box ratio 1.562 = the FFOI flag
+   canvas 414x265, so cover fills with zero crop for every year. */
+.hy-year-flag {
+  margin-top: 74px; /* box top sits on the digits' ink top */
+  width: 192px;
+  height: 123px;
+  flex-shrink: 0;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Placeholder shown in the same area until the client drops
+   year-flag.png / flag.png into assets/images/history/<year>/ */
+.hy-year-flag-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(24, 18, 6, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.hy-text-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Slide Title — Figma's 57.4px line reads the Excel "Slide Title" string */
+.hy-title {
+  /* clear the numeral's real ink (baseline ~433 page, 5px below the row
+     box) plus breathing room, per user request */
+  margin-top: 24px;
+  font-family: var(--font-ui);
+  font-weight: 300;
+  font-size: 57.397px;
+  line-height: 1.226;
+  color: var(--white);
+}
+
+/* Read More (795:4283/4284) — page y=536: title line ends ~498 + 38px gap */
+.hy-read-more {
+  margin-top: 38px;
+  width: 191px;
+  height: 61px;
+  border-radius: 19.536px;
+  border: 1px solid #fff6bd;
+  background: var(--gold-gradient);
+  font-family: var(--font-ui);
+  font-weight: 300;
+  font-size: 26.774px;
+  color: #000000;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease;
+}
+
+.hy-read-more:active {
+  transform: scale(0.96);
+}
+
+/* ---- Bottom timeline bar (795:4279) ---------------------------- */
+.hy-timeline {
+  position: absolute;
+  left: 108px;
+  top: 886px;
+  width: 1765px;
+  height: 173px;
+  border-radius: var(--radius-card-lg);
+  /* Figma 795:4279 glass: fill rgba(37,24,5,.17), 1px white inside stroke,
+     GLASS blur 4px. Falloff + inset highlight approximate the GLASS light. */
+  background-color: var(--glass-warm-bar-tint);
+  background-image: var(--glass-falloff);
+  border: 1px solid var(--white);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-highlight), var(--glass-drop);
+}
+
+/* Children of .hy-timeline offset by -1px: absolute children anchor to the
+   padding box, inside the 1px border, while Figma coords include it. */
+.hy-timeline-label {
+  position: absolute;
+  left: 20px;
+  top: 11px;
+  font-family: var(--font-ui);
+  font-weight: 300;
+  font-size: 27.28px;
+  color: var(--white);
+}
+
+/* Gold rule 1566px + 12px end dots (795:4285-4287) */
+.hy-track {
+  position: absolute;
+  left: 154.5px;
+  top: 31.5px;
+  width: 1566px;
+  height: 3px;
+  background: var(--gold-gradient);
+}
+
+.hy-track-dot {
+  position: absolute;
+  top: 27px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gold-gradient);
+}
+
+/* Year pills — flex + gap (audit risk #5: row must survive year edits) */
+.hy-pills {
+  position: absolute;
+  left: 20px;
+  top: 62px;
+  display: flex;
+  gap: 14px;
+}
+
+.hy-pill {
+  width: 177px;
+  height: 76px;
+  border-radius: 10px;
+  /* Figma pill glass: fill rgba(74,59,46,.45), 1px #8F692B, GLASS blur 4.
+     backdrop-filter deliberately OMITTED — the pill sits inside the
+     .hy-timeline glass (perf guard: never nest backdrop-filters);
+     plain translucency + falloff reads the same over the blurred bar. */
+  border: 1px solid #8f692b;
+  background-color: var(--glass-warm-pill-tint);
+  background-image: var(--glass-falloff);
+  box-shadow: var(--glass-highlight-soft);
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 26.774px;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease;
+}
+
+.hy-pill:active {
+  transform: scale(0.96);
+}
+
+.hy-pill-active {
+  /* Figma 795:4325: goldGrad fill, same 1px #8F692B stroke, no shadow.
+     Shorthand resets the tint + falloff layers. */
+  background: var(--gold-gradient);
+  box-shadow: var(--glass-highlight-soft);
+  color: #301a00;
+}
+
+@keyframes hy-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
