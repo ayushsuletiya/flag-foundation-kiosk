@@ -221,9 +221,22 @@
   }
 }
 
-/* Orbit mode owns its own touch glow — hide the arrival ring while lifted */
+/* Orbit mode owns its own touch glow — the arrival ring/bloom must not
+   ride along into the lift. animation:none (not just opacity) because a
+   running animation would override plain declarations. On release the
+   slot-0 rules re-apply and the arrival glow replays as the ring settles. */
+.sy-carousel[data-mode='orbit'] .sy-glow-ring,
+.sy-carousel[data-mode='orbit'] .sy-glow-ring rect,
+.sy-carousel[data-mode='orbit'] .sy-card3d {
+  animation: none;
+}
+
 .sy-carousel[data-mode='orbit'] .sy-glow-ring {
   opacity: 0;
+}
+
+.sy-carousel[data-mode='orbit'] .sy-card3d {
+  box-shadow: none;
 }
 
 /* Touch glow — warm gold bloom on the card under the finger */

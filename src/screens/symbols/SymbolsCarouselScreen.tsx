@@ -32,9 +32,12 @@ function orbitPose(ringIndex: number, count: number, spinDeg: number) {
   const theta = (((ringIndex * 360) / count + spinDeg) * Math.PI) / 180
   const s = Math.sin(theta)
   const c = Math.cos(theta)
+  // Steep scale/opacity falloff toward the back: 14 evenly-spaced cards
+  // inevitably bunch at the ellipse's horizontal edges mid-spin — strong
+  // depth separation keeps that from reading as a flat pile-up.
   return {
-    transform: `translate3d(${(s * 460).toFixed(1)}px, ${(30 + (1 - c) * 26).toFixed(1)}px, ${((c - 1) * 230).toFixed(1)}px) rotateY(${(-s * 35).toFixed(1)}deg) scale(${(0.6 + 0.16 * (c + 1)).toFixed(3)})`,
-    opacity: 0.5 + 0.25 * (c + 1),
+    transform: `translate3d(${(s * 440).toFixed(1)}px, ${(30 + (1 - c) * 30).toFixed(1)}px, ${((c - 1) * 280).toFixed(1)}px) rotateY(${(-s * 35).toFixed(1)}deg) scale(${(0.44 + 0.24 * (c + 1)).toFixed(3)})`,
+    opacity: 0.38 + 0.31 * (c + 1),
     zIndex: Math.round(100 + c * 50),
   } as const
 }
