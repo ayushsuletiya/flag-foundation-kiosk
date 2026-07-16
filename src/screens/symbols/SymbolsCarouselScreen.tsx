@@ -91,6 +91,14 @@ export function SymbolsCarouselScreen() {
     dragLastX.current = null
     setGlowSlug(null)
     if (mode !== 'orbit') return
+    // Drop-to-select: whichever card the drag left nearest the FRONT of the
+    // ring becomes the active symbol — the ring settles around it instead of
+    // snapping back. No drag (spin≈0) keeps the current symbol.
+    if (count > 0) {
+      const step = 360 / count
+      const k = ((Math.round(-spinRef.current / step) % count) + count) % count
+      if (k !== 0) setSelected((activeIndex + k) % count)
+    }
     setMode('settle')
     if (settleTimer.current !== null) clearTimeout(settleTimer.current)
     settleTimer.current = setTimeout(() => {
