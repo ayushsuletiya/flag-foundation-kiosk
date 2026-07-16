@@ -92,6 +92,17 @@
   z-index: 3;
 }
 
+/* Resting CENTER card = Figma's even dark under-scrim (795:3841). The
+   frosted glass let the podium beam bleed through as an uneven bright
+   patch behind the subject — glass stays for side cards and the lifted
+   ring, where pane separation matters. */
+.sy-carousel[data-mode='rest'] .sy-card3d[data-slot='0'] {
+  background-color: rgba(0, 0, 0, 0.51);
+  background-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .sy-card3d[data-slot='-1'] {
   transform: translate3d(-381px, 99px, -140px) rotateY(36deg) scale(0.857);
   z-index: 2;
