@@ -38,10 +38,22 @@ Target hardware: Windows, i5 11th gen, 16GB, integrated GPU.
 - Map: **only the selected state renders** (outline, lift, markers); other states = bare render,
   invisible tap targets only. One marker per district (dedupe in render).
 - Symbols detail: "Did You Know?" heading is a FIXED label; chevrons page FACTS, not symbols.
+- Symbols carousel: 3D ring; press-hold lifts ALL cards into a floating orbit — **finger drag is the
+  only thing that spins it** (no auto-spin); release = drop-to-select (nearest-front card wins).
+  Turntable sequences play on EVERY card including side thumbnails. **One uniform glass recipe on
+  all cards in all states** (no center-card special case, NO persistent halo — user removed it;
+  only the transient arrival border-trace + press touch-glow remain).
 - Chakra: virtue list order = Excel spoke order; DYK facts ≤135 chars; wheel drag-spins on its axle;
   Design tab uses 3D dims mode; Flag tab plays the chakra-docks-into-flag animation.
 - History year flags/backgrounds: generated placeholders until real art lands (specs baked into them).
 - No emoji in filenames. Idle reset (120s) returns home — intended kiosk behavior.
+
+## Pending (next session)
+- Wire from the design handoff (`~/Downloads/Design Brief_ Homepage Design-handoff.zip`, unzip →
+  `project/assets` + `project/uploads`): india_map_loop / india_map_fx_loop (map base — user picks
+  variant), tiranga_bg_loop vs flag_loop (home bg — user picks), flag_timeline_assets (history year
+  backgrounds + thumbnails), peacock_kling_loop, quiz q-bg-*.png. Turntable sequences already wired.
+- Phase 7: kiosk hardening + Windows/NSIS packaging (autostart, watchdog, soak test).
 
 ## Geo layer
 `src/data/geo/districts.json` maps (state, district) → normalized map coords (affine fit, rms 0.8%).
