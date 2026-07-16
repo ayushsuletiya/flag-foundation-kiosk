@@ -21,7 +21,6 @@ import './SymbolsCarouselScreen.css'
 
 const SWIPE_THRESHOLD_PX = 60
 const HOLD_TO_ORBIT_MS = 260
-const ORBIT_SPIN_DEG_PER_S = 14
 const SETTLE_MS = 750
 
 /**
@@ -65,35 +64,21 @@ export function SymbolsCarouselScreen() {
   const spinRef = useRef(0)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rafRef = useRef(0)
-  const lastT = useRef(0)
   const dragLastX = useRef<number | null>(null)
   const suppressClick = useRef(false)
-
-  useEffect(() => {
-    if (mode !== 'orbit') return
-    lastT.current = performance.now()
-    const tick = (t: number) => {
-      const dt = Math.min(0.05, (t - lastT.current) / 1000)
-      lastT.current = t
-      spinRef.current += ORBIT_SPIN_DEG_PER_S * dt
-      setSpin(spinRef.current)
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [mode])
 
   useEffect(
     () => () => {
       if (holdTimer.current !== null) clearTimeout(holdTimer.current)
       if (settleTimer.current !== null) clearTimeout(settleTimer.current)
-      cancelAnimationFrame(rafRef.current)
     },
     [],
   )
 
   const engageOrbit = () => {
+    // fresh lift always opens with the active card front-center
+    spinRef.current = 0
+    setSpin(0)
     setMode('orbit')
     suppressClick.current = true
   }
@@ -171,9 +156,10 @@ export function SymbolsCarouselScreen() {
         }}
         onPointerMove={(e) => {
           if (mode !== 'orbit') return
-          // drag spins the floating ring
+          // the finger is the only thing that spins the floating ring
           if (dragLastX.current !== null) {
             spinRef.current += (e.clientX - dragLastX.current) * 0.25
+            setSpin(spinRef.current)
           }
           dragLastX.current = e.clientX
           const card = (e.target as HTMLElement).closest<HTMLElement>('.sy-card3d')
