@@ -46,58 +46,83 @@
   width: 1060px;
   height: 620px;
   touch-action: pan-y;
+  /* 3D stage for the card ring; origin = center-slot card center */
+  perspective: 1600px;
+  perspective-origin: 543.5px 287px;
 }
 
-.sy-card {
+/* One element per visible symbol; base rect = the Figma CENTER slot
+   (page 454,251 379x472). Slot poses below are pure transforms so slot
+   changes glide in 3D. Side-slot constants are tuned so the projected
+   card lands on the Figma side rects (page 173/873, 392, 241x372). */
+.sy-card3d {
   position: absolute;
-  border-radius: 60px;
-  overflow: hidden;
-}
-
-/* Center card: 51% black scrim UNDER the subject (audit 795:3841). */
-.sy-card-center {
-  left: 354px; /* page 454 - carousel 100 */
-  top: 51px; /*  page 251 - carousel 200 */
+  left: 354px;
+  top: 51px;
   width: 379px;
   height: 472px;
-  background: rgba(0, 0, 0, 0.51);
-}
-
-/* Side cards: 36% black scrim OVER the image (dims inactive symbol). */
-.sy-card-side {
-  width: 241px;
-  height: 372px;
+  border-radius: 60px;
+  overflow: hidden;
+  padding: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.51); /* center under-scrim (795:3841) */
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 120ms ease;
+  will-change: transform, opacity;
+  transition:
+    transform 560ms cubic-bezier(0.22, 0.8, 0.25, 1),
+    opacity 400ms ease;
 }
 
-.sy-card-side:active {
-  transform: scale(0.97);
+.sy-card3d[data-slot='0'] {
+  transform: translate3d(0, 0, 0) rotateY(0deg) scale(1);
+  cursor: default;
+  z-index: 3;
 }
 
-.sy-card-left {
-  left: 73px; /* page 173 */
-  top: 192px; /* page 392 */
+.sy-card3d[data-slot='-1'] {
+  transform: translate3d(-381px, 99px, -140px) rotateY(36deg) scale(0.857);
+  z-index: 2;
 }
 
-.sy-card-right {
-  left: 773px; /* page 873 */
-  top: 192px;
+.sy-card3d[data-slot='1'] {
+  transform: translate3d(381px, 99px, -140px) rotateY(-36deg) scale(0.857);
+  z-index: 2;
+}
+
+/* Entry/exit poses — invisible, deeper in the ring */
+.sy-card3d[data-slot='-2'] {
+  transform: translate3d(-700px, 130px, -420px) rotateY(52deg) scale(0.75);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sy-card3d[data-slot='2'] {
+  transform: translate3d(700px, 130px, -420px) rotateY(-52deg) scale(0.75);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .sy-card-media {
   position: absolute;
   inset: 0;
-  animation: sy-fade-in 320ms ease both;
 }
 
+/* Side-card dim (Figma 36% over-scrim) — fades with the slot pose */
 .sy-card-dim {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.36);
+  opacity: 1;
   pointer-events: none;
+  transition: opacity 400ms ease;
+}
+
+.sy-card3d[data-slot='0'] .sy-card-dim {
+  opacity: 0;
 }
 
 /* ---- Pagination dots on the podium front face ------------------ */

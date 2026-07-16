@@ -47,8 +47,6 @@ export function SymbolsCarouselScreen() {
   }
 
   const active = identities[activeIndex]!
-  const prev = identities[(activeIndex + count - 1) % count]!
-  const next = identities[(activeIndex + 1) % count]!
   const activeSlug = symbolSlug(active.symbol)
   const shortName = symbolShortName(active)
   const nameFontSize = fitFontSize(shortName, 96.716, 660)
@@ -90,54 +88,42 @@ export function SymbolsCarouselScreen() {
           else if (dx >= SWIPE_THRESHOLD_PX) rotate(-1)
         }}
       >
-        <button
-          type="button"
-          className="sy-card sy-card-side sy-card-left"
-          aria-label={`Show ${symbolShortName(prev)}`}
-          onClick={() => rotate(-1)}
-        >
-          <div key={symbolSlug(prev.symbol)} className="sy-card-media">
-            <SymbolVisual
-              slug={symbolSlug(prev.symbol)}
-              name={symbolShortName(prev)}
-              width={241}
-              height={372}
-              mode="still"
-            />
-          </div>
-          <span className="sy-card-dim" />
-        </button>
-
-        <div className="sy-card sy-card-center">
-          <div key={activeSlug} className="sy-card-media">
-            <SymbolVisual
-              slug={activeSlug}
-              name={shortName}
-              width={379}
-              height={472}
-              mode="live"
-              fit="contain"
-            />
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="sy-card sy-card-side sy-card-right"
-          aria-label={`Show ${symbolShortName(next)}`}
-          onClick={() => rotate(1)}
-        >
-          <div key={symbolSlug(next.symbol)} className="sy-card-media">
-            <SymbolVisual
-              slug={symbolSlug(next.symbol)}
-              name={symbolShortName(next)}
-              width={241}
-              height={372}
-              mode="still"
-            />
-          </div>
-          <span className="sy-card-dim" />
-        </button>
+        {/* 3D ring: every card is ONE persistent element (keyed by slug) whose
+            slot pose (data-slot -2..2) is pure transform — so rotating the
+            carousel GLIDES cards around the arc. Cards beyond ±2 unmount:
+            they enter/exit at the invisible ±2 poses. */}
+        {identities.map((s, i) => {
+          let off = (((i - activeIndex) % count) + count) % count
+          if (off > count / 2) off -= count
+          if (Math.abs(off) > 2 || (count <= 2 && off < 0)) return null
+          const slug = symbolSlug(s.symbol)
+          const isCenter = off === 0
+          return (
+            <button
+              key={slug}
+              type="button"
+              className="sy-card3d"
+              data-slot={off}
+              aria-label={isCenter ? shortName : `Show ${symbolShortName(s)}`}
+              tabIndex={isCenter ? -1 : 0}
+              onClick={() => {
+                if (off !== 0) rotate(off < 0 ? -1 : 1)
+              }}
+            >
+              <div className="sy-card-media">
+                <SymbolVisual
+                  slug={slug}
+                  name={symbolShortName(s)}
+                  width={379}
+                  height={472}
+                  mode={isCenter ? 'live' : 'still'}
+                  fit="contain"
+                />
+              </div>
+              <span className="sy-card-dim" />
+            </button>
+          )
+        })}
       </div>
 
       {/* Pagination dots on the podium face — count is Excel-driven. */}
