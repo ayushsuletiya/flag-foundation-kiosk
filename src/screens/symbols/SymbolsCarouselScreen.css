@@ -19,9 +19,40 @@
   top: 0;
   width: 2161.4px;
   height: 1080.2px;
+  /* camera pull-back: the stage relaxes out of a slight zoom on entry */
+  animation: sy-stage-zoom 4200ms cubic-bezier(0.25, 0.6, 0.3, 1) both;
+}
+
+@keyframes sy-stage-zoom {
+  from {
+    transform: scale(1.045);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Intro veil — scene opens from black during the fly-in phase */
+.sy-veil {
+  position: absolute;
+  inset: 0;
+  background: #020715;
+  z-index: 60;
+  pointer-events: none;
+  animation: sy-veil-out 750ms ease 120ms both;
+}
+
+@keyframes sy-veil-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* ---- Header (Poppins SemiBold 65.889, title gradient) --------- */
+/* Gradient sits on the blur-typewriter chars (see .sy-name note). */
 .sy-header {
   position: absolute;
   left: 81px;
@@ -31,7 +62,10 @@
   font-weight: 600;
   font-size: 65.889px;
   line-height: 1.226;
-  background: var(--title-gradient);
+}
+
+.sy-header .btt-char {
+  background-image: var(--title-gradient);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -139,17 +173,47 @@
   opacity: 0;
 }
 
-/* ---- press-and-hold orbit ---------------------------------------- */
+/* ---- category intro ------------------------------------------------ */
+/* "Summoned from the podium": each card is born as a point of light deep
+   inside the podium and spirals up/out to its ring pose (carried in as
+   CSS vars, staggered per card via animation-delay). Then data-mode flips
+   to intro-spin: the animation drops and rAF-driven ring poses take one
+   slow revolution before the ring settles into the rest slots. */
+.sy-carousel[data-mode='intro'] .sy-card3d {
+  animation: sy-spawn 800ms cubic-bezier(0.22, 0.75, 0.3, 1) both;
+}
+
+@keyframes sy-spawn {
+  from {
+    transform: translate3d(0, 250px, -760px) rotateY(-390deg) scale(0.05);
+    opacity: 0;
+  }
+  55% {
+    opacity: var(--sy-pose-o, 1);
+  }
+  to {
+    transform: var(--sy-pose, none);
+    opacity: var(--sy-pose-o, 1);
+  }
+}
+
+/* ---- press-and-hold orbit (+ intro revolution) -------------------- */
 /* While the ring floats, per-frame pose targets need a short linear
-   chase so auto-spin + drag-spin read as smooth drift, not lag. */
-.sy-carousel[data-mode='orbit'] .sy-card3d {
+   chase so drag-spin / the intro revolution read as smooth drift.
+   animation:none on intro-spin releases the sy-spawn fill so the inline
+   ring poses drive again. */
+.sy-carousel[data-mode='orbit'] .sy-card3d,
+.sy-carousel[data-mode='intro-spin'] .sy-card3d {
+  animation: none;
   transition:
     transform 220ms linear,
     opacity 220ms linear;
 }
 
 /* Floating cards all read "awake": dims nearly lift */
-.sy-carousel[data-mode='orbit'] .sy-card-dim {
+.sy-carousel[data-mode='orbit'] .sy-card-dim,
+.sy-carousel[data-mode='intro'] .sy-card-dim,
+.sy-carousel[data-mode='intro-spin'] .sy-card-dim {
   opacity: 0.12;
 }
 
@@ -215,17 +279,24 @@
 }
 
 
-/* Orbit mode owns its own touch glow — the arrival ring/bloom must not
-   ride along into the lift. animation:none (not just opacity) because a
-   running animation would override plain declarations. On release the
-   slot-0 rules re-apply and the arrival glow replays as the ring settles. */
+/* Lifted modes own their own motion — the arrival ring must not ride
+   along into the lift/fly-in. animation:none (not just opacity) because a
+   running animation would override plain declarations. On settle the
+   slot-0 rules re-apply and the arrival glow replays as the ring lands.
+   (Card animation:none for orbit/intro-spin lives in the chase rule above
+   — during 'intro' the card keeps its sy-spawn animation.) */
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
 .sy-carousel[data-mode='orbit'] .sy-glow-ring rect,
-.sy-carousel[data-mode='orbit'] .sy-card3d {
+.sy-carousel[data-mode='intro'] .sy-glow-ring,
+.sy-carousel[data-mode='intro'] .sy-glow-ring rect,
+.sy-carousel[data-mode='intro-spin'] .sy-glow-ring,
+.sy-carousel[data-mode='intro-spin'] .sy-glow-ring rect {
   animation: none;
 }
 
-.sy-carousel[data-mode='orbit'] .sy-glow-ring {
+.sy-carousel[data-mode='orbit'] .sy-glow-ring,
+.sy-carousel[data-mode='intro'] .sy-glow-ring,
+.sy-carousel[data-mode='intro-spin'] .sy-glow-ring {
   opacity: 0;
 }
 
@@ -257,6 +328,17 @@
   left: 643.5px;
   top: 764px;
   transform: translateX(-50%);
+  /* mounts as the intro settles */
+  animation: sy-soft-in 420ms ease both;
+}
+
+@keyframes sy-soft-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ---- Right text column ----------------------------------------- */

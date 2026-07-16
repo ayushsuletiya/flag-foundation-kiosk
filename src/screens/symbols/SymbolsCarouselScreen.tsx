@@ -9,7 +9,7 @@
  * artwork); the center card plays the symbol's PNG-sequence turntable
  * (statics only today), and Know More opens /symbols/:slug.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
@@ -23,6 +23,13 @@ import './SymbolsCarouselScreen.css'
 const SWIPE_THRESHOLD_PX = 60
 const HOLD_TO_ORBIT_MS = 260
 const SETTLE_MS = 750
+
+// Category intro — "summoned from the podium": cards are born inside the
+// podium one by one and spiral out to the floating ring (fly), the full
+// ring takes one slow revolution (spin), then settles into the rest slots.
+const INTRO_FLY_MS = 800
+const INTRO_STAGGER_MS = 90
+const INTRO_SPIN_MS = 1500
 
 /**
  * Orbit pose for a card while the ring is lifted (press-and-hold).
@@ -59,15 +66,19 @@ export function SymbolsCarouselScreen() {
 
   const swipeStartX = useRef<number | null>(null)
 
-  // ---- press-and-hold orbit mode -----------------------------------
-  // 'rest' = Figma slot poses · 'orbit' = full ring floats around the
-  // podium (slow auto-spin + drag-to-spin) · 'settle' = gliding home.
-  const [mode, setMode] = useState<'rest' | 'orbit' | 'settle'>('rest')
+  // ---- mode state machine -------------------------------------------
+  // 'intro' = cards fly in from the podium · 'intro-spin' = the assembled
+  // ring takes one revolution · 'rest' = Figma slot poses · 'orbit' = full
+  // ring floats (drag-to-spin) · 'settle' = gliding home.
+  const [mode, setMode] = useState<'intro' | 'intro-spin' | 'rest' | 'orbit' | 'settle'>('intro')
+  const isIntro = mode === 'intro' || mode === 'intro-spin'
   const [spin, setSpin] = useState(0)
   const [glowSlug, setGlowSlug] = useState<string | null>(null)
   const spinRef = useRef(0)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const introRaf = useRef<number | null>(null)
+  const introStarted = useRef(false)
   const dragLastX = useRef<number | null>(null)
   const suppressClick = useRef(false)
 
@@ -75,9 +86,69 @@ export function SymbolsCarouselScreen() {
     () => () => {
       if (holdTimer.current !== null) clearTimeout(holdTimer.current)
       if (settleTimer.current !== null) clearTimeout(settleTimer.current)
+      if (introRaf.current !== null) cancelAnimationFrame(introRaf.current)
     },
     [],
   )
+
+  const settleToRest = () => {
+    setMode('settle')
+    if (settleTimer.current !== null) clearTimeout(settleTimer.current)
+    settleTimer.current = setTimeout(() => {
+      setMode('rest')
+      suppressClick.current = false
+    }, SETTLE_MS)
+  }
+
+  // Intro timeline: fly-in is CSS-staggered per card; after the last card
+  // lands, one decelerating revolution, then the ring settles. A single
+  // elapsed-time rAF machine (not chained timeouts) so a hidden window
+  // pauses the intro instead of finishing it invisibly.
+  useEffect(() => {
+    if (count === 0 || introStarted.current) return
+    introStarted.current = true
+    const flyTotal = INTRO_FLY_MS + (count - 1) * INTRO_STAGGER_MS + 200
+    let start: number | null = null
+    let spinning = false
+    const tick = (now: number) => {
+      start ??= now
+      const t = now - start
+      if (t < flyTotal) {
+        introRaf.current = requestAnimationFrame(tick)
+        return
+      }
+      if (!spinning) {
+        spinning = true
+        setMode('intro-spin')
+      }
+      const p = Math.min(1, (t - flyTotal) / INTRO_SPIN_MS)
+      const eased = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
+      spinRef.current = -360 * eased
+      setSpin(spinRef.current)
+      if (p < 1) {
+        introRaf.current = requestAnimationFrame(tick)
+      } else {
+        introRaf.current = null
+        spinRef.current = 0 // -360 ≡ 0: same pose, active card unchanged
+        setSpin(0)
+        settleToRest()
+      }
+    }
+    introRaf.current = requestAnimationFrame(tick)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count])
+
+  // Kiosk users won't wait: any touch during the intro fast-forwards it.
+  const skipIntro = () => {
+    if (introRaf.current !== null) {
+      cancelAnimationFrame(introRaf.current)
+      introRaf.current = null
+    }
+    spinRef.current = 0
+    setSpin(0)
+    suppressClick.current = true
+    settleToRest()
+  }
 
   const engageOrbit = () => {
     // fresh lift always opens with the active card front-center
@@ -103,12 +174,7 @@ export function SymbolsCarouselScreen() {
       const k = ((Math.round(-spinRef.current / step) % count) + count) % count
       if (k !== 0) setSelected((activeIndex + k) % count)
     }
-    setMode('settle')
-    if (settleTimer.current !== null) clearTimeout(settleTimer.current)
-    settleTimer.current = setTimeout(() => {
-      setMode('rest')
-      suppressClick.current = false
-    }, SETTLE_MS)
+    settleToRest()
   }
 
   if (count === 0) {
@@ -130,12 +196,18 @@ export function SymbolsCarouselScreen() {
   }
 
   return (
-    <div className="sy-screen">
+    <div className="sy-screen" onPointerDown={isIntro ? skipIntro : undefined}>
       {/* Baked stage (navy + mandala + podium), pre-flipped to match the
           render; design cover-crops region x=217..2094 of the 2113px source. */}
       <img className="sy-stage-bg" src="assets/images/symbols/stage-intro.png" alt="" />
 
-      <h1 className="sy-header">National Symbols of India</h1>
+      {/* Intro veil — the scene opens from black while the stage relaxes
+          out of its zoom; unmounts once the fly-in phase ends. */}
+      {mode === 'intro' && <div className="sy-veil" />}
+
+      <h1 className="sy-header">
+        <BlurTypeText text="National Symbols of India" delay={400} stagger={34} budget={900} />
+      </h1>
 
       <HomeButton
         onClick={() => navigate('/')}
@@ -159,6 +231,7 @@ export function SymbolsCarouselScreen() {
           }
         }}
         onPointerDown={(e) => {
+          if (isIntro) return // the screen-root handler fast-forwards the intro
           swipeStartX.current = e.clientX
           dragLastX.current = e.clientX
           const card = (e.target as HTMLElement).closest<HTMLElement>('.sy-card3d')
@@ -204,7 +277,19 @@ export function SymbolsCarouselScreen() {
           if (!lifted && (Math.abs(off) > 2 || (count <= 2 && off < 0))) return null
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
-          const pose = mode === 'orbit' ? orbitPose(ringIndex, count, spin) : undefined
+          const pose = mode === 'orbit' || isIntro ? orbitPose(ringIndex, count, spin) : undefined
+          // During the intro fly-in the sy-spawn animation drives each card
+          // from inside the podium to its ring pose — the target pose rides
+          // along as CSS vars, the stagger as a per-card animation delay.
+          const style =
+            mode === 'intro'
+              ? ({
+                  ...pose,
+                  '--sy-pose': pose!.transform,
+                  '--sy-pose-o': String(pose!.opacity),
+                  animationDelay: `${ringIndex * INTRO_STAGGER_MS}ms`,
+                } as CSSProperties)
+              : (pose as CSSProperties | undefined)
           return (
             <button
               key={slug}
@@ -214,7 +299,7 @@ export function SymbolsCarouselScreen() {
               data-slug={slug}
               aria-label={isCenter ? shortName : `Show ${symbolShortName(s)}`}
               tabIndex={isCenter ? -1 : 0}
-              style={pose}
+              style={style}
               onClick={() => {
                 if (mode === 'rest' && off !== 0) rotate(off < 0 ? -1 : 1)
               }}
@@ -242,17 +327,22 @@ export function SymbolsCarouselScreen() {
         })}
       </div>
 
-      {/* Pagination dots on the podium face — count is Excel-driven. */}
-      <PaginationDots
-        count={count}
-        activeIndex={activeIndex}
-        onSelect={(i) => setSelected(i)}
-        className="sy-dots"
-      />
+      {/* Pagination dots on the podium face — count is Excel-driven.
+          Held back until the intro's ring settles, then fade in. */}
+      {!isIntro && (
+        <PaginationDots
+          count={count}
+          activeIndex={activeIndex}
+          onSelect={(i) => setSelected(i)}
+          className="sy-dots"
+        />
+      )}
 
       {/* Right text column — name, category, Know More (all Excel-driven).
-          Keyed on the slug so the blur-typewriter replays on every change. */}
-      <div key={activeSlug} className="sy-info">
+          Keyed on the slug so the blur-typewriter replays on every change;
+          first mounted as the intro settles so the typing caps the intro. */}
+      {!isIntro && (
+        <div key={activeSlug} className="sy-info">
         <p className="sy-name" style={{ fontSize: nameFontSize }}>
           <BlurTypeText text={shortName} delay={80} stagger={48} budget={620} fitWidth={660} />
         </p>
@@ -272,7 +362,8 @@ export function SymbolsCarouselScreen() {
         >
           Know More
         </button>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
