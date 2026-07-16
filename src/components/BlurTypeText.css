@@ -1,0 +1,27 @@
+.btt {
+  display: inline-block;
+}
+
+/* inline-block so transform/filter apply per glyph */
+.btt-char {
+  display: inline-block;
+  animation: btt-char-in 480ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* Materialize: each char rises out of a heavy blur, is fully opaque by
+   midway, and settles sharp — reads as elegant typing at 40-50ms stagger. */
+@keyframes btt-char-in {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translateY(0.18em) scale(1.08);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}

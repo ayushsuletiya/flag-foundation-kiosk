@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
+import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
@@ -249,12 +250,21 @@ export function SymbolsCarouselScreen() {
         className="sy-dots"
       />
 
-      {/* Right text column — name, category, Know More (all Excel-driven). */}
+      {/* Right text column — name, category, Know More (all Excel-driven).
+          Keyed on the slug so the blur-typewriter replays on every change. */}
       <div key={activeSlug} className="sy-info">
         <p className="sy-name" style={{ fontSize: nameFontSize }}>
-          {shortName}
+          <BlurTypeText text={shortName} delay={80} stagger={48} budget={620} fitWidth={660} />
         </p>
-        <p className="sy-subtitle">{symbolSubtitle(active)}</p>
+        <p className="sy-subtitle">
+          <BlurTypeText
+            text={symbolSubtitle(active)}
+            delay={340}
+            stagger={26}
+            budget={420}
+            fitWidth={660}
+          />
+        </p>
         <button
           type="button"
           className="sy-know-more"
