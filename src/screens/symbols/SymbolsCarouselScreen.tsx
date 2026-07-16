@@ -219,12 +219,14 @@ export function SymbolsCarouselScreen() {
               }}
             >
               <div className="sy-card-media">
+                {/* mode "live" on EVERY card — turntables play in the side
+                    thumbnails too (user decision 2026-07-17), not just center */}
                 <SymbolVisual
                   slug={slug}
                   name={symbolShortName(s)}
                   width={379}
                   height={472}
-                  mode={isCenter ? 'live' : 'still'}
+                  mode="live"
                   fit="contain"
                 />
               </div>
