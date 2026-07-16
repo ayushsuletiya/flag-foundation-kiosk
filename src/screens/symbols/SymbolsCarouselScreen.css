@@ -151,36 +151,53 @@
   height: 100%;
   pointer-events: none;
   opacity: 0;
+  /* luminous stroke, not a hairline */
+  filter: drop-shadow(0 0 6px rgba(255, 210, 110, 0.85));
 }
 
 .sy-glow-ring rect {
   fill: none;
-  stroke: rgba(255, 219, 130, 0.95);
-  stroke-width: 3;
+  stroke: rgba(255, 222, 140, 0.95);
+  stroke-width: 4;
   stroke-linecap: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
+  /* symmetric fill: dash pinned to TOP-CENTER (path pos 8.163 of 100),
+     both ends grow together down the sides and meet at bottom-center */
+  stroke-dasharray: 0.5 99.5;
+  stroke-dashoffset: -7.913;
 }
 
+/* Whole moment ≈ 2s after the card lands: borders fill (0-42%),
+   brief full-frame glow (42-55%), then everything settles away. */
 .sy-card3d[data-slot='0'] .sy-glow-ring {
-  opacity: 1;
-  transition: opacity 300ms ease;
+  animation: sy-ring-fade 2000ms 380ms ease both;
 }
 
 .sy-card3d[data-slot='0'] .sy-glow-ring rect {
-  animation: sy-trace 950ms 420ms cubic-bezier(0.45, 0, 0.2, 1) both;
+  animation: sy-trace 850ms 380ms cubic-bezier(0.3, 0, 0.4, 1) both;
 }
 
 .sy-card3d[data-slot='0'] {
-  animation: sy-bloom 1600ms 420ms ease-out both;
+  animation: sy-bloom 2000ms 380ms ease both;
 }
 
 @keyframes sy-trace {
   from {
-    stroke-dashoffset: 100;
+    stroke-dasharray: 0.5 99.5;
+    stroke-dashoffset: -7.913;
   }
   to {
-    stroke-dashoffset: 0;
+    stroke-dasharray: 100 0;
+    stroke-dashoffset: 41.837;
+  }
+}
+
+@keyframes sy-ring-fade {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 
@@ -190,15 +207,15 @@
       0 0 0 0 rgba(255, 196, 84, 0),
       0 0 0 0 rgba(255, 180, 60, 0);
   }
-  55% {
+  42% {
     box-shadow:
-      0 0 44px 10px rgba(255, 196, 84, 0.62),
-      0 0 112px 24px rgba(255, 180, 60, 0.3);
+      0 0 46px 10px rgba(255, 196, 84, 0.6),
+      0 0 115px 24px rgba(255, 180, 60, 0.3);
   }
   100% {
     box-shadow:
-      0 0 26px 6px rgba(255, 196, 84, 0.4),
-      0 0 70px 14px rgba(255, 180, 60, 0.18);
+      0 0 18px 4px rgba(255, 196, 84, 0.14),
+      0 0 48px 10px rgba(255, 180, 60, 0.08);
   }
 }
 
