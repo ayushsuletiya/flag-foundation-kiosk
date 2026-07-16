@@ -190,9 +190,8 @@
   animation: sy-trace 800ms 300ms cubic-bezier(0.3, 0, 0.4, 1) both;
 }
 
-.sy-card3d[data-slot='0'] {
-  animation: sy-bloom 2000ms 300ms ease both;
-}
+/* (halo bloom removed — user 2026-07-17: center card keeps clean glass;
+   the border trace below still plays on arrival and fades out fully) */
 
 @keyframes sy-trace {
   from {
@@ -215,25 +214,6 @@
   }
 }
 
-@keyframes sy-bloom {
-  0% {
-    box-shadow:
-      0 0 0 0 rgba(255, 196, 84, 0),
-      0 0 0 0 rgba(255, 180, 60, 0);
-  }
-  42% {
-    box-shadow:
-      0 0 46px 10px rgba(255, 196, 84, 0.6),
-      0 0 115px 24px rgba(255, 180, 60, 0.3);
-  }
-  100% {
-    /* settled halo — clearly visible on EVERY centered card, not just
-       noticeable after staring (was 0.14/0.08, read as tiger-only) */
-    box-shadow:
-      0 0 24px 6px rgba(255, 200, 95, 0.34),
-      0 0 64px 14px rgba(255, 184, 66, 0.16);
-  }
-}
 
 /* Orbit mode owns its own touch glow — the arrival ring/bloom must not
    ride along into the lift. animation:none (not just opacity) because a
