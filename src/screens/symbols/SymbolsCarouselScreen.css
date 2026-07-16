@@ -139,6 +139,74 @@
   opacity: 0.12;
 }
 
+/* ---- center-arrival glow ----------------------------------------- */
+/* When a card's data-slot flips to 0 these selectors start matching and
+   the animations run once: the border TRACES around the card while the
+   bloom swells, then both settle into a soft steady halo. Delay 420ms =
+   the card is just landing from its 560ms glide. */
+.sy-glow-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.sy-glow-ring rect {
+  fill: none;
+  stroke: rgba(255, 219, 130, 0.95);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+
+.sy-card3d[data-slot='0'] .sy-glow-ring {
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.sy-card3d[data-slot='0'] .sy-glow-ring rect {
+  animation: sy-trace 950ms 420ms cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+
+.sy-card3d[data-slot='0'] {
+  animation: sy-bloom 1600ms 420ms ease-out both;
+}
+
+@keyframes sy-trace {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sy-bloom {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(255, 196, 84, 0),
+      0 0 0 0 rgba(255, 180, 60, 0);
+  }
+  55% {
+    box-shadow:
+      0 0 44px 10px rgba(255, 196, 84, 0.62),
+      0 0 112px 24px rgba(255, 180, 60, 0.3);
+  }
+  100% {
+    box-shadow:
+      0 0 26px 6px rgba(255, 196, 84, 0.4),
+      0 0 70px 14px rgba(255, 180, 60, 0.18);
+  }
+}
+
+/* Orbit mode owns its own touch glow — hide the arrival ring while lifted */
+.sy-carousel[data-mode='orbit'] .sy-glow-ring {
+  opacity: 0;
+}
+
 /* Touch glow — warm gold bloom on the card under the finger */
 .sy-card-glow {
   box-shadow:

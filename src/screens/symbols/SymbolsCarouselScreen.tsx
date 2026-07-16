@@ -226,6 +226,11 @@ export function SymbolsCarouselScreen() {
                 />
               </div>
               <span className="sy-card-dim" />
+              {/* Center-arrival glow: gold stroke traces the border, bloom
+                  settles (CSS animations start when data-slot becomes 0). */}
+              <svg className="sy-glow-ring" viewBox="0 0 379 472" aria-hidden="true">
+                <rect x="2" y="2" width="375" height="468" rx="58" pathLength="100" />
+              </svg>
             </button>
           )
         })}
