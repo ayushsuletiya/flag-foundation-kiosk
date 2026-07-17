@@ -613,8 +613,12 @@ function createChakraScene(
   // additively over the CSS plate, so the shafts spill onto the background
   // too. The spinning spokes chop the disc, so sharp rays sweep and
   // flicker through the gaps as the wheel turns.
-  const occRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
-  const occBlack = new THREE.MeshBasicMaterial({ color: 0x000000 })
+  // Quarter res: linear filtering pre-blurs the thin spoke-gap slivers that
+  // otherwise smear into aliased "sparkle" spikes.
+  const occRT = new THREE.WebGLRenderTarget(Math.floor(width / 4), Math.floor(height / 4))
+  // Wheel mask goes to the GREEN channel (sun light lives in RED): the ray
+  // shader dims shafts where they would paint across the wheel itself.
+  const occBlack = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
   const occSunScene = new THREE.Scene()
   // Soft-edged sun: a hard disc produces crisp arcade streaks; a radial
   // falloff source scatters into soft, filmic shafts.
@@ -622,9 +626,10 @@ function createChakraScene(
   sunCanvas.width = sunCanvas.height = 128
   const sunCtx = sunCanvas.getContext('2d')!
   const sunGrad = sunCtx.createRadialGradient(64, 64, 6, 64, 64, 64)
-  sunGrad.addColorStop(0, 'rgba(255, 255, 255, 1)')
-  sunGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)')
-  sunGrad.addColorStop(1, 'rgba(255, 255, 255, 0)')
+  // red-only: the RED channel is the light source, GREEN is the wheel mask
+  sunGrad.addColorStop(0, 'rgba(255, 0, 0, 1)')
+  sunGrad.addColorStop(0.35, 'rgba(255, 0, 0, 0.55)')
+  sunGrad.addColorStop(1, 'rgba(255, 0, 0, 0)')
   sunCtx.fillStyle = sunGrad
   sunCtx.fillRect(0, 0, 128, 128)
   const occSun = new THREE.Mesh(
@@ -647,7 +652,7 @@ function createChakraScene(
     uniforms: {
       tOcc: { value: occRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
-      strength: { value: 1.0 }, // user-tuned soft
+      strength: { value: 0.55 }, // user-tuned soft
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -675,7 +680,11 @@ function createChakraScene(
         // never print a rectangular seam against the background plate
         float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) *
           smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
-        vec3 col = vec3(1.0, 0.78, 0.45) * illum * 0.075 * strength * edge;
+        // shafts crossing the wheel itself get knocked down hard — that
+        // over-the-spokes glare is what reads as sparkle
+        float wheelMask = texture2D(tOcc, vUv).g;
+        float overWheel = mix(1.0, 0.22, clamp(wheelMask * 1.5, 0.0, 1.0));
+        vec3 col = vec3(1.0, 0.78, 0.45) * illum * 0.075 * strength * edge * overWheel;
         gl_FragColor = vec4(col, 0.0);
       }
     `,
