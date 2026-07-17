@@ -604,6 +604,98 @@ function createChakraScene(
   liveCatcher.receiveShadow = true
   scene.add(liveCatcher)
 
+  /* ------------------------------------------ god rays (sun-through) -- */
+  // "Light coming through the chakra": screen-space volumetric scattering.
+  // Pass 1 renders an occlusion buffer — a bright sun disc at the plate's
+  // sun position with the wheel silhouetted BLACK over it. Pass 2 radially
+  // smears that buffer away from the sun and ADDS it over the frame; on
+  // this transparent canvas, colour written with zero alpha composites
+  // additively over the CSS plate, so the shafts spill onto the background
+  // too. The spinning spokes chop the disc, so sharp rays sweep and
+  // flicker through the gaps as the wheel turns.
+  const occRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
+  const occBlack = new THREE.MeshBasicMaterial({ color: 0x000000 })
+  const occSunScene = new THREE.Scene()
+  const occSun = new THREE.Mesh(
+    new THREE.CircleGeometry(38, 48),
+    new THREE.MeshBasicMaterial({ color: 0xfff3d0 }),
+  )
+  occSun.position.set(28, -46, -286) // the plate's sun, dead behind the wheel
+  occSunScene.add(occSun)
+  const raySunNdc = new THREE.Vector3()
+  const rayScene = new THREE.Scene()
+  const rayCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+  const rayMat = new THREE.ShaderMaterial({
+    uniforms: {
+      tOcc: { value: occRT.texture },
+      sunUv: { value: new THREE.Vector2(0.5, 0.5) },
+      strength: { value: 3.0 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      varying vec2 vUv;
+      uniform sampler2D tOcc;
+      uniform vec2 sunUv;
+      uniform float strength;
+      void main() {
+        const int SAMPLES = 64;
+        vec2 delta = (vUv - sunUv) * (0.92 / float(SAMPLES));
+        vec2 uv = vUv;
+        float illum = 0.0;
+        float falloff = 1.0;
+        for (int i = 0; i < SAMPLES; i++) {
+          uv -= delta;
+          illum += texture2D(tOcc, uv).r * falloff;
+          falloff *= 0.968;
+        }
+        vec3 col = vec3(1.0, 0.78, 0.45) * illum * 0.075 * strength;
+        gl_FragColor = vec4(col, 0.0);
+      }
+    `,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneFactor,
+    blendSrcAlpha: THREE.ZeroFactor,
+    blendDstAlpha: THREE.OneFactor,
+  })
+  rayScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), rayMat))
+
+  function renderGodRays(): void {
+    const prevContact = contactShadow.visible
+    const prevCatcher = liveCatcher.visible
+    const prevDims = dimGroup?.visible ?? false
+    contactShadow.visible = false
+    liveCatcher.visible = false
+    if (dimGroup) dimGroup.visible = false
+    const prevShadowAuto = renderer.shadowMap.autoUpdate
+    renderer.shadowMap.autoUpdate = false
+    renderer.setRenderTarget(occRT)
+    renderer.clear()
+    renderer.autoClear = false
+    renderer.render(occSunScene, camera)
+    scene.overrideMaterial = occBlack
+    renderer.render(scene, camera)
+    scene.overrideMaterial = null
+    renderer.setRenderTarget(null)
+    renderer.shadowMap.autoUpdate = prevShadowAuto
+    contactShadow.visible = prevContact
+    liveCatcher.visible = prevCatcher
+    if (dimGroup) dimGroup.visible = prevDims
+    raySunNdc.copy(occSun.position).project(camera)
+    ;(rayMat.uniforms['sunUv']!.value as THREE.Vector2).set(
+      (raySunNdc.x + 1) / 2,
+      (raySunNdc.y + 1) / 2,
+    )
+    renderer.render(rayScene, rayCam)
+    renderer.autoClear = true
+  }
+
   // Swap the studio env for one built from the ACTUAL sunset plate — the
   // wheel then reflects/absorbs the same warm sky and dark sea it sits in.
   new THREE.TextureLoader().load('assets/images/chakra/bg-sunset.png', (t) => {
@@ -1195,6 +1287,9 @@ function createChakraScene(
       }
     }
     renderer.render(scene, camera)
+    // sun shafts through the spokes — wheel framing only (flag mode has
+    // its own choreography and no visible sun)
+    if (modeState === 'wheel') renderGodRays()
   })
 
   function dispose() {
@@ -1216,6 +1311,11 @@ function createChakraScene(
     spokeGeo.dispose()
     spokes.forEach((s) => s.material.dispose())
     material.dispose()
+    occRT.dispose()
+    occBlack.dispose()
+    occSun.geometry.dispose()
+    occSun.material.dispose()
+    rayMat.dispose()
     // flag resources (only allocated if flag mode was ever entered)
     if (flagGroup !== null) {
       scene.remove(flagGroup)
