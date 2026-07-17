@@ -14,7 +14,42 @@
     "check:content": "node scripts/check-content.ts",
     "mirror:photos": "node scripts/mirror-photos.ts",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dist:win": "npm run build && electron-builder --win --publish never"
+  },
+  "build": {
+    "appId": "in.flagfoundation.kiosk",
+    "productName": "Flag Foundation Kiosk",
+    "asar": false,
+    "files": [
+      "dist/**",
+      "dist-electron/**"
+    ],
+    "extraResources": [
+      {
+        "from": "data",
+        "to": "data"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "runAfterFinish": true
+    }
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
