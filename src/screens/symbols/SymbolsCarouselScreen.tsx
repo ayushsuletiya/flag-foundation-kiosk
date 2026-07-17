@@ -135,6 +135,9 @@ export function SymbolsCarouselScreen() {
   const spinRef = useRef(0)
   const turnRef = useRef(0)
   const turnRaf = useRef<number | null>(null)
+  const dragging = useRef(false)
+  const dragBaseU = useRef(0)
+  const dragScale = useRef(1) // viewport px per stage px, sampled on press
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const introRaf = useRef<number | null>(null)
@@ -261,22 +264,15 @@ export function SymbolsCarouselScreen() {
   const introSpin = -INTRO_ENTRY_TURNS_DEG * (1 - introE)
   const introRadius = 0.55 + 0.45 * introE
 
-  // Rotate by sliding every card ALONG the track (mode 'turn'): the new
-  // selection applies immediately, the row starts offset by the step just
-  // taken and eases back to 0. Repeat taps mid-turn ACCUMULATE into the
-  // offset, so spamming reads as one long fluid flick, and paths never
-  // cross — the outgoing and incoming cards stay side by side on the arc.
-  const rotateTo = (index: number) => {
-    if (count === 0) return
-    let step = (((index - activeIndex) % count) + count) % count
-    if (step > count / 2) step -= count // shortest signed distance
-    if (step === 0) return
-    setSelected(((index % count) + count) % count)
-    turnRef.current = Math.max(-2.5, Math.min(2.5, turnRef.current + step))
-    setTurnOffset(turnRef.current)
-    setMode('turn')
+  // Ease the track offset home (turnRef → 0), then hand back to rest.
+  const startTurnAnim = () => {
     if (turnRaf.current !== null) cancelAnimationFrame(turnRaf.current)
     const from = turnRef.current
+    if (from === 0) {
+      setMode('rest')
+      suppressClick.current = false
+      return
+    }
     let t0: number | null = null
     const tick = (now: number) => {
       t0 ??= now
@@ -291,13 +287,49 @@ export function SymbolsCarouselScreen() {
         turnRef.current = 0
         setTurnOffset(0)
         setMode('rest')
+        suppressClick.current = false
       }
     }
     turnRaf.current = requestAnimationFrame(tick)
   }
 
+  // Rotate by sliding every card ALONG the track (mode 'turn'): the new
+  // selection applies immediately, the row starts offset by the step just
+  // taken and eases back to 0. Repeat taps mid-turn ACCUMULATE into the
+  // offset, so spamming reads as one long fluid flick, and paths never
+  // cross — the outgoing and incoming cards stay side by side on the arc.
+  const rotateTo = (index: number) => {
+    if (count === 0) return
+    let step = (((index - activeIndex) % count) + count) % count
+    if (step > count / 2) step -= count // shortest signed distance
+    if (step === 0) return
+    setSelected(((index % count) + count) % count)
+    turnRef.current = Math.max(-2.5, Math.min(2.5, turnRef.current + step))
+    setTurnOffset(turnRef.current)
+    setMode('turn')
+    startTurnAnim()
+  }
+
   const rotate = (dir: 1 | -1) => {
     rotateTo(activeIndex + dir)
+  }
+
+  // Finger lifted (or left the surface) mid-drag: snap the track to the
+  // nearest slot — a short-but-fast fling still advances one card.
+  const releaseDrag = (dxRaw: number) => {
+    dragging.current = false
+    const o = turnRef.current
+    // symmetric rounding (Math.round biases -0.5 toward 0)
+    let snap = Math.sign(o) * Math.round(Math.abs(o))
+    if (snap === 0 && Math.abs(dxRaw) >= SWIPE_THRESHOLD_PX) snap = o < 0 ? -1 : 1
+    if (snap !== 0) {
+      setSelected((((activeIndex - snap) % count) + count) % count)
+      turnRef.current = o - snap
+      setTurnOffset(turnRef.current)
+    }
+    suppressClick.current = true
+    setMode('turn')
+    startTurnAnim()
   }
 
   return (
@@ -339,21 +371,49 @@ export function SymbolsCarouselScreen() {
           if (isIntro) return // the screen-root handler fast-forwards the intro
           swipeStartX.current = e.clientX
           dragLastX.current = e.clientX
+          dragging.current = false
+          dragBaseU.current = turnRef.current
+          dragScale.current = e.currentTarget.getBoundingClientRect().width / 1060
           const card = (e.target as HTMLElement).closest<HTMLElement>('.sy-card3d')
           setGlowSlug(card?.dataset.slug ?? null)
           if (holdTimer.current !== null) clearTimeout(holdTimer.current)
           holdTimer.current = setTimeout(engageOrbit, HOLD_TO_ORBIT_MS)
         }}
         onPointerMove={(e) => {
-          if (mode !== 'orbit') return
-          // the finger is the only thing that spins the floating ring
-          if (dragLastX.current !== null) {
-            spinRef.current += (e.clientX - dragLastX.current) * 0.25
-            setSpin(spinRef.current)
+          if (mode === 'orbit') {
+            // the finger is the only thing that spins the floating ring
+            if (dragLastX.current !== null) {
+              spinRef.current += (e.clientX - dragLastX.current) * 0.25
+              setSpin(spinRef.current)
+            }
+            dragLastX.current = e.clientX
+            const card = (e.target as HTMLElement).closest<HTMLElement>('.sy-card3d')
+            if (card?.dataset.slug) setGlowSlug(card.dataset.slug)
+            return
           }
-          dragLastX.current = e.clientX
-          const card = (e.target as HTMLElement).closest<HTMLElement>('.sy-card3d')
-          if (card?.dataset.slug) setGlowSlug(card.dataset.slug)
+          // Rest/turn: a horizontal slide DRAGS the track 1:1 with the
+          // finger. Committing to a drag kills the orbit hold (that needs a
+          // STATIONARY press) and takes over any easing turn in flight.
+          const start = swipeStartX.current
+          if (start === null || (mode !== 'rest' && mode !== 'turn')) return
+          const dx = e.clientX - start
+          if (!dragging.current && Math.abs(dx) > 12) {
+            dragging.current = true
+            if (holdTimer.current !== null) {
+              clearTimeout(holdTimer.current)
+              holdTimer.current = null
+            }
+            if (turnRaf.current !== null) {
+              cancelAnimationFrame(turnRaf.current)
+              turnRaf.current = null
+            }
+          }
+          if (dragging.current) {
+            const u = dragBaseU.current + dx / dragScale.current / 381
+            turnRef.current = Math.max(-2.5, Math.min(2.5, u))
+            setTurnOffset(turnRef.current)
+            if (mode !== 'turn') setMode('turn')
+          }
         }}
         onPointerUp={(e) => {
           const start = swipeStartX.current
@@ -362,11 +422,23 @@ export function SymbolsCarouselScreen() {
           releaseOrbit()
           if (wasOrbit || start === null) return
           const dx = e.clientX - start
+          if (dragging.current) {
+            releaseDrag(dx)
+            return
+          }
           if (dx <= -SWIPE_THRESHOLD_PX) rotate(1)
           else if (dx >= SWIPE_THRESHOLD_PX) rotate(-1)
         }}
-        onPointerLeave={releaseOrbit}
-        onPointerCancel={releaseOrbit}
+        onPointerLeave={() => {
+          if (dragging.current) releaseDrag(0)
+          swipeStartX.current = null
+          releaseOrbit()
+        }}
+        onPointerCancel={() => {
+          if (dragging.current) releaseDrag(0)
+          swipeStartX.current = null
+          releaseOrbit()
+        }}
       >
         {/* 3D ring: every card is ONE persistent element (keyed by slug) whose
             slot pose (data-slot -2..2) is pure transform — so rotating the
