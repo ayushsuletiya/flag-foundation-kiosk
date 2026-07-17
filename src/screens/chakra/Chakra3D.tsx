@@ -712,6 +712,58 @@ function createChakraScene(
     `,
     depthTest: false,
     depthWrite: false,
+    blending: THREE.NoBlending, // renders alone into rayRT
+  })
+  rayScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), rayMat))
+
+  // Stage 2 — visible BEAMS: with the sun dead-behind and the camera in
+  // front we look straight down the light columns, so the physical glow
+  // foreshortens into a corona. The film/game trick: radially stretch the
+  // (correct, wheel-masked) volumetric light field away from the sun's
+  // screen point — the gap glow elongates into rays. Rendered additively
+  // with zero alpha so it also spills over the CSS plate.
+  const rayRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
+  const sunWorld = new THREE.Vector3(78, 37, -286) // measured plate sun
+  const sunNdc = new THREE.Vector3()
+  const streakScene = new THREE.Scene()
+  const streakMat = new THREE.ShaderMaterial({
+    uniforms: {
+      tRay: { value: rayRT.texture },
+      sunUv: { value: new THREE.Vector2(0.5, 0.5) },
+      boost: { value: 1.4 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      varying vec2 vUv;
+      uniform sampler2D tRay;
+      uniform vec2 sunUv;
+      uniform float boost;
+      void main() {
+        const int SAMPLES = 48;
+        vec2 delta = (vUv - sunUv) * (0.95 / float(SAMPLES));
+        float jitter = fract(sin(dot(vUv, vec2(12.9898, 78.233))) * 43758.5453);
+        vec2 uv = vUv - delta * jitter;
+        vec3 acc = vec3(0.0);
+        float w = 1.0;
+        for (int i = 0; i < SAMPLES; i++) {
+          uv -= delta;
+          acc += texture2D(tRay, uv).rgb * w;
+          w *= 0.972;
+        }
+        // decayed SUM (not average): pixels far from bright sources get
+        // almost nothing, so beams stay local instead of hazing the canvas
+        vec3 streak = acc * 0.05;
+        vec3 base = texture2D(tRay, vUv).rgb;
+        float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) *
+          smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
+        gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
+      }
+    `,
+    depthTest: false,
+    depthWrite: false,
     transparent: true,
     blending: THREE.CustomBlending,
     blendSrc: THREE.OneFactor,
@@ -719,7 +771,7 @@ function createChakraScene(
     blendSrcAlpha: THREE.ZeroFactor,
     blendDstAlpha: THREE.OneFactor,
   })
-  rayScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), rayMat))
+  streakScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), streakMat))
 
   const _invProj = new THREE.Matrix4()
   function renderGodRays(): void {
@@ -756,8 +808,19 @@ function createChakraScene(
     ;(rayMat.uniforms['invView']!.value as THREE.Matrix4).copy(camera.matrixWorld)
     ;(rayMat.uniforms['camPos']!.value as THREE.Vector3).copy(camera.position)
     ;(rayMat.uniforms['sunDir']!.value as THREE.Vector3).copy(rimSun.position).normalize()
-    renderer.autoClear = false
+    // stage 1: physical volumetric field → rayRT
+    renderer.setRenderTarget(rayRT)
+    renderer.clear()
     renderer.render(rayScene, rayCam)
+    renderer.setRenderTarget(null)
+    // stage 2: radial beam stretch, composited over the frame
+    sunNdc.copy(sunWorld).project(camera)
+    ;(streakMat.uniforms['sunUv']!.value as THREE.Vector2).set(
+      (sunNdc.x + 1) / 2,
+      (sunNdc.y + 1) / 2,
+    )
+    renderer.autoClear = false
+    renderer.render(streakScene, rayCam)
     renderer.autoClear = true
   }
 
@@ -1379,6 +1442,8 @@ function createChakraScene(
     rayMat.dispose()
     depthRT.dispose()
     depthMat.dispose()
+    rayRT.dispose()
+    streakMat.dispose()
     // flag resources (only allocated if flag mode was ever entered)
     if (flagGroup !== null) {
       scene.remove(flagGroup)
