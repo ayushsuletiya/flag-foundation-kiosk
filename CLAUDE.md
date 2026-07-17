@@ -60,6 +60,10 @@ Target hardware: Windows, i5 11th gen, 16GB, integrated GPU.
 Hand-correct via `geo-report.json` + README in `src/data/geo/`. Chandigarh has no map shape.
 
 ## Gotchas
+- React StrictMode double-mounts in dev: an effect that owns a rAF/timer timeline must gate on
+  COMPLETION (ref set when finished), cancel in its OWN cleanup, and restart on re-run. A
+  started-guard + external cancel leaves the timeline dead after the simulated unmount (this froze
+  the symbols intro mid-fly when entering from Home, where content is already loaded at mount).
 - Figma MCP `get_metadata` on this file often returns stale/no children (page cache) — use plugin API
   or download_assets rawImages; whole-canvas metadata times out.
 - The Figma GLASS effect and image fills don't survive REST export — plugin API only.

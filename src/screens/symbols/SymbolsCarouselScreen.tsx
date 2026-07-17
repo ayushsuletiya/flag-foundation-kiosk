@@ -78,7 +78,7 @@ export function SymbolsCarouselScreen() {
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const introRaf = useRef<number | null>(null)
-  const introStarted = useRef(false)
+  const introDone = useRef(false)
   const dragLastX = useRef<number | null>(null)
   const suppressClick = useRef(false)
 
@@ -86,7 +86,6 @@ export function SymbolsCarouselScreen() {
     () => () => {
       if (holdTimer.current !== null) clearTimeout(holdTimer.current)
       if (settleTimer.current !== null) clearTimeout(settleTimer.current)
-      if (introRaf.current !== null) cancelAnimationFrame(introRaf.current)
     },
     [],
   )
@@ -104,9 +103,11 @@ export function SymbolsCarouselScreen() {
   // lands, one decelerating revolution, then the ring settles. A single
   // elapsed-time rAF machine (not chained timeouts) so a hidden window
   // pauses the intro instead of finishing it invisibly.
+  // Gated on COMPLETION (introDone), never on start, and the effect cancels
+  // its own frame: StrictMode's dev double-mount cancels run 1 and cleanly
+  // restarts in run 2 (a start-guard here left the intro frozen mid-fly).
   useEffect(() => {
-    if (count === 0 || introStarted.current) return
-    introStarted.current = true
+    if (count === 0 || introDone.current) return
     const flyTotal = INTRO_FLY_MS + (count - 1) * INTRO_STAGGER_MS + 200
     let start: number | null = null
     let spinning = false
@@ -129,17 +130,25 @@ export function SymbolsCarouselScreen() {
         introRaf.current = requestAnimationFrame(tick)
       } else {
         introRaf.current = null
+        introDone.current = true
         spinRef.current = 0 // -360 ≡ 0: same pose, active card unchanged
         setSpin(0)
         settleToRest()
       }
     }
     introRaf.current = requestAnimationFrame(tick)
+    return () => {
+      if (introRaf.current !== null) {
+        cancelAnimationFrame(introRaf.current)
+        introRaf.current = null
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count])
 
   // Kiosk users won't wait: any touch during the intro fast-forwards it.
   const skipIntro = () => {
+    introDone.current = true // don't restart on a later count change
     if (introRaf.current !== null) {
       cancelAnimationFrame(introRaf.current)
       introRaf.current = null
