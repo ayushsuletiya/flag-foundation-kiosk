@@ -492,7 +492,11 @@ function createChakraScene(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(width, height)
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.15
+  // 1.0 keeps the flag navy (#06038D) reading as NAVY — higher exposure
+  // pushed the whole wheel toward bright royal blue.
+  renderer.toneMappingExposure = 1.0
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
   const scene = new THREE.Scene() // background stays transparent (alpha)
 
@@ -504,29 +508,46 @@ function createChakraScene(
   camTarget.copy(initialMode === 'flag' ? FLAG_TGT_HOME : WHEEL_TGT)
   camera.lookAt(camTarget)
 
-  // Soft studio environment gives the navy its metallic sheen…
+  // Soft studio environment gives the navy a subtle sheen… (kept LOW so
+  // the body colour stays the flag navy, not studio-brightened blue)
   const pmrem = new THREE.PMREMGenerator(renderer)
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   scene.environment = envTex
-  scene.environmentIntensity = 0.75
+  scene.environmentIntensity = 0.45
 
-  // …and a warm sunset rig matches the Figma background plate.
-  const hemi = new THREE.HemisphereLight(0xffdcae, 0x54331b, 0.8)
+  // …and a warm sunset rig matches the Figma background plate: the sun
+  // sits low BEHIND the wheel (hot rim light), the camera side is in
+  // relative shade — the key is soft warm bounce and CASTS the wheel's
+  // self-shadows (spokes onto hub/rim) so the geometry reads as lit by
+  // the environment instead of evenly flat.
+  const hemi = new THREE.HemisphereLight(0xffdcae, 0x54331b, 0.55)
   scene.add(hemi)
-  const key = new THREE.DirectionalLight(0xfff0da, 2.6)
+  const key = new THREE.DirectionalLight(0xfff0da, 1.7)
   key.position.set(-140, 170, 210)
+  key.castShadow = true
+  key.shadow.mapSize.set(2048, 2048)
+  key.shadow.camera.left = -120
+  key.shadow.camera.right = 120
+  key.shadow.camera.top = 120
+  key.shadow.camera.bottom = -120
+  key.shadow.camera.near = 50
+  key.shadow.camera.far = 700
+  key.shadow.bias = -0.0004
+  key.shadow.normalBias = 0.6
   scene.add(key)
-  const sun = new THREE.DirectionalLight(0xffa14d, 2.0) // low sun behind-right
+  const sun = new THREE.DirectionalLight(0xffa14d, 2.3) // low sun behind-right
   sun.position.set(80, -10, -240)
   scene.add(sun)
-  const fill = new THREE.DirectionalLight(0xffc07a, 0.7)
+  const fill = new THREE.DirectionalLight(0xffc07a, 0.5)
   fill.position.set(200, -40, 140)
   scene.add(fill)
 
+  // Painted-enamel finish: mostly dielectric so the base colour stays the
+  // true flag navy; the low metalness + env sheen keep the bevel catches.
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(SPEC.colour),
-    metalness: 0.45,
-    roughness: 0.32,
+    metalness: 0.3,
+    roughness: 0.42,
   })
 
   // lean group (fixed pose) → chakra group (spins about its axle)
@@ -558,8 +579,14 @@ function createChakraScene(
     m.rotation.z = -i * SPOKE_STEP // spoke 1 points up, clockwise
     m.name = `Spoke ${i + 1}`
     m.userData = { spoke: i + 1 }
+    m.castShadow = true
+    m.receiveShadow = true
     spokes.push(m)
     chakra.add(m)
+  }
+  for (const part of [rim, hub, boss, flutes]) {
+    part.castShadow = true
+    part.receiveShadow = true
   }
   chakra.add(rim, hub, boss, flutes)
 
