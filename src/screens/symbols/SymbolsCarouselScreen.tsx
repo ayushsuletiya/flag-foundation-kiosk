@@ -23,6 +23,7 @@ import './SymbolsCarouselScreen.css'
 const SWIPE_THRESHOLD_PX = 60
 const HOLD_TO_ORBIT_MS = 260
 const SETTLE_MS = 750
+const TURN_MS = 480
 
 // Category intro — "the trail": one continuous cinematic motion. Every
 // tile rides the SAME orbital ellipse; the whole trail sweeps 1¼ turns
@@ -35,6 +36,36 @@ const INTRO_TOTAL_MS = 3200
 const INTRO_ENTRY_TURNS_DEG = 450 // 1¼ revolutions; ends at spin 0
 const INTRO_STAGGER_MS = 55 // ≈ ring step / early angular speed
 const INTRO_APPEAR_MS = 340
+
+/**
+ * Continuous pose along the carousel TRACK — the curve the rest slots sit
+ * on. u = 0 is the center slot, ±1 the sides, ±2 the hidden entry/exit
+ * poses (values MUST match the data-slot CSS so a finished turn lands
+ * exactly on the slot poses). Rotating the carousel slides every card
+ * ALONG this track, so a swap never sends two cards through each other.
+ */
+const TRACK_KEYPOSES = [
+  { u: -2, x: -700, y: 130, z: -420, ry: 52, s: 0.75, o: 0, dim: 0.36 },
+  { u: -1, x: -381, y: 99, z: -140, ry: 36, s: 0.857, o: 1, dim: 0.36 },
+  { u: 0, x: 0, y: 0, z: 0, ry: 0, s: 1, o: 1, dim: 0 },
+  { u: 1, x: 381, y: 99, z: -140, ry: -36, s: 0.857, o: 1, dim: 0.36 },
+  { u: 2, x: 700, y: 130, z: -420, ry: -52, s: 0.75, o: 0, dim: 0.36 },
+] as const
+
+function trackPose(u: number) {
+  const cu = Math.max(-2, Math.min(2, u))
+  const i = Math.max(0, Math.min(3, Math.floor(cu + 2)))
+  const a = TRACK_KEYPOSES[i]!
+  const b = TRACK_KEYPOSES[i + 1]!
+  const f = (cu - a.u) / (b.u - a.u)
+  const l = (p: number, q: number) => p + (q - p) * f
+  return {
+    transform: `translate3d(${l(a.x, b.x).toFixed(1)}px, ${l(a.y, b.y).toFixed(1)}px, ${l(a.z, b.z).toFixed(1)}px) rotateY(${l(a.ry, b.ry).toFixed(1)}deg) scale(${l(a.s, b.s).toFixed(3)})`,
+    opacity: l(a.o, b.o),
+    dim: l(a.dim, b.dim),
+    zIndex: Math.round(120 - Math.abs(cu) * 30),
+  }
+}
 
 /**
  * Orbit pose for a card while the ring is lifted (press-and-hold).
@@ -89,15 +120,21 @@ export function SymbolsCarouselScreen() {
 
   // ---- mode state machine -------------------------------------------
   // 'intro' = the continuous trail sweep around the podium · 'rest' =
-  // Figma slot poses · 'orbit' = full ring floats (drag-to-spin) ·
-  // 'settle' = gliding home.
-  const [mode, setMode] = useState<'intro' | 'rest' | 'orbit' | 'settle'>('intro')
+  // Figma slot poses · 'turn' = cards sliding along the track to new
+  // slots · 'orbit' = full ring floats (drag-to-spin) · 'settle' =
+  // gliding home.
+  const [mode, setMode] = useState<'intro' | 'rest' | 'turn' | 'orbit' | 'settle'>('intro')
   const isIntro = mode === 'intro'
   const [spin, setSpin] = useState(0)
   // Elapsed intro time — the single value the whole trail derives from.
   const [introT, setIntroT] = useState(0)
+  // Track offset while turning: cards render at u = off + turnOffset, so
+  // the whole row slides along the track and eases into the new slots.
+  const [turnOffset, setTurnOffset] = useState(0)
   const [glowSlug, setGlowSlug] = useState<string | null>(null)
   const spinRef = useRef(0)
+  const turnRef = useRef(0)
+  const turnRaf = useRef<number | null>(null)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const introRaf = useRef<number | null>(null)
@@ -109,6 +146,7 @@ export function SymbolsCarouselScreen() {
     () => () => {
       if (holdTimer.current !== null) clearTimeout(holdTimer.current)
       if (settleTimer.current !== null) clearTimeout(settleTimer.current)
+      if (turnRaf.current !== null) cancelAnimationFrame(turnRaf.current)
     },
     [],
   )
@@ -168,6 +206,14 @@ export function SymbolsCarouselScreen() {
   }
 
   const engageOrbit = () => {
+    // a lift can start mid-turn — the turn animation must not finish later
+    // and yank the orbit back to rest
+    if (turnRaf.current !== null) {
+      cancelAnimationFrame(turnRaf.current)
+      turnRaf.current = null
+    }
+    turnRef.current = 0
+    setTurnOffset(0)
     // fresh lift always opens with the active card front-center
     spinRef.current = 0
     setSpin(0)
@@ -215,8 +261,43 @@ export function SymbolsCarouselScreen() {
   const introSpin = -INTRO_ENTRY_TURNS_DEG * (1 - introE)
   const introRadius = 0.55 + 0.45 * introE
 
+  // Rotate by sliding every card ALONG the track (mode 'turn'): the new
+  // selection applies immediately, the row starts offset by the step just
+  // taken and eases back to 0. Repeat taps mid-turn ACCUMULATE into the
+  // offset, so spamming reads as one long fluid flick, and paths never
+  // cross — the outgoing and incoming cards stay side by side on the arc.
+  const rotateTo = (index: number) => {
+    if (count === 0) return
+    let step = (((index - activeIndex) % count) + count) % count
+    if (step > count / 2) step -= count // shortest signed distance
+    if (step === 0) return
+    setSelected(((index % count) + count) % count)
+    turnRef.current = Math.max(-2.5, Math.min(2.5, turnRef.current + step))
+    setTurnOffset(turnRef.current)
+    setMode('turn')
+    if (turnRaf.current !== null) cancelAnimationFrame(turnRaf.current)
+    const from = turnRef.current
+    let t0: number | null = null
+    const tick = (now: number) => {
+      t0 ??= now
+      const p = Math.min(1, (now - t0) / TURN_MS)
+      const e = 1 - Math.pow(1 - p, 3)
+      turnRef.current = from * (1 - e)
+      setTurnOffset(turnRef.current)
+      if (p < 1) {
+        turnRaf.current = requestAnimationFrame(tick)
+      } else {
+        turnRaf.current = null
+        turnRef.current = 0
+        setTurnOffset(0)
+        setMode('rest')
+      }
+    }
+    turnRaf.current = requestAnimationFrame(tick)
+  }
+
   const rotate = (dir: 1 | -1) => {
-    setSelected((activeIndex + dir + count) % count)
+    rotateTo(activeIndex + dir)
   }
 
   return (
@@ -309,19 +390,23 @@ export function SymbolsCarouselScreen() {
             ? Math.min(1, Math.max(0, (introT - ringIndex * INTRO_STAGGER_MS) / INTRO_APPEAR_MS))
             : 1
           const appear = appearP * appearP * (3 - 2 * appearP)
+          // 'turn': the whole row slides along the track toward the new slots.
+          const turn = mode === 'turn' ? trackPose(off + turnOffset) : undefined
           const pose =
             mode === 'orbit'
               ? orbitPose(ringIndex, count, spin)
               : isIntro
                 ? orbitPose(ringIndex, count, introSpin, introRadius, 0.7 + 0.3 * appear)
                 : undefined
-          const style = pose
-            ? ({
-                transform: pose.transform,
-                opacity: isIntro ? pose.opacity * appear : pose.opacity,
-                zIndex: pose.zIndex,
-              } as CSSProperties)
-            : undefined
+          const style = turn
+            ? ({ transform: turn.transform, opacity: turn.opacity, zIndex: turn.zIndex } as CSSProperties)
+            : pose
+              ? ({
+                  transform: pose.transform,
+                  opacity: isIntro ? pose.opacity * appear : pose.opacity,
+                  zIndex: pose.zIndex,
+                } as CSSProperties)
+              : undefined
           return (
             <button
               key={slug}
@@ -333,7 +418,7 @@ export function SymbolsCarouselScreen() {
               tabIndex={isCenter ? -1 : 0}
               style={style}
               onClick={() => {
-                if (mode === 'rest' && off !== 0) rotate(off < 0 ? -1 : 1)
+                if ((mode === 'rest' || mode === 'turn') && off !== 0) rotate(off < 0 ? -1 : 1)
               }}
             >
               <div className="sy-card-media">
@@ -348,7 +433,7 @@ export function SymbolsCarouselScreen() {
                   fit="contain"
                 />
               </div>
-              <span className="sy-card-dim" />
+              <span className="sy-card-dim" style={turn ? { opacity: turn.dim } : undefined} />
               {/* Center-arrival glow: gold stroke traces the border, bloom
                   settles (CSS animations start when data-slot becomes 0). */}
               <svg className="sy-glow-ring" viewBox="0 0 379 472" aria-hidden="true">
@@ -365,7 +450,7 @@ export function SymbolsCarouselScreen() {
         <PaginationDots
           count={count}
           activeIndex={activeIndex}
-          onSelect={(i) => setSelected(i)}
+          onSelect={rotateTo}
           className="sy-dots"
         />
       )}

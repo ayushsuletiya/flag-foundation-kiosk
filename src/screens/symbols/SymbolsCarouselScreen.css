@@ -179,11 +179,17 @@
    trail), smoothed by a short linear chase so per-frame targets read as
    smooth drift. animation:none keeps the arrival glow from riding along. */
 .sy-carousel[data-mode='orbit'] .sy-card3d,
-.sy-carousel[data-mode='intro'] .sy-card3d {
+.sy-carousel[data-mode='intro'] .sy-card3d,
+.sy-carousel[data-mode='turn'] .sy-card3d {
   animation: none;
   transition:
     transform 220ms linear,
     opacity 220ms linear;
+}
+
+/* Turning drives the dim per frame (inline) — drop the slow slot fade */
+.sy-carousel[data-mode='turn'] .sy-card-dim {
+  transition: opacity 120ms linear;
 }
 
 /* Floating cards all read "awake": dims nearly lift */
@@ -261,12 +267,15 @@
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
 .sy-carousel[data-mode='orbit'] .sy-glow-ring rect,
 .sy-carousel[data-mode='intro'] .sy-glow-ring,
-.sy-carousel[data-mode='intro'] .sy-glow-ring rect {
+.sy-carousel[data-mode='intro'] .sy-glow-ring rect,
+.sy-carousel[data-mode='turn'] .sy-glow-ring,
+.sy-carousel[data-mode='turn'] .sy-glow-ring rect {
   animation: none;
 }
 
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
-.sy-carousel[data-mode='intro'] .sy-glow-ring {
+.sy-carousel[data-mode='intro'] .sy-glow-ring,
+.sy-carousel[data-mode='turn'] .sy-glow-ring {
   opacity: 0;
 }
 
