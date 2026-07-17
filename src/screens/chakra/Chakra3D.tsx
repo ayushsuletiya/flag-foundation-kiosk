@@ -524,22 +524,35 @@ function createChakraScene(
   // a second faint rim separates the left edge from the dark clouds.
   const hemi = new THREE.HemisphereLight(0xffd9a8, 0x4a2f16, 0.45)
   scene.add(hemi)
-  const key = new THREE.SpotLight(0xffe0b2, 1000, 1400, 0.9, 1, 1)
+  // Backlit scene: the front face is lit only by soft sky bounce, so the
+  // key stays modest.
+  const key = new THREE.SpotLight(0xffe0b2, 700, 1400, 0.9, 1, 1)
   key.position.set(210, 300, 260)
   key.target.position.set(14, 3, 0)
-  // the key casts the LIVE shadow: the spoke pattern on the ground turns
-  // with the wheel (the dynamic-shadow half of the "ray-traced" look)
-  key.castShadow = true
-  key.shadow.mapSize.set(1024, 1024)
-  key.shadow.camera.near = 120
-  key.shadow.camera.far = 900
-  key.shadow.bias = -0.0004
-  key.shadow.normalBias = 0.6
-  key.shadow.radius = 8
   scene.add(key, key.target)
-  const rimSun = new THREE.DirectionalLight(0xff9a45, 4.2) // THE sun: low, behind-right
-  rimSun.position.set(230, -20, -130) // grazing angle: burns the right edge bevels
+  // THE sun — DIRECTLY BEHIND the wheel (the plate composites the wheel
+  // right over the sun's glow), low and a touch right. It wraps the whole
+  // silhouette in a hot rim (bottom-right burns hottest) and casts the
+  // LIVE shadow: spokes streaming TOWARD the viewer across the ground,
+  // exactly what a low sun behind the subject does. (Raised a few degrees
+  // above the visual sun so the shadow lands on a renderable plane.)
+  const rimSun = new THREE.DirectionalLight(0xffa14d, 4.5)
+  rimSun.position.set(60, 26, -270)
+  rimSun.castShadow = true
+  rimSun.shadow.mapSize.set(1024, 1024)
+  rimSun.shadow.camera.left = -130
+  rimSun.shadow.camera.right = 130
+  rimSun.shadow.camera.top = 130
+  rimSun.shadow.camera.bottom = -130
+  rimSun.shadow.camera.near = 60
+  rimSun.shadow.camera.far = 800
+  rimSun.shadow.bias = -0.0004
+  rimSun.shadow.normalBias = 0.6
+  rimSun.shadow.radius = 8
   scene.add(rimSun)
+  const rimGraze = new THREE.DirectionalLight(0xff9a45, 1.5) // secondary edge graze
+  rimGraze.position.set(230, -20, -130)
+  scene.add(rimGraze)
   const rimSky = new THREE.DirectionalLight(0xffc9a0, 1.1) // sky glow rim, behind-left-top
   rimSky.position.set(-220, 160, -200)
   scene.add(rimSky)
@@ -575,19 +588,19 @@ function createChakraScene(
     new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }),
   )
   contactShadow.rotation.x = -Math.PI / 2
-  // sun is behind-right → the pool falls toward camera-left
-  contactShadow.position.set(-8, -90.5, 20)
+  // sun directly behind → the pool stretches toward the viewer
+  contactShadow.position.set(-10, -90.5, 42)
   scene.add(contactShadow)
 
-  // Live shadow catcher: only the key's cast shadow renders on it — the
-  // spoke pattern sweeps across the ground as the wheel turns, layered
-  // over the soft baked pool above.
+  // Live shadow catcher: only the sun's cast shadow renders on it — the
+  // spoke pattern streams toward the camera and turns with the wheel,
+  // layered over the soft baked pool above.
   const liveCatcher = new THREE.Mesh(
-    new THREE.PlaneGeometry(760, 460),
+    new THREE.PlaneGeometry(760, 560),
     new THREE.ShadowMaterial({ opacity: 0.26 }),
   )
   liveCatcher.rotation.x = -Math.PI / 2
-  liveCatcher.position.set(14, -91, 30)
+  liveCatcher.position.set(14, -91, 80)
   liveCatcher.receiveShadow = true
   scene.add(liveCatcher)
 
