@@ -616,9 +616,24 @@ function createChakraScene(
   const occRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
   const occBlack = new THREE.MeshBasicMaterial({ color: 0x000000 })
   const occSunScene = new THREE.Scene()
+  // Soft-edged sun: a hard disc produces crisp arcade streaks; a radial
+  // falloff source scatters into soft, filmic shafts.
+  const sunCanvas = document.createElement('canvas')
+  sunCanvas.width = sunCanvas.height = 128
+  const sunCtx = sunCanvas.getContext('2d')!
+  const sunGrad = sunCtx.createRadialGradient(64, 64, 6, 64, 64, 64)
+  sunGrad.addColorStop(0, 'rgba(255, 255, 255, 1)')
+  sunGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.55)')
+  sunGrad.addColorStop(1, 'rgba(255, 255, 255, 0)')
+  sunCtx.fillStyle = sunGrad
+  sunCtx.fillRect(0, 0, 128, 128)
   const occSun = new THREE.Mesh(
-    new THREE.CircleGeometry(38, 48),
-    new THREE.MeshBasicMaterial({ color: 0xfff3d0 }),
+    new THREE.PlaneGeometry(150, 150),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(sunCanvas),
+      transparent: true,
+      depthWrite: false,
+    }),
   )
   // Measured from the plate: sun core at stage (1071, 576) → canvas-local
   // (616, 393) → projected back to z=-286 = (78, 37). Behind the wheel's
@@ -632,7 +647,7 @@ function createChakraScene(
     uniforms: {
       tOcc: { value: occRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
-      strength: { value: 1.2 }, // 40% of the original 3.0 — user-tuned
+      strength: { value: 1.0 }, // user-tuned soft
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -645,14 +660,16 @@ function createChakraScene(
       uniform float strength;
       void main() {
         const int SAMPLES = 64;
-        vec2 delta = (vUv - sunUv) * (0.92 / float(SAMPLES));
-        vec2 uv = vUv;
+        vec2 delta = (vUv - sunUv) * (0.8 / float(SAMPLES));
+        // per-pixel jitter turns sampling bands into invisible grain
+        float jitter = fract(sin(dot(vUv, vec2(12.9898, 78.233))) * 43758.5453);
+        vec2 uv = vUv - delta * jitter;
         float illum = 0.0;
         float falloff = 1.0;
         for (int i = 0; i < SAMPLES; i++) {
           uv -= delta;
           illum += texture2D(tOcc, uv).r * falloff;
-          falloff *= 0.968;
+          falloff *= 0.958;
         }
         // fade to nothing before the canvas edge — the additive shafts must
         // never print a rectangular seam against the background plate
@@ -1321,6 +1338,7 @@ function createChakraScene(
     occRT.dispose()
     occBlack.dispose()
     occSun.geometry.dispose()
+    occSun.material.map?.dispose()
     occSun.material.dispose()
     rayMat.dispose()
     // flag resources (only allocated if flag mode was ever entered)
