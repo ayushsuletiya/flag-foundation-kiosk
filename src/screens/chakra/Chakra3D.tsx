@@ -636,7 +636,7 @@ function createChakraScene(
       invView: { value: new THREE.Matrix4() },
       camPos: { value: new THREE.Vector3() },
       sunDir: { value: new THREE.Vector3() }, // toward the sun
-      strength: { value: 0.5 }, // calibrated against the WORKING effect
+      strength: { value: 0.4 }, // user-tuned (-20%)
 
     },
     vertexShader: /* glsl */ `
@@ -722,7 +722,8 @@ function createChakraScene(
   // (correct, wheel-masked) volumetric light field away from the sun's
   // screen point — the gap glow elongates into rays. Rendered additively
   // with zero alpha so it also spills over the CSS plate.
-  const rayRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
+  // third-res: linear upsampling doubles as a blur — softer, wider rays
+  const rayRT = new THREE.WebGLRenderTarget(Math.floor(width / 3), Math.floor(height / 3))
   const sunWorld = new THREE.Vector3(78, 37, -286) // measured plate sun
   const sunNdc = new THREE.Vector3()
   const streakScene = new THREE.Scene()
@@ -730,7 +731,7 @@ function createChakraScene(
     uniforms: {
       tRay: { value: rayRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
-      boost: { value: 1.4 },
+      boost: { value: 1.2 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -757,8 +758,10 @@ function createChakraScene(
         // almost nothing, so beams stay local instead of hazing the canvas
         vec3 streak = acc * 0.05;
         vec3 base = texture2D(tRay, vUv).rgb;
-        float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) *
-          smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
+        // wide dissolve: light must die well inside the canvas so the render
+        // box can never print its rectangle on the plate
+        float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x) *
+          smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
         gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
       }
     `,
