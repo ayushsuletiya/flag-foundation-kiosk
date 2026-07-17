@@ -632,7 +632,7 @@ function createChakraScene(
     uniforms: {
       tOcc: { value: occRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
-      strength: { value: 3.0 },
+      strength: { value: 1.2 }, // 40% of the original 3.0 — user-tuned
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
