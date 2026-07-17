@@ -560,15 +560,47 @@ function createChakraScene(
   contactShadow.position.set(38, -90.5, 12) // pooled slightly off the key light
   scene.add(contactShadow)
 
-  // Glossy painted finish per the reference render: lit facets flash
-  // cobalt, shade facets fall to deep navy — high facet contrast. The
-  // base is the design render's cobalt (the print-spec #06038D reads
+  // Painted-metal imperfection: procedural two-scale noise so the finish
+  // isn't CG-perfect — blotchy paint (roughness variation breaks the sheen
+  // unevenly) + fine grain (bump micro-relief catches the light). Extrude
+  // UVs are in position units (~±92), so repeat sets real-world tile size.
+  const makeNoise = (blur: number, contrast: number, repeat: number): THREE.CanvasTexture => {
+    const size = 256
+    const c = document.createElement('canvas')
+    c.width = c.height = size
+    const g = c.getContext('2d')!
+    const img = g.createImageData(size, size)
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.max(0, Math.min(255, 128 + (Math.random() - 0.5) * 2 * contrast))
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v
+      img.data[i + 3] = 255
+    }
+    g.putImageData(img, 0, 0)
+    if (blur > 0) {
+      g.filter = `blur(${blur}px)`
+      g.drawImage(c, 0, 0)
+      g.filter = 'none'
+    }
+    const tex = new THREE.CanvasTexture(c)
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(repeat, repeat)
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy()
+    return tex
+  }
+  const paintBlotch = makeNoise(8, 70, 0.017) // ~60-unit tiles, soft blotches
+  const metalGrain = makeNoise(0, 90, 0.05) // ~20-unit tiles, fine grain
+
+  // Body colour = the design render's cobalt (the print-spec #06038D reads
   // near-black under any physically plausible light; the approved Figma
-  // plate uses this brighter body).
+  // plate uses this brighter body). roughness 1.0 is modulated DOWN by the
+  // blotch map (mid-gray ≈ 0.5 effective) — worn painted metal, not gloss.
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(0x0b2da0),
     metalness: 0.35,
-    roughness: 0.3,
+    roughness: 1.0,
+    roughnessMap: paintBlotch,
+    bumpMap: metalGrain,
+    bumpScale: 0.25,
   })
 
   // lean group (fixed pose) → chakra group (spins about its axle)
