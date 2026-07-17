@@ -515,32 +515,41 @@ function createChakraScene(
   scene.environment = envTex
   scene.environmentIntensity = 0.45
 
-  // …and a warm sunset rig matches the Figma background plate: the sun
-  // sits low BEHIND the wheel (hot rim light), the camera side is in
-  // relative shade — the key is soft warm bounce and CASTS the wheel's
-  // self-shadows (spokes onto hub/rim) so the geometry reads as lit by
-  // the environment instead of evenly flat.
-  const hemi = new THREE.HemisphereLight(0xffdcae, 0x54331b, 0.55)
+  // …and a warm sunset rig matches the Figma background plate. The wheel
+  // is a flat coplanar extrusion seen face-on, so directional lights CANNOT
+  // shade it (constant N·L) — the key is a warm SPOT with distance falloff:
+  // the face brightens toward the upper-left and falls into shade toward
+  // the lower-right, and the same spot casts the wheel's soft shadow onto
+  // a ground catcher under it (the sea in the plate).
+  const hemi = new THREE.HemisphereLight(0xffdcae, 0x3a2413, 0.45)
   scene.add(hemi)
-  const key = new THREE.DirectionalLight(0xfff0da, 1.7)
-  key.position.set(-140, 170, 210)
+  const key = new THREE.SpotLight(0xfff0da, 900, 1400, 0.9, 1, 1)
+  key.position.set(-260, 320, 260)
+  key.target.position.set(14, 3, 0)
   key.castShadow = true
   key.shadow.mapSize.set(2048, 2048)
-  key.shadow.camera.left = -120
-  key.shadow.camera.right = 120
-  key.shadow.camera.top = 120
-  key.shadow.camera.bottom = -120
-  key.shadow.camera.near = 50
-  key.shadow.camera.far = 700
+  key.shadow.camera.near = 100
+  key.shadow.camera.far = 1400
   key.shadow.bias = -0.0004
   key.shadow.normalBias = 0.6
-  scene.add(key)
+  scene.add(key, key.target)
   const sun = new THREE.DirectionalLight(0xffa14d, 2.3) // low sun behind-right
   sun.position.set(80, -10, -240)
   scene.add(sun)
   const fill = new THREE.DirectionalLight(0xffc07a, 0.5)
   fill.position.set(200, -40, 140)
   scene.add(fill)
+
+  // Shadow catcher: an invisible ground plane at the wheel's bottom tangent
+  // — only the cast shadow renders, compositing onto the background plate.
+  const shadowCatcher = new THREE.Mesh(
+    new THREE.PlaneGeometry(760, 460),
+    new THREE.ShadowMaterial({ opacity: 0.32 }),
+  )
+  shadowCatcher.rotation.x = -Math.PI / 2
+  shadowCatcher.position.set(14, -96, 30)
+  shadowCatcher.receiveShadow = true
+  scene.add(shadowCatcher)
 
   // Painted-enamel finish: mostly dielectric so the base colour stays the
   // true flag navy; the low metalness + env sheen keep the bevel catches.
