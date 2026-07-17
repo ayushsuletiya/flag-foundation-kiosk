@@ -604,55 +604,30 @@ function createChakraScene(
   liveCatcher.receiveShadow = true
   scene.add(liveCatcher)
 
-  /* ------------------------------------------ god rays (sun-through) -- */
-  // "Light coming through the chakra": screen-space volumetric scattering.
-  // Pass 1 renders an occlusion buffer — a bright sun disc at the plate's
-  // sun position with the wheel silhouetted BLACK over it. Pass 2 radially
-  // smears that buffer away from the sun and ADDS it over the frame; on
-  // this transparent canvas, colour written with zero alpha composites
-  // additively over the CSS plate, so the shafts spill onto the background
-  // too. The spinning spokes chop the disc, so sharp rays sweep and
-  // flicker through the gaps as the wheel turns.
-  // Quarter res: linear filtering pre-blurs the thin spoke-gap slivers that
-  // otherwise smear into aliased "sparkle" spikes.
-  const occRT = new THREE.WebGLRenderTarget(Math.floor(width / 4), Math.floor(height / 4))
-  // Wheel mask goes to the GREEN channel (sun light lives in RED): the ray
-  // shader dims shafts where they would paint across the wheel itself.
-  const occBlack = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-  const occSunScene = new THREE.Scene()
-  // Soft-edged sun: a hard disc produces crisp arcade streaks; a radial
-  // falloff source scatters into soft, filmic shafts.
-  const sunCanvas = document.createElement('canvas')
-  sunCanvas.width = sunCanvas.height = 128
-  const sunCtx = sunCanvas.getContext('2d')!
-  const sunGrad = sunCtx.createRadialGradient(64, 64, 6, 64, 64, 64)
-  // red-only: the RED channel is the light source, GREEN is the wheel mask
-  sunGrad.addColorStop(0, 'rgba(255, 0, 0, 1)')
-  sunGrad.addColorStop(0.35, 'rgba(255, 0, 0, 0.55)')
-  sunGrad.addColorStop(1, 'rgba(255, 0, 0, 0)')
-  sunCtx.fillStyle = sunGrad
-  sunCtx.fillRect(0, 0, 128, 128)
-  const occSun = new THREE.Mesh(
-    new THREE.PlaneGeometry(150, 150),
-    new THREE.MeshBasicMaterial({
-      map: new THREE.CanvasTexture(sunCanvas),
-      transparent: true,
-      depthWrite: false,
-    }),
-  )
-  // Measured from the plate: sun core at stage (1071, 576) → canvas-local
-  // (616, 393) → projected back to z=-286 = (78, 37). Behind the wheel's
-  // upper-right spoke field, ~2-3 o'clock.
-  occSun.position.set(78, 37, -286)
-  occSunScene.add(occSun)
-  const raySunNdc = new THREE.Vector3()
+  /* ------------------------- volumetric light (true object occlusion) -- */
+  // The way 3D packages do it, shadow-map accelerated: for every pixel a
+  // ray marches through the AIR in front of the camera and asks at each
+  // step "can this point see the sun?" against the sun's shadow map. Air
+  // the wheel shades stays dark; air in the spoke gaps glows — real 3D
+  // crepuscular rays with no screen-space smearing (and none of its
+  // sparkle artifacts). Colour written with zero alpha composites
+  // additively over the CSS plate.
+  // Depth pre-pass of the solid scene (half res): each ray STOPS at the
+  // first surface, so lit air behind the wheel never paints over it.
+  const depthRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
+  const depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
   const rayScene = new THREE.Scene()
   const rayCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
   const rayMat = new THREE.ShaderMaterial({
     uniforms: {
-      tOcc: { value: occRT.texture },
-      sunUv: { value: new THREE.Vector2(0.5, 0.5) },
-      strength: { value: 0.55 }, // user-tuned soft
+      shadowMap: { value: null },
+      shadowMatrix: { value: new THREE.Matrix4() },
+      tDepth: { value: depthRT.texture },
+      invProj: { value: new THREE.Matrix4() },
+      invView: { value: new THREE.Matrix4() },
+      camPos: { value: new THREE.Vector3() },
+      sunDir: { value: new THREE.Vector3() }, // toward the sun
+      strength: { value: 0.6 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -660,31 +635,68 @@ function createChakraScene(
     `,
     fragmentShader: /* glsl */ `
       varying vec2 vUv;
-      uniform sampler2D tOcc;
-      uniform vec2 sunUv;
+      uniform sampler2D shadowMap;
+      uniform sampler2D tDepth;
+      uniform mat4 shadowMatrix;
+      uniform mat4 invProj;
+      uniform mat4 invView;
+      uniform vec3 camPos;
+      uniform vec3 sunDir;
       uniform float strength;
+      // march segment = ray ∩ sphere around the wheel's air volume
+      const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
+      const float VOL_R = 230.0;
+      const int STEPS = 20;
+      // three.js RGBA depth packing (shadow + depth maps are RGBA-packed)
+      const float UnpackDownscale = 255.0 / 256.0;
+      const vec3 PackFactors = vec3(16777216.0, 65536.0, 256.0);
+      const vec4 UnpackFactors = UnpackDownscale / vec4(PackFactors, 1.0);
+      float unpackRGBAToDepth(const in vec4 v) { return dot(v, UnpackFactors); }
       void main() {
-        const int SAMPLES = 64;
-        vec2 delta = (vUv - sunUv) * (0.8 / float(SAMPLES));
-        // per-pixel jitter turns sampling bands into invisible grain
-        float jitter = fract(sin(dot(vUv, vec2(12.9898, 78.233))) * 43758.5453);
-        vec2 uv = vUv - delta * jitter;
-        float illum = 0.0;
-        float falloff = 1.0;
-        for (int i = 0; i < SAMPLES; i++) {
-          uv -= delta;
-          illum += texture2D(tOcc, uv).r * falloff;
-          falloff *= 0.958;
+        vec4 ndc = vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
+        vec4 vp = invProj * ndc;
+        vp /= vp.w;
+        vec3 rayDir = normalize((invView * vec4(vp.xyz, 0.0)).xyz);
+        vec3 oc = camPos - VOL_C;
+        float b = dot(oc, rayDir);
+        float c = dot(oc, oc) - VOL_R * VOL_R;
+        float disc = b * b - c;
+        if (disc < 0.0) discard;
+        float sq = sqrt(disc);
+        float t0 = max(0.0, -b - sq);
+        float t1 = -b + sq;
+        // stop at the first solid surface: reconstruct the depth-buffer hit
+        float dScene = unpackRGBAToDepth(texture2D(tDepth, vUv));
+        if (dScene < 0.9999) {
+          vec4 sn = vec4(vUv * 2.0 - 1.0, dScene * 2.0 - 1.0, 1.0);
+          vec4 sv = invProj * sn;
+          sv /= sv.w;
+          vec3 sw = (invView * vec4(sv.xyz, 1.0)).xyz;
+          t1 = min(t1, length(sw - camPos));
         }
-        // fade to nothing before the canvas edge — the additive shafts must
-        // never print a rectangular seam against the background plate
+        if (t1 <= t0) discard;
+        float stepLen = (t1 - t0) / float(STEPS);
+        // per-pixel jitter hides the step count as grain
+        float jitter = fract(sin(dot(vUv, vec2(12.9898, 78.233))) * 43758.5453);
+        float acc = 0.0;
+        for (int i = 0; i < STEPS; i++) {
+          vec3 p = camPos + rayDir * (t0 + (float(i) + jitter) * stepLen);
+          vec4 sc = shadowMatrix * vec4(p, 1.0);
+          vec3 s = sc.xyz / sc.w;
+          float lit = 1.0;
+          if (s.x > 0.0 && s.x < 1.0 && s.y > 0.0 && s.y < 1.0 && s.z < 1.0) {
+            float d = unpackRGBAToDepth(texture2D(shadowMap, s.xy));
+            lit = d + 0.004 > s.z ? 1.0 : 0.0;
+          }
+          acc += lit;
+        }
+        acc /= float(STEPS);
+        // forward scattering: shafts bloom when looking toward the sun
+        float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
+        // fade before the canvas edge — no rectangular seam on the plate
         float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) *
           smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
-        // shafts crossing the wheel itself get knocked down hard — that
-        // over-the-spokes glare is what reads as sparkle
-        float wheelMask = texture2D(tOcc, vUv).g;
-        float overWheel = mix(1.0, 0.22, clamp(wheelMask * 1.5, 0.0, 1.0));
-        vec3 col = vec3(1.0, 0.78, 0.45) * illum * 0.075 * strength * edge * overWheel;
+        vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength * edge;
         gl_FragColor = vec4(col, 0.0);
       }
     `,
@@ -699,7 +711,11 @@ function createChakraScene(
   })
   rayScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), rayMat))
 
+  const _invProj = new THREE.Matrix4()
   function renderGodRays(): void {
+    const sm = rimSun.shadow.map
+    if (sm === null) return // first frame: shadow map not rendered yet
+    // depth pre-pass: solid wheel only (ground planes are see-through fx)
     const prevContact = contactShadow.visible
     const prevCatcher = liveCatcher.visible
     const prevDims = dimGroup?.visible ?? false
@@ -708,11 +724,9 @@ function createChakraScene(
     if (dimGroup) dimGroup.visible = false
     const prevShadowAuto = renderer.shadowMap.autoUpdate
     renderer.shadowMap.autoUpdate = false
-    renderer.setRenderTarget(occRT)
+    renderer.setRenderTarget(depthRT)
     renderer.clear()
-    renderer.autoClear = false
-    renderer.render(occSunScene, camera)
-    scene.overrideMaterial = occBlack
+    scene.overrideMaterial = depthMat
     renderer.render(scene, camera)
     scene.overrideMaterial = null
     renderer.setRenderTarget(null)
@@ -720,11 +734,15 @@ function createChakraScene(
     contactShadow.visible = prevContact
     liveCatcher.visible = prevCatcher
     if (dimGroup) dimGroup.visible = prevDims
-    raySunNdc.copy(occSun.position).project(camera)
-    ;(rayMat.uniforms['sunUv']!.value as THREE.Vector2).set(
-      (raySunNdc.x + 1) / 2,
-      (raySunNdc.y + 1) / 2,
+    rayMat.uniforms['shadowMap']!.value = sm.texture
+    ;(rayMat.uniforms['shadowMatrix']!.value as THREE.Matrix4).copy(rimSun.shadow.matrix)
+    ;(rayMat.uniforms['invProj']!.value as THREE.Matrix4).copy(
+      _invProj.copy(camera.projectionMatrix).invert(),
     )
+    ;(rayMat.uniforms['invView']!.value as THREE.Matrix4).copy(camera.matrixWorld)
+    ;(rayMat.uniforms['camPos']!.value as THREE.Vector3).copy(camera.position)
+    ;(rayMat.uniforms['sunDir']!.value as THREE.Vector3).copy(rimSun.position).normalize()
+    renderer.autoClear = false
     renderer.render(rayScene, rayCam)
     renderer.autoClear = true
   }
@@ -1344,12 +1362,9 @@ function createChakraScene(
     spokeGeo.dispose()
     spokes.forEach((s) => s.material.dispose())
     material.dispose()
-    occRT.dispose()
-    occBlack.dispose()
-    occSun.geometry.dispose()
-    occSun.material.map?.dispose()
-    occSun.material.dispose()
     rayMat.dispose()
+    depthRT.dispose()
+    depthMat.dispose()
     // flag resources (only allocated if flag mode was ever entered)
     if (flagGroup !== null) {
       scene.remove(flagGroup)
