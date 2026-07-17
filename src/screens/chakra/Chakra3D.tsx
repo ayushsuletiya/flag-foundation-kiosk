@@ -495,6 +495,8 @@ function createChakraScene(
   // Matched against figma-refs/chakra-values.png: lit faces read rich
   // cobalt, shadow faces deep navy.
   renderer.toneMappingExposure = 1.28
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
   const scene = new THREE.Scene() // background stays transparent (alpha)
 
@@ -525,6 +527,15 @@ function createChakraScene(
   const key = new THREE.SpotLight(0xffe0b2, 1000, 1400, 0.9, 1, 1)
   key.position.set(210, 300, 260)
   key.target.position.set(14, 3, 0)
+  // the key casts the LIVE shadow: the spoke pattern on the ground turns
+  // with the wheel (the dynamic-shadow half of the "ray-traced" look)
+  key.castShadow = true
+  key.shadow.mapSize.set(1024, 1024)
+  key.shadow.camera.near = 120
+  key.shadow.camera.far = 900
+  key.shadow.bias = -0.0004
+  key.shadow.normalBias = 0.6
+  key.shadow.radius = 8
   scene.add(key, key.target)
   const rimSun = new THREE.DirectionalLight(0xff9a45, 4.2) // THE sun: low, behind-right
   rimSun.position.set(230, -20, -130) // grazing angle: burns the right edge bevels
@@ -552,8 +563,8 @@ function createChakraScene(
   sctx.translate(128, 64)
   sctx.scale(1, 0.5)
   const sgrad = sctx.createRadialGradient(0, 0, 10, 0, 0, 120)
-  sgrad.addColorStop(0, 'rgba(24, 12, 4, 0.55)')
-  sgrad.addColorStop(0.55, 'rgba(24, 12, 4, 0.28)')
+  sgrad.addColorStop(0, 'rgba(24, 12, 4, 0.4)') // softer base — the live shadow layers on top
+  sgrad.addColorStop(0.55, 'rgba(24, 12, 4, 0.2)')
   sgrad.addColorStop(1, 'rgba(24, 12, 4, 0)')
   sctx.fillStyle = sgrad
   sctx.fillRect(-128, -128, 256, 256)
@@ -567,6 +578,18 @@ function createChakraScene(
   // sun is behind-right → the pool falls toward camera-left
   contactShadow.position.set(-8, -90.5, 20)
   scene.add(contactShadow)
+
+  // Live shadow catcher: only the key's cast shadow renders on it — the
+  // spoke pattern sweeps across the ground as the wheel turns, layered
+  // over the soft baked pool above.
+  const liveCatcher = new THREE.Mesh(
+    new THREE.PlaneGeometry(760, 460),
+    new THREE.ShadowMaterial({ opacity: 0.26 }),
+  )
+  liveCatcher.rotation.x = -Math.PI / 2
+  liveCatcher.position.set(14, -91, 30)
+  liveCatcher.receiveShadow = true
+  scene.add(liveCatcher)
 
   // Swap the studio env for one built from the ACTUAL sunset plate — the
   // wheel then reflects/absorbs the same warm sky and dark sea it sits in.
@@ -652,9 +675,11 @@ function createChakraScene(
     m.rotation.z = -i * SPOKE_STEP // spoke 1 points up, clockwise
     m.name = `Spoke ${i + 1}`
     m.userData = { spoke: i + 1 }
+    m.castShadow = true
     spokes.push(m)
     chakra.add(m)
   }
+  for (const part of [rim, hub, boss, flutes]) part.castShadow = true
   chakra.add(rim, hub, boss, flutes)
 
   /* ------------------------------------------------ selection state -- */
