@@ -722,8 +722,15 @@ function createChakraScene(
   // (correct, wheel-masked) volumetric light field away from the sun's
   // screen point — the gap glow elongates into rays. Rendered additively
   // with zero alpha so it also spills over the CSS plate.
-  // third-res: linear upsampling doubles as a blur — softer, wider rays
-  const rayRT = new THREE.WebGLRenderTarget(Math.floor(width / 3), Math.floor(height / 3))
+  // Field resolution: at the old ~303px the silhouette stair-stepped along
+  // the radial spokes (the radial smear can't blur across an edge parallel
+  // to it). Bumped to ~512 (capped — 910px froze the iGPU at 20 samples/
+  // px) so the edge is finer; the 5-tap blur below keeps it soft.
+  const rayFieldMax = 512
+  const rayAspect = width / height
+  const rayFieldW = rayAspect >= 1 ? rayFieldMax : Math.round(rayFieldMax * rayAspect)
+  const rayFieldH = rayAspect >= 1 ? Math.round(rayFieldMax / rayAspect) : rayFieldMax
+  const rayRT = new THREE.WebGLRenderTarget(rayFieldW, rayFieldH)
   const sunWorld = new THREE.Vector3(78, 37, -286) // measured plate sun
   const sunNdc = new THREE.Vector3()
   const streakScene = new THREE.Scene()
@@ -731,6 +738,7 @@ function createChakraScene(
     uniforms: {
       tRay: { value: rayRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
+      texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
       boost: { value: 1.2 },
     },
     vertexShader: /* glsl */ `
@@ -741,6 +749,7 @@ function createChakraScene(
       varying vec2 vUv;
       uniform sampler2D tRay;
       uniform vec2 sunUv;
+      uniform vec2 texel;
       uniform float boost;
       void main() {
         const int SAMPLES = 48;
@@ -757,7 +766,14 @@ function createChakraScene(
         // decayed SUM (not average): pixels far from bright sources get
         // almost nothing, so beams stay local instead of hazing the canvas
         vec3 streak = acc * 0.05;
-        vec3 base = texture2D(tRay, vUv).rgb;
+        // fill glow = a 5-tap blur of the field, so the silhouette edge is
+        // soft (a single tap paints the field's blocky edge onto the frame)
+        vec2 b = texel * 1.5;
+        vec3 base = texture2D(tRay, vUv).rgb * 0.4
+          + texture2D(tRay, vUv + vec2(b.x, b.y)).rgb * 0.15
+          + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
+          + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
+          + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
         // wide dissolve: light must die well inside the canvas so the render
         // box can never print its rectangle on the plate
         float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x) *
