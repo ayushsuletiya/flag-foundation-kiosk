@@ -612,9 +612,18 @@ function createChakraScene(
   // crepuscular rays with no screen-space smearing (and none of its
   // sparkle artifacts). Colour written with zero alpha composites
   // additively over the CSS plate.
-  // Depth pre-pass of the solid scene (half res): each ray STOPS at the
-  // first surface, so lit air behind the wheel never paints over it.
-  const depthRT = new THREE.WebGLRenderTarget(Math.floor(width / 2), Math.floor(height / 2))
+  // Depth pre-pass of the solid scene: each ray STOPS at the first surface,
+  // so lit air behind the wheel never paints over it. FULL device res and
+  // NEAREST filtering — RGBA-packed depth must never be interpolated
+  // (blended packed bytes decode to garbage and ring the silhouette with
+  // a jagged fringe).
+  const depthDpr = Math.min(window.devicePixelRatio, 2)
+  const depthRT = new THREE.WebGLRenderTarget(
+    Math.floor(width * depthDpr),
+    Math.floor(height * depthDpr),
+  )
+  depthRT.texture.minFilter = THREE.NearestFilter
+  depthRT.texture.magFilter = THREE.NearestFilter
   const depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
   const rayScene = new THREE.Scene()
   const rayCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
