@@ -513,24 +513,31 @@ function createChakraScene(
   scene.environment = envTex
   scene.environmentIntensity = 0.55
 
-  // …and a warm sunset rig matches the Figma background plate. The wheel
-  // is a flat coplanar extrusion seen face-on, so directional lights CANNOT
-  // shade it (constant N·L) — the key is a warm SPOT with distance falloff:
-  // the face brightens toward the upper-left and falls into shade toward
-  // the lower-right, and the same spot casts the wheel's soft shadow onto
-  // a ground catcher under it (the sea in the plate).
-  const hemi = new THREE.HemisphereLight(0xffdcae, 0x3a2413, 0.45)
+  // Studio rig read straight off the plate (classic 4-point, podcast-style):
+  // the plate's SUN is low and BEHIND-RIGHT → the hottest light is a back
+  // RIM that burns the wheel's right edges; the bright right sky is the soft
+  // KEY (spot with falloff so the flat face still grades); the dark-cloud
+  // left side gets a cool FILL that keeps shade readable without flattening;
+  // the mirror-bright floor justifies a warm KICKER up into the bottom rim;
+  // a second faint rim separates the left edge from the dark clouds.
+  const hemi = new THREE.HemisphereLight(0xffd9a8, 0x4a2f16, 0.45)
   scene.add(hemi)
-  const key = new THREE.SpotLight(0xfff0da, 1250, 1400, 0.9, 1, 1)
-  key.position.set(-260, 320, 260)
+  const key = new THREE.SpotLight(0xffe0b2, 1000, 1400, 0.9, 1, 1)
+  key.position.set(210, 300, 260)
   key.target.position.set(14, 3, 0)
   scene.add(key, key.target)
-  const sun = new THREE.DirectionalLight(0xffa14d, 2.3) // low sun behind-right
-  sun.position.set(80, -10, -240)
-  scene.add(sun)
-  const fill = new THREE.DirectionalLight(0xffc07a, 0.5)
-  fill.position.set(200, -40, 140)
+  const rimSun = new THREE.DirectionalLight(0xff9a45, 4.2) // THE sun: low, behind-right
+  rimSun.position.set(230, -20, -130) // grazing angle: burns the right edge bevels
+  scene.add(rimSun)
+  const rimSky = new THREE.DirectionalLight(0xffc9a0, 1.1) // sky glow rim, behind-left-top
+  rimSky.position.set(-220, 160, -200)
+  scene.add(rimSky)
+  const fill = new THREE.DirectionalLight(0x9db3d9, 0.5) // cool lift from the dark-cloud side
+  fill.position.set(-260, 60, 200)
   scene.add(fill)
+  const kicker = new THREE.PointLight(0xffb768, 1.4, 420, 1.5) // floor bounce up into the rim
+  kicker.position.set(20, -125, 140)
+  scene.add(kicker)
 
   // Shadow catcher: an invisible ground plane at the wheel's bottom tangent
   // — only the cast shadow renders, compositing onto the background plate.
@@ -557,7 +564,8 @@ function createChakraScene(
     new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }),
   )
   contactShadow.rotation.x = -Math.PI / 2
-  contactShadow.position.set(38, -90.5, 12) // pooled slightly off the key light
+  // sun is behind-right → the pool falls toward camera-left
+  contactShadow.position.set(-8, -90.5, 20)
   scene.add(contactShadow)
 
   // Swap the studio env for one built from the ACTUAL sunset plate — the
