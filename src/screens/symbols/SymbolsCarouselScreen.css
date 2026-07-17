@@ -173,55 +173,13 @@
   opacity: 0;
 }
 
-/* ---- category intro ------------------------------------------------ */
-/* "The flock": each card flies in from off-screen left like a bird — it
-   enters banked into the flight direction at its own altitude (--sy-jy),
-   sweeps across the stage, dips low mid-flight, then pulls up and banks
-   upright onto its ring pose (components ride in as CSS vars; delay and
-   duration are jittered per card in the TSX). Then data-mode flips to
-   intro-spin: the animation drops and rAF-driven ring poses take one slow
-   revolution before the ring settles into the rest slots. */
-.sy-carousel[data-mode='intro'] .sy-card3d {
-  animation: sy-flock 950ms cubic-bezier(0.3, 0.05, 0.25, 1) both;
-}
-
-@keyframes sy-flock {
-  0% {
-    transform: translate3d(
-        calc(var(--sy-x) - 1750px),
-        calc(var(--sy-y) - 160px + var(--sy-jy)),
-        calc(var(--sy-z) - 260px)
-      )
-      rotateY(56deg) rotateZ(-10deg) scale(calc(var(--sy-s) * 0.6));
-    opacity: 0;
-  }
-  12% {
-    opacity: var(--sy-o);
-  }
-  55% {
-    /* the swoop: low over the stage, half-unbanked, still left of the perch */
-    transform: translate3d(
-        calc(var(--sy-x) - 430px),
-        calc(var(--sy-y) + 70px - var(--sy-jy) * 0.4),
-        calc(var(--sy-z) - 90px)
-      )
-      rotateY(28deg) rotateZ(6deg) scale(calc(var(--sy-s) * 0.85));
-    opacity: var(--sy-o);
-  }
-  100% {
-    transform: translate3d(var(--sy-x), var(--sy-y), var(--sy-z)) rotateY(var(--sy-ry))
-      rotateZ(0deg) scale(var(--sy-s));
-    opacity: var(--sy-o);
-  }
-}
-
-/* ---- press-and-hold orbit (+ intro revolution) -------------------- */
-/* While the ring floats, per-frame pose targets need a short linear
-   chase so drag-spin / the intro revolution read as smooth drift.
-   animation:none on intro-spin releases the sy-flock fill so the inline
-   ring poses drive again. */
+/* ---- press-and-hold orbit (+ category intro trail) ----------------- */
+/* The intro is the same machinery as orbit: rAF-driven inline ring poses
+   updated per frame (one continuous decelerating sweep for the intro
+   trail), smoothed by a short linear chase so per-frame targets read as
+   smooth drift. animation:none keeps the arrival glow from riding along. */
 .sy-carousel[data-mode='orbit'] .sy-card3d,
-.sy-carousel[data-mode='intro-spin'] .sy-card3d {
+.sy-carousel[data-mode='intro'] .sy-card3d {
   animation: none;
   transition:
     transform 220ms linear,
@@ -230,8 +188,7 @@
 
 /* Floating cards all read "awake": dims nearly lift */
 .sy-carousel[data-mode='orbit'] .sy-card-dim,
-.sy-carousel[data-mode='intro'] .sy-card-dim,
-.sy-carousel[data-mode='intro-spin'] .sy-card-dim {
+.sy-carousel[data-mode='intro'] .sy-card-dim {
   opacity: 0.12;
 }
 
@@ -298,23 +255,18 @@
 
 
 /* Lifted modes own their own motion — the arrival ring must not ride
-   along into the lift/fly-in. animation:none (not just opacity) because a
+   along into the lift/sweep. animation:none (not just opacity) because a
    running animation would override plain declarations. On settle the
-   slot-0 rules re-apply and the arrival glow replays as the ring lands.
-   (Card animation:none for orbit/intro-spin lives in the chase rule above
-   — during 'intro' the card keeps its sy-flock animation.) */
+   slot-0 rules re-apply and the arrival glow replays as the ring lands. */
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
 .sy-carousel[data-mode='orbit'] .sy-glow-ring rect,
 .sy-carousel[data-mode='intro'] .sy-glow-ring,
-.sy-carousel[data-mode='intro'] .sy-glow-ring rect,
-.sy-carousel[data-mode='intro-spin'] .sy-glow-ring,
-.sy-carousel[data-mode='intro-spin'] .sy-glow-ring rect {
+.sy-carousel[data-mode='intro'] .sy-glow-ring rect {
   animation: none;
 }
 
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
-.sy-carousel[data-mode='intro'] .sy-glow-ring,
-.sy-carousel[data-mode='intro-spin'] .sy-glow-ring {
+.sy-carousel[data-mode='intro'] .sy-glow-ring {
   opacity: 0;
 }
 

@@ -24,35 +24,38 @@ const SWIPE_THRESHOLD_PX = 60
 const HOLD_TO_ORBIT_MS = 260
 const SETTLE_MS = 750
 
-// Category intro — "the flock": cards stream in from off-screen left like
-// a loose formation of birds (each at its own altitude, speed and delay),
-// swoop across the stage and pull up into their ring poses; the full ring
-// then takes one slow revolution (spin) and settles into the rest slots.
-const INTRO_BASE_DELAY_MS = 250 // let the veil clear before the first bird
-const INTRO_FLY_MS = 1350 // base delay + longest flight (900–1100ms)
-const INTRO_STAGGER_MS = 70
-const INTRO_SPIN_MS = 1500
-
-/** Deterministic 0..1 jitter per card — flock variation that is stable
-    across re-renders (spin state updates re-render mid-intro). */
-function flockJitter(ringIndex: number): number {
-  return ((ringIndex * 37 + 11) % 13) / 13
-}
+// Category intro — "the trail": one continuous cinematic motion. Every
+// tile rides the SAME orbital ellipse; the whole trail sweeps 1¼ turns
+// around the podium while decelerating (ease-out), the ellipse expanding
+// from a tight swirl to full size. Tiles materialize one behind another
+// (stagger tuned to the early angular speed, so they appear to stream in
+// at the ellipse's left edge) and the sweep ends with every tile exactly
+// on its ring pose — then the normal settle glides them into the slots.
+const INTRO_TOTAL_MS = 3200
+const INTRO_ENTRY_TURNS_DEG = 450 // 1¼ revolutions; ends at spin 0
+const INTRO_STAGGER_MS = 55 // ≈ ring step / early angular speed
+const INTRO_APPEAR_MS = 340
 
 /**
  * Orbit pose for a card while the ring is lifted (press-and-hold).
  * theta 0 = front of the podium. Ellipse ~460x230 around the center slot,
  * back cards higher, smaller, dimmer — a floating ring of 3D cards.
  */
-function orbitPose(ringIndex: number, count: number, spinDeg: number) {
+function orbitPose(
+  ringIndex: number,
+  count: number,
+  spinDeg: number,
+  radius = 1,
+  scaleMul = 1,
+) {
   const theta = (((ringIndex * 360) / count + spinDeg) * Math.PI) / 180
   const s = Math.sin(theta)
   const c = Math.cos(theta)
-  const x = s * 440
-  const y = 30 + (1 - c) * 30
-  const z = (c - 1) * 280
+  const x = s * 440 * radius
+  const y = 30 + (1 - c) * 30 * radius
+  const z = (c - 1) * 280 * radius
   const ry = -s * 35
-  const scale = 0.44 + 0.24 * (c + 1)
+  const scale = (0.44 + 0.24 * (c + 1)) * scaleMul
   // Steep scale/opacity falloff toward the back: 14 evenly-spaced cards
   // inevitably bunch at the ellipse's horizontal edges mid-spin — strong
   // depth separation keeps that from reading as a flat pile-up.
@@ -85,12 +88,14 @@ export function SymbolsCarouselScreen() {
   const swipeStartX = useRef<number | null>(null)
 
   // ---- mode state machine -------------------------------------------
-  // 'intro' = cards fly in from the podium · 'intro-spin' = the assembled
-  // ring takes one revolution · 'rest' = Figma slot poses · 'orbit' = full
-  // ring floats (drag-to-spin) · 'settle' = gliding home.
-  const [mode, setMode] = useState<'intro' | 'intro-spin' | 'rest' | 'orbit' | 'settle'>('intro')
-  const isIntro = mode === 'intro' || mode === 'intro-spin'
+  // 'intro' = the continuous trail sweep around the podium · 'rest' =
+  // Figma slot poses · 'orbit' = full ring floats (drag-to-spin) ·
+  // 'settle' = gliding home.
+  const [mode, setMode] = useState<'intro' | 'rest' | 'orbit' | 'settle'>('intro')
+  const isIntro = mode === 'intro'
   const [spin, setSpin] = useState(0)
+  // Elapsed intro time — the single value the whole trail derives from.
+  const [introT, setIntroT] = useState(0)
   const [glowSlug, setGlowSlug] = useState<string | null>(null)
   const spinRef = useRef(0)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -117,40 +122,25 @@ export function SymbolsCarouselScreen() {
     }, SETTLE_MS)
   }
 
-  // Intro timeline: fly-in is CSS-staggered per card; after the last card
-  // lands, one decelerating revolution, then the ring settles. A single
-  // elapsed-time rAF machine (not chained timeouts) so a hidden window
-  // pauses the intro instead of finishing it invisibly.
+  // Intro timeline: a single elapsed-time rAF machine (not chained
+  // timeouts) so a hidden window pauses the intro instead of finishing it
+  // invisibly. All per-card motion derives from introT in render — one
+  // clock, one continuous sweep, zero phase seams.
   // Gated on COMPLETION (introDone), never on start, and the effect cancels
   // its own frame: StrictMode's dev double-mount cancels run 1 and cleanly
   // restarts in run 2 (a start-guard here left the intro frozen mid-fly).
   useEffect(() => {
     if (count === 0 || introDone.current) return
-    const flyTotal = INTRO_FLY_MS + (count - 1) * INTRO_STAGGER_MS + 200
     let start: number | null = null
-    let spinning = false
     const tick = (now: number) => {
       start ??= now
       const t = now - start
-      if (t < flyTotal) {
-        introRaf.current = requestAnimationFrame(tick)
-        return
-      }
-      if (!spinning) {
-        spinning = true
-        setMode('intro-spin')
-      }
-      const p = Math.min(1, (t - flyTotal) / INTRO_SPIN_MS)
-      const eased = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
-      spinRef.current = -360 * eased
-      setSpin(spinRef.current)
-      if (p < 1) {
+      setIntroT(t)
+      if (t < INTRO_TOTAL_MS) {
         introRaf.current = requestAnimationFrame(tick)
       } else {
         introRaf.current = null
         introDone.current = true
-        spinRef.current = 0 // -360 ≡ 0: same pose, active card unchanged
-        setSpin(0)
         settleToRest()
       }
     }
@@ -217,6 +207,13 @@ export function SymbolsCarouselScreen() {
   const activeSlug = symbolSlug(active.symbol)
   const shortName = symbolShortName(active)
   const nameFontSize = fitFontSize(shortName, 96.716, 660)
+
+  // Trail sweep parameters — every tile's pose derives from the one intro
+  // clock: a decelerating 1¼-turn sweep while the ellipse expands to size.
+  const introP = Math.min(1, introT / INTRO_TOTAL_MS)
+  const introE = 1 - Math.pow(1 - introP, 3)
+  const introSpin = -INTRO_ENTRY_TURNS_DEG * (1 - introE)
+  const introRadius = 0.55 + 0.45 * introE
 
   const rotate = (dir: 1 | -1) => {
     setSelected((activeIndex + dir + count) % count)
@@ -304,30 +301,27 @@ export function SymbolsCarouselScreen() {
           if (!lifted && (Math.abs(off) > 2 || (count <= 2 && off < 0))) return null
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
-          const pose = mode === 'orbit' || isIntro ? orbitPose(ringIndex, count, spin) : undefined
-          const poseCss = pose
-            ? { transform: pose.transform, opacity: pose.opacity, zIndex: pose.zIndex }
+          // Intro: tiles materialize one behind another (smoothstepped) while
+          // the whole trail rides the same decelerating sweep — the stagger
+          // matches the early angular speed, so each new tile appears where
+          // the previous one just was: a stream pouring onto the orbit.
+          const appearP = isIntro
+            ? Math.min(1, Math.max(0, (introT - ringIndex * INTRO_STAGGER_MS) / INTRO_APPEAR_MS))
+            : 1
+          const appear = appearP * appearP * (3 - 2 * appearP)
+          const pose =
+            mode === 'orbit'
+              ? orbitPose(ringIndex, count, spin)
+              : isIntro
+                ? orbitPose(ringIndex, count, introSpin, introRadius, 0.7 + 0.3 * appear)
+                : undefined
+          const style = pose
+            ? ({
+                transform: pose.transform,
+                opacity: isIntro ? pose.opacity * appear : pose.opacity,
+                zIndex: pose.zIndex,
+              } as CSSProperties)
             : undefined
-          // During the intro fly-in the sy-flock animation flies each card in
-          // from off-screen left to its ring pose — the pose components ride
-          // along as CSS vars so the keyframes can plot a swooping path, and
-          // per-card jitter varies delay, speed and altitude (flock feel).
-          const jitter = flockJitter(ringIndex)
-          const style =
-            mode === 'intro'
-              ? ({
-                  ...poseCss,
-                  '--sy-x': `${pose!.x.toFixed(1)}px`,
-                  '--sy-y': `${pose!.y.toFixed(1)}px`,
-                  '--sy-z': `${pose!.z.toFixed(1)}px`,
-                  '--sy-ry': `${pose!.ry.toFixed(1)}deg`,
-                  '--sy-s': pose!.scale.toFixed(3),
-                  '--sy-o': pose!.opacity.toFixed(3),
-                  '--sy-jy': `${((jitter - 0.5) * 180).toFixed(0)}px`,
-                  animationDelay: `${Math.round(INTRO_BASE_DELAY_MS + ringIndex * INTRO_STAGGER_MS + jitter * 80)}ms`,
-                  animationDuration: `${Math.round(900 + jitter * 200)}ms`,
-                } as CSSProperties)
-              : (poseCss as CSSProperties | undefined)
           return (
             <button
               key={slug}
