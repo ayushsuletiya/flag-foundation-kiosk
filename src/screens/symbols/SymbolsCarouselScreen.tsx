@@ -24,12 +24,20 @@ const SWIPE_THRESHOLD_PX = 60
 const HOLD_TO_ORBIT_MS = 260
 const SETTLE_MS = 750
 
-// Category intro — "summoned from the podium": cards are born inside the
-// podium one by one and spiral out to the floating ring (fly), the full
-// ring takes one slow revolution (spin), then settles into the rest slots.
-const INTRO_FLY_MS = 800
-const INTRO_STAGGER_MS = 90
+// Category intro — "the flock": cards stream in from off-screen left like
+// a loose formation of birds (each at its own altitude, speed and delay),
+// swoop across the stage and pull up into their ring poses; the full ring
+// then takes one slow revolution (spin) and settles into the rest slots.
+const INTRO_BASE_DELAY_MS = 250 // let the veil clear before the first bird
+const INTRO_FLY_MS = 1350 // base delay + longest flight (900–1100ms)
+const INTRO_STAGGER_MS = 70
 const INTRO_SPIN_MS = 1500
+
+/** Deterministic 0..1 jitter per card — flock variation that is stable
+    across re-renders (spin state updates re-render mid-intro). */
+function flockJitter(ringIndex: number): number {
+  return ((ringIndex * 37 + 11) % 13) / 13
+}
 
 /**
  * Orbit pose for a card while the ring is lifted (press-and-hold).
@@ -40,11 +48,21 @@ function orbitPose(ringIndex: number, count: number, spinDeg: number) {
   const theta = (((ringIndex * 360) / count + spinDeg) * Math.PI) / 180
   const s = Math.sin(theta)
   const c = Math.cos(theta)
+  const x = s * 440
+  const y = 30 + (1 - c) * 30
+  const z = (c - 1) * 280
+  const ry = -s * 35
+  const scale = 0.44 + 0.24 * (c + 1)
   // Steep scale/opacity falloff toward the back: 14 evenly-spaced cards
   // inevitably bunch at the ellipse's horizontal edges mid-spin — strong
   // depth separation keeps that from reading as a flat pile-up.
   return {
-    transform: `translate3d(${(s * 440).toFixed(1)}px, ${(30 + (1 - c) * 30).toFixed(1)}px, ${((c - 1) * 280).toFixed(1)}px) rotateY(${(-s * 35).toFixed(1)}deg) scale(${(0.44 + 0.24 * (c + 1)).toFixed(3)})`,
+    x,
+    y,
+    z,
+    ry,
+    scale,
+    transform: `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg) scale(${scale.toFixed(3)})`,
     opacity: 0.38 + 0.31 * (c + 1),
     zIndex: Math.round(100 + c * 50),
   } as const
@@ -287,18 +305,29 @@ export function SymbolsCarouselScreen() {
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
           const pose = mode === 'orbit' || isIntro ? orbitPose(ringIndex, count, spin) : undefined
-          // During the intro fly-in the sy-spawn animation drives each card
-          // from inside the podium to its ring pose — the target pose rides
-          // along as CSS vars, the stagger as a per-card animation delay.
+          const poseCss = pose
+            ? { transform: pose.transform, opacity: pose.opacity, zIndex: pose.zIndex }
+            : undefined
+          // During the intro fly-in the sy-flock animation flies each card in
+          // from off-screen left to its ring pose — the pose components ride
+          // along as CSS vars so the keyframes can plot a swooping path, and
+          // per-card jitter varies delay, speed and altitude (flock feel).
+          const jitter = flockJitter(ringIndex)
           const style =
             mode === 'intro'
               ? ({
-                  ...pose,
-                  '--sy-pose': pose!.transform,
-                  '--sy-pose-o': String(pose!.opacity),
-                  animationDelay: `${ringIndex * INTRO_STAGGER_MS}ms`,
+                  ...poseCss,
+                  '--sy-x': `${pose!.x.toFixed(1)}px`,
+                  '--sy-y': `${pose!.y.toFixed(1)}px`,
+                  '--sy-z': `${pose!.z.toFixed(1)}px`,
+                  '--sy-ry': `${pose!.ry.toFixed(1)}deg`,
+                  '--sy-s': pose!.scale.toFixed(3),
+                  '--sy-o': pose!.opacity.toFixed(3),
+                  '--sy-jy': `${((jitter - 0.5) * 180).toFixed(0)}px`,
+                  animationDelay: `${Math.round(INTRO_BASE_DELAY_MS + ringIndex * INTRO_STAGGER_MS + jitter * 80)}ms`,
+                  animationDuration: `${Math.round(900 + jitter * 200)}ms`,
                 } as CSSProperties)
-              : (pose as CSSProperties | undefined)
+              : (poseCss as CSSProperties | undefined)
           return (
             <button
               key={slug}
