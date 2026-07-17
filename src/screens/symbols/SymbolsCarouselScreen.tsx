@@ -34,7 +34,14 @@ const SETTLE_MS = 750
 const INTRO_TOTAL_MS = 3200
 const INTRO_ENTRY_TURNS_DEG = 450 // 1¼ revolutions; ends at spin 0
 const INTRO_STAGGER_MS = 55 // ≈ ring step / early angular speed
-const INTRO_APPEAR_MS = 340
+const INTRO_ENTRY_MS = 550 // per-tile flight from the left gate onto the orbit
+// The left gate: where every tile enters from (off-screen left, banked
+// into the direction of travel). Tiles lerp from here toward their MOVING
+// orbit pose, so the flight path bends smoothly onto the circling ring.
+const INTRO_GATE_X = -1250
+const INTRO_GATE_Y = 40
+const INTRO_GATE_Z = -60
+const INTRO_GATE_RY = 45
 
 /**
  * Orbit pose for a card while the ring is lifted (press-and-hold).
@@ -301,27 +308,39 @@ export function SymbolsCarouselScreen() {
           if (!lifted && (Math.abs(off) > 2 || (count <= 2 && off < 0))) return null
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
-          // Intro: tiles materialize one behind another (smoothstepped) while
-          // the whole trail rides the same decelerating sweep — the stagger
-          // matches the early angular speed, so each new tile appears where
-          // the previous one just was: a stream pouring onto the orbit.
-          const appearP = isIntro
-            ? Math.min(1, Math.max(0, (introT - ringIndex * INTRO_STAGGER_MS) / INTRO_APPEAR_MS))
+          // Intro: tiles stream in from the LEFT GATE one behind another,
+          // each lerping toward its orbit pose — a target that is itself
+          // sweeping around the podium, so the flight path curves onto the
+          // ring with no seam between "entering" and "circling".
+          const entryP = isIntro
+            ? Math.min(1, Math.max(0, (introT - ringIndex * INTRO_STAGGER_MS) / INTRO_ENTRY_MS))
             : 1
-          const appear = appearP * appearP * (3 - 2 * appearP)
+          const entry = entryP * entryP * (3 - 2 * entryP)
           const pose =
             mode === 'orbit'
               ? orbitPose(ringIndex, count, spin)
               : isIntro
-                ? orbitPose(ringIndex, count, introSpin, introRadius, 0.7 + 0.3 * appear)
+                ? orbitPose(ringIndex, count, introSpin, introRadius)
                 : undefined
-          const style = pose
-            ? ({
-                transform: pose.transform,
-                opacity: isIntro ? pose.opacity * appear : pose.opacity,
-                zIndex: pose.zIndex,
-              } as CSSProperties)
-            : undefined
+          let style: CSSProperties | undefined
+          if (isIntro && pose) {
+            const x = INTRO_GATE_X + (pose.x - INTRO_GATE_X) * entry
+            const y = INTRO_GATE_Y + (pose.y - INTRO_GATE_Y) * entry
+            const z = INTRO_GATE_Z + (pose.z - INTRO_GATE_Z) * entry
+            const ry = INTRO_GATE_RY + (pose.ry - INTRO_GATE_RY) * entry
+            const sc = pose.scale * (0.8 + 0.2 * entry)
+            style = {
+              transform: `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg) scale(${sc.toFixed(3)})`,
+              opacity: pose.opacity * Math.min(1, entry / 0.35),
+              zIndex: pose.zIndex,
+            }
+          } else if (pose) {
+            style = {
+              transform: pose.transform,
+              opacity: pose.opacity,
+              zIndex: pose.zIndex,
+            }
+          }
           return (
             <button
               key={slug}
