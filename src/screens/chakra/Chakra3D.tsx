@@ -86,7 +86,7 @@ const SPEC = {
 } as const
 
 const DEPTH = 5.5
-const BEVEL = 1.0
+const BEVEL = 1.4 // generous rounded bevels roll the light like the reference render
 const IDLE_SPIN = 0.0035 // rad/frame, matches source build
 const IDLE_RESUME_MS = 4000 // idle turntable resumes this long after the last touch
 const TAP_SLOP_PX = 8 // finger travel below this = tap (raycast select); above = drag
@@ -494,7 +494,7 @@ function createChakraScene(
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   // Matched against figma-refs/chakra-values.png: lit faces read rich
   // cobalt, shadow faces deep navy.
-  renderer.toneMappingExposure = 1.1
+  renderer.toneMappingExposure = 1.28
 
   const scene = new THREE.Scene() // background stays transparent (alpha)
 
@@ -560,47 +560,44 @@ function createChakraScene(
   contactShadow.position.set(38, -90.5, 12) // pooled slightly off the key light
   scene.add(contactShadow)
 
-  // Painted-metal imperfection: procedural two-scale noise so the finish
-  // isn't CG-perfect — blotchy paint (roughness variation breaks the sheen
-  // unevenly) + fine grain (bump micro-relief catches the light). Extrude
-  // UVs are in position units (~±92), so repeat sets real-world tile size.
-  const makeNoise = (blur: number, contrast: number, repeat: number): THREE.CanvasTexture => {
-    const size = 256
-    const c = document.createElement('canvas')
-    c.width = c.height = size
-    const g = c.getContext('2d')!
-    const img = g.createImageData(size, size)
-    for (let i = 0; i < img.data.length; i += 4) {
-      const v = Math.max(0, Math.min(255, 128 + (Math.random() - 0.5) * 2 * contrast))
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = v
-      img.data[i + 3] = 255
-    }
-    g.putImageData(img, 0, 0)
-    if (blur > 0) {
-      g.filter = `blur(${blur}px)`
-      g.drawImage(c, 0, 0)
-      g.filter = 'none'
-    }
-    const tex = new THREE.CanvasTexture(c)
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-    tex.repeat.set(repeat, repeat)
-    tex.anisotropy = renderer.capabilities.getMaxAnisotropy()
-    return tex
-  }
-  const paintBlotch = makeNoise(8, 70, 0.017) // ~60-unit tiles, soft blotches
-  const metalGrain = makeNoise(0, 90, 0.05) // ~20-unit tiles, fine grain
+  // Swap the studio env for one built from the ACTUAL sunset plate — the
+  // wheel then reflects/absorbs the same warm sky and dark sea it sits in.
+  new THREE.TextureLoader().load('assets/images/chakra/bg-sunset.png', (t) => {
+    t.mapping = THREE.EquirectangularReflectionMapping
+    t.colorSpace = THREE.SRGBColorSpace
+    scene.environment = pmrem.fromEquirectangular(t).texture
+    scene.environmentIntensity = 0.5
+    t.dispose()
+  })
 
-  // Body colour = the design render's cobalt (the print-spec #06038D reads
-  // near-black under any physically plausible light; the approved Figma
-  // plate uses this brighter body). roughness 1.0 is modulated DOWN by the
-  // blotch map (mid-gray ≈ 0.5 effective) — worn painted metal, not gloss.
-  const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(0x0b2da0),
-    metalness: 0.35,
-    roughness: 1.0,
-    roughnessMap: paintBlotch,
-    bumpMap: metalGrain,
-    bumpScale: 0.25,
+  // Baked contact shading (per-vertex AO): real renders read as real mostly
+  // because of the darkening where parts meet — spoke roots into the hub,
+  // spoke tips under the rim, the scalloped inner rim edge. Cheap, baked
+  // once, multiplied into the base colour via vertexColors.
+  const smoothstep = (a: number, b: number, x: number): number => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+    return t * t * (3 - 2 * t)
+  }
+  const bakeRadialAO = (geo: THREE.BufferGeometry, ao: (r: number) => number): void => {
+    const pos = geo.attributes.position as THREE.BufferAttribute
+    const colors = new Float32Array(pos.count * 3)
+    for (let i = 0; i < pos.count; i++) {
+      const v = ao(Math.hypot(pos.getX(i), pos.getY(i)))
+      colors[i * 3] = colors[i * 3 + 1] = colors[i * 3 + 2] = v
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  }
+
+  // Painted-enamel body over metal: clearcoat carries the sun's sheen while
+  // the base stays the design render's cobalt (print-spec #06038D reads
+  // near-black under any physically plausible light).
+  const material = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(0x1236b0),
+    metalness: 0.25,
+    roughness: 0.42,
+    clearcoat: 0.9,
+    clearcoatRoughness: 0.28,
+    vertexColors: true,
   })
 
   // lean group (fixed pose) → chakra group (spins about its axle)
@@ -614,18 +611,33 @@ function createChakraScene(
   const chakra = new THREE.Group()
   lean.add(chakra)
 
-  const rim = new THREE.Mesh(buildRimGeometry(DEPTH, BEVEL), material)
+  const rimGeo = buildRimGeometry(DEPTH, BEVEL)
+  // rim: the scalloped inner edge sits in shade, the outer face is open
+  bakeRadialAO(rimGeo, (r) => 0.68 + 0.32 * smoothstep(77, 89, r))
+  const rim = new THREE.Mesh(rimGeo, material)
   rim.name = 'Rim'
-  const hub = new THREE.Mesh(buildHubGeometry(DEPTH * 1.05, BEVEL), material)
+  const hubGeo = buildHubGeometry(DEPTH * 1.05, BEVEL)
+  // hub: darkens toward its edge where all 24 spoke roots crowd in
+  bakeRadialAO(hubGeo, (r) => 0.95 - 0.3 * smoothstep(10, 16, r))
+  const hub = new THREE.Mesh(hubGeo, material)
   hub.name = 'Hub'
   const bossGeo = new THREE.CapsuleGeometry(4.4, DEPTH * 1.15, 8, 32)
   bossGeo.rotateX(Math.PI / 2)
+  bakeRadialAO(bossGeo, () => 0.92)
   const boss = new THREE.Mesh(bossGeo, material)
   boss.name = 'Centre boss'
-  const flutes = new THREE.Mesh(buildFluteGeometry(DEPTH * 1.05), material)
+  const fluteGeo = buildFluteGeometry(DEPTH * 1.05)
+  bakeRadialAO(fluteGeo, (r) => 0.9 - 0.25 * smoothstep(10, 16, r))
+  const flutes = new THREE.Mesh(fluteGeo, material)
   flutes.name = 'Hub flutes'
 
   const spokeGeo = buildSpokeGeometry(DEPTH, BEVEL * 0.9)
+  // spokes: shaded at the root junction, brightest along the bulge, tucked
+  // into shade again where the tip meets the rim
+  bakeRadialAO(
+    spokeGeo,
+    (r) => (0.6 + 0.4 * smoothstep(15, 32, r)) * (1 - 0.22 * smoothstep(62, 80, r)),
+  )
   const spokes: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>[] = []
   for (let i = 0; i < SPEC.spokeCount; i++) {
     const m = new THREE.Mesh(spokeGeo, material.clone())
