@@ -492,11 +492,9 @@ function createChakraScene(
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(width, height)
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  // 1.0 keeps the flag navy (#06038D) reading as NAVY — higher exposure
-  // pushed the whole wheel toward bright royal blue.
-  renderer.toneMappingExposure = 1.0
-  renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  // Matched against figma-refs/chakra-values.png: lit faces read rich
+  // cobalt, shadow faces deep navy.
+  renderer.toneMappingExposure = 1.1
 
   const scene = new THREE.Scene() // background stays transparent (alpha)
 
@@ -513,7 +511,7 @@ function createChakraScene(
   const pmrem = new THREE.PMREMGenerator(renderer)
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   scene.environment = envTex
-  scene.environmentIntensity = 0.45
+  scene.environmentIntensity = 0.55
 
   // …and a warm sunset rig matches the Figma background plate. The wheel
   // is a flat coplanar extrusion seen face-on, so directional lights CANNOT
@@ -523,15 +521,9 @@ function createChakraScene(
   // a ground catcher under it (the sea in the plate).
   const hemi = new THREE.HemisphereLight(0xffdcae, 0x3a2413, 0.45)
   scene.add(hemi)
-  const key = new THREE.SpotLight(0xfff0da, 900, 1400, 0.9, 1, 1)
+  const key = new THREE.SpotLight(0xfff0da, 1250, 1400, 0.9, 1, 1)
   key.position.set(-260, 320, 260)
   key.target.position.set(14, 3, 0)
-  key.castShadow = true
-  key.shadow.mapSize.set(2048, 2048)
-  key.shadow.camera.near = 100
-  key.shadow.camera.far = 1400
-  key.shadow.bias = -0.0004
-  key.shadow.normalBias = 0.6
   scene.add(key, key.target)
   const sun = new THREE.DirectionalLight(0xffa14d, 2.3) // low sun behind-right
   sun.position.set(80, -10, -240)
@@ -542,21 +534,41 @@ function createChakraScene(
 
   // Shadow catcher: an invisible ground plane at the wheel's bottom tangent
   // — only the cast shadow renders, compositing onto the background plate.
-  const shadowCatcher = new THREE.Mesh(
-    new THREE.PlaneGeometry(760, 460),
-    new THREE.ShadowMaterial({ opacity: 0.32 }),
+  // Contact shadow per the reference: a soft dark pool on the ground under
+  // the wheel, offset slightly away from the key light. Baked radial
+  // gradient (not a realtime shadow map) — identical look, zero cost on
+  // the kiosk iGPU, and it foreshortens naturally with the camera.
+  const shadowCanvas = document.createElement('canvas')
+  shadowCanvas.width = 256
+  shadowCanvas.height = 128
+  const sctx = shadowCanvas.getContext('2d')!
+  sctx.translate(128, 64)
+  sctx.scale(1, 0.5)
+  const sgrad = sctx.createRadialGradient(0, 0, 10, 0, 0, 120)
+  sgrad.addColorStop(0, 'rgba(24, 12, 4, 0.55)')
+  sgrad.addColorStop(0.55, 'rgba(24, 12, 4, 0.28)')
+  sgrad.addColorStop(1, 'rgba(24, 12, 4, 0)')
+  sctx.fillStyle = sgrad
+  sctx.fillRect(-128, -128, 256, 256)
+  const shadowTex = new THREE.CanvasTexture(shadowCanvas)
+  shadowTex.colorSpace = THREE.SRGBColorSpace
+  const contactShadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(340, 150),
+    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }),
   )
-  shadowCatcher.rotation.x = -Math.PI / 2
-  shadowCatcher.position.set(14, -96, 30)
-  shadowCatcher.receiveShadow = true
-  scene.add(shadowCatcher)
+  contactShadow.rotation.x = -Math.PI / 2
+  contactShadow.position.set(38, -90.5, 12) // pooled slightly off the key light
+  scene.add(contactShadow)
 
-  // Painted-enamel finish: mostly dielectric so the base colour stays the
-  // true flag navy; the low metalness + env sheen keep the bevel catches.
+  // Glossy painted finish per the reference render: lit facets flash
+  // cobalt, shade facets fall to deep navy — high facet contrast. The
+  // base is the design render's cobalt (the print-spec #06038D reads
+  // near-black under any physically plausible light; the approved Figma
+  // plate uses this brighter body).
   const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(SPEC.colour),
-    metalness: 0.3,
-    roughness: 0.42,
+    color: new THREE.Color(0x0b2da0),
+    metalness: 0.35,
+    roughness: 0.3,
   })
 
   // lean group (fixed pose) → chakra group (spins about its axle)
@@ -588,14 +600,8 @@ function createChakraScene(
     m.rotation.z = -i * SPOKE_STEP // spoke 1 points up, clockwise
     m.name = `Spoke ${i + 1}`
     m.userData = { spoke: i + 1 }
-    m.castShadow = true
-    m.receiveShadow = true
     spokes.push(m)
     chakra.add(m)
-  }
-  for (const part of [rim, hub, boss, flutes]) {
-    part.castShadow = true
-    part.receiveShadow = true
   }
   chakra.add(rim, hub, boss, flutes)
 
