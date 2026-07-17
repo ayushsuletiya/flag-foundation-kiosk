@@ -627,7 +627,8 @@ function createChakraScene(
       invView: { value: new THREE.Matrix4() },
       camPos: { value: new THREE.Vector3() },
       sunDir: { value: new THREE.Vector3() }, // toward the sun
-      strength: { value: 1.5 },
+      strength: { value: 0.5 }, // calibrated against the WORKING effect
+
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -725,10 +726,14 @@ function createChakraScene(
     const prevShadowAuto = renderer.shadowMap.autoUpdate
     renderer.shadowMap.autoUpdate = false
     renderer.setRenderTarget(depthRT)
+    // clear to WHITE: packed depth 1 = "no surface" (black decodes as a
+    // surface at the near plane, which discards every ray)
+    renderer.setClearColor(0xffffff, 1)
     renderer.clear()
     scene.overrideMaterial = depthMat
     renderer.render(scene, camera)
     scene.overrideMaterial = null
+    renderer.setClearColor(0x000000, 0) // restore the transparent canvas clear
     renderer.setRenderTarget(null)
     renderer.shadowMap.autoUpdate = prevShadowAuto
     contactShadow.visible = prevContact
