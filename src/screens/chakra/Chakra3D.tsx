@@ -537,7 +537,7 @@ function createChakraScene(
   // exactly what a low sun behind the subject does. (Raised a few degrees
   // above the visual sun so the shadow lands on a renderable plane.)
   const rimSun = new THREE.DirectionalLight(0xffa14d, 4.5)
-  rimSun.position.set(60, 26, -270)
+  rimSun.position.set(78, 37, -270) // same spot as the measured sun core
   rimSun.castShadow = true
   rimSun.shadow.mapSize.set(1024, 1024)
   rimSun.shadow.camera.left = -130
@@ -620,7 +620,10 @@ function createChakraScene(
     new THREE.CircleGeometry(38, 48),
     new THREE.MeshBasicMaterial({ color: 0xfff3d0 }),
   )
-  occSun.position.set(28, -46, -286) // the plate's sun, dead behind the wheel
+  // Measured from the plate: sun core at stage (1071, 576) → canvas-local
+  // (616, 393) → projected back to z=-286 = (78, 37). Behind the wheel's
+  // upper-right spoke field, ~2-3 o'clock.
+  occSun.position.set(78, 37, -286)
   occSunScene.add(occSun)
   const raySunNdc = new THREE.Vector3()
   const rayScene = new THREE.Scene()
@@ -651,7 +654,11 @@ function createChakraScene(
           illum += texture2D(tOcc, uv).r * falloff;
           falloff *= 0.968;
         }
-        vec3 col = vec3(1.0, 0.78, 0.45) * illum * 0.075 * strength;
+        // fade to nothing before the canvas edge — the additive shafts must
+        // never print a rectangular seam against the background plate
+        float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) *
+          smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
+        vec3 col = vec3(1.0, 0.78, 0.45) * illum * 0.075 * strength * edge;
         gl_FragColor = vec4(col, 0.0);
       }
     `,
