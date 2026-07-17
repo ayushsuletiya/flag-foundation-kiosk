@@ -2,7 +2,12 @@
 
 1920×1080 touchscreen kiosk app (Electron + React 18 + TS strict + Vite) reproducing the Figma design
 (`figma.com/design/SGS26MDJpekIP2K2HKW65Z/Flag-Foundation`, page "Final Page 3") pixel-perfectly.
-Target hardware: Windows, i5 11th gen, 16GB, integrated GPU.
+Target hardware: **ASUS NUC 14 Pro Plus** (NUC14RVSU5), Intel **Core Ultra 5 125H**
+(Meteor Lake, 14C/18T), **Intel Arc iGPU** (Xe-LPG, 7 Xe-cores), Windows 11, x64.
+Barebone kit — RAM/SSD added separately. **CRITICAL: populate BOTH SO-DIMM slots
+(dual-channel DDR5-5600) — the Arc iGPU is bandwidth-bound and runs at ~half GPU
+perf on a single stick.** This is a capable iGPU (~2-3× 11th-gen UHD); the three.js
+chakra scene + god-ray volumetrics run comfortably at 1080p when dual-channel.
 
 ## Commands
 - `npm run dev` — vite dev server (browser preview at :5173)
@@ -19,6 +24,8 @@ Target hardware: Windows, i5 11th gen, 16GB, integrated GPU.
   Figma pixels — do not make things responsive.
 - **Perf guards (integrated GPU):** no full-screen `backdrop-filter`, never nest backdrop-filters,
   three.js only via lazy import (stays in its own chunk), PNG sequences via `PngSequencePlayer`.
+  Chakra god-rays recompute every frame (depth pre-pass + shadow map + 512px ray-march) — fine on
+  the Arc iGPU, but pause the recompute while the wheel is idle if headroom is ever needed.
 - **Glass system** lives in `src/styles/tokens.css` (extracted from Figma's native GLASS effect via
   plugin API — the REST export drops it). Use the `.glass` classes / `--glass-*` vars, don't invent fills.
 - Pixel changes are verified against Figma screenshots (`../figma-refs/` has references).
