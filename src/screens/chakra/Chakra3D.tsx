@@ -737,7 +737,6 @@ function createChakraScene(
   const streakMat = new THREE.ShaderMaterial({
     uniforms: {
       tRay: { value: rayRT.texture },
-      tDepth: { value: depthRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
       boost: { value: 1.2 },
@@ -749,14 +748,9 @@ function createChakraScene(
     fragmentShader: /* glsl */ `
       varying vec2 vUv;
       uniform sampler2D tRay;
-      uniform sampler2D tDepth;
       uniform vec2 sunUv;
       uniform vec2 texel;
       uniform float boost;
-      const float UnpackDownscale = 255.0 / 256.0;
-      const vec3 PackFactors = vec3(16777216.0, 65536.0, 256.0);
-      const vec4 UnpackFactors = UnpackDownscale / vec4(PackFactors, 1.0);
-      float unpackRGBAToDepth(const in vec4 v) { return dot(v, UnpackFactors); }
       void main() {
         const int SAMPLES = 48;
         vec2 delta = (vUv - sunUv) * (0.95 / float(SAMPLES));
@@ -780,20 +774,11 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // WHEEL MASK: the radial smear pulls gap-light onto pixels that lie
-        // along the ray, including the SPOKES — killing glow on wheel pixels
-        // keeps beams in the gaps and off the metal (the 'highlight casting
-        // a shadow' the user saw was smeared glow crossing the spokes).
-        float dScene = unpackRGBAToDepth(texture2D(tDepth, vUv));
-        float onWheel = step(dScene, 0.9999);
-        float notWheel = 1.0 - onWheel * 0.9;
-        // RADIAL falloff from the sun: glow dies out with distance so it
-        // never reaches the canvas box — no left/right seam (clipping).
-        float rad = smoothstep(0.62, 0.14, distance(vUv, sunUv));
-        // edge dissolve kept only as a hard safety net at the very border
-        float edge = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x) *
-          smoothstep(0.0, 0.08, vUv.y) * smoothstep(1.0, 0.92, vUv.y);
-        gl_FragColor = vec4((base * 0.55 + streak * boost) * rad * notWheel * edge, 0.0);
+        // wide dissolve: light must die well inside the canvas so the render
+        // box can never print its rectangle on the plate
+        float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x) *
+          smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
+        gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
       }
     `,
     depthTest: false,
