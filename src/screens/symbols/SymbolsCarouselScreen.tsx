@@ -24,6 +24,9 @@ const SWIPE_THRESHOLD_PX = 60
 const HOLD_TO_ORBIT_MS = 260
 const SETTLE_MS = 750
 const TURN_MS = 480
+// Attract behavior: at rest the carousel advances by itself (smooth track
+// turn) — full cycle ≈ 3.5s wait + 0.5s glide. Any touch restarts the wait.
+const AUTO_ADVANCE_MS = 3500
 
 // Category intro — "the trail": one continuous cinematic motion. Every
 // tile rides the SAME orbital ellipse; the whole trail sweeps 1¼ turns
@@ -131,6 +134,9 @@ export function SymbolsCarouselScreen() {
   // Track offset while turning: cards render at u = off + turnOffset, so
   // the whole row slides along the track and eases into the new slots.
   const [turnOffset, setTurnOffset] = useState(0)
+  // Bumped on every touch so the auto-advance wait restarts even when the
+  // interaction doesn't change mode (e.g. a tap on the center card).
+  const [autoTick, setAutoTick] = useState(0)
   const [glowSlug, setGlowSlug] = useState<string | null>(null)
   const spinRef = useRef(0)
   const turnRef = useRef(0)
@@ -300,6 +306,16 @@ export function SymbolsCarouselScreen() {
     rotateTo(activeIndex + dir)
   }
 
+  // Auto-advance: whenever the carousel sits at rest untouched for
+  // AUTO_ADVANCE_MS, glide to the next symbol. Rearms on every mode change
+  // (turn/orbit/settle all leave 'rest') and on every touch (autoTick).
+  useEffect(() => {
+    if (mode !== 'rest' || count <= 1) return
+    const t = setTimeout(() => rotate(1), AUTO_ADVANCE_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, activeIndex, autoTick, count])
+
   return (
     <div className="sy-screen" onPointerDown={isIntro ? skipIntro : undefined}>
       {/* Baked stage (navy + mandala + podium), pre-flipped to match the
@@ -337,6 +353,7 @@ export function SymbolsCarouselScreen() {
         }}
         onPointerDown={(e) => {
           if (isIntro) return // the screen-root handler fast-forwards the intro
+          setAutoTick((n) => n + 1) // touching restarts the auto-advance wait
           swipeStartX.current = e.clientX
           dragLastX.current = e.clientX
           const card = (e.target as HTMLElement).closest<HTMLElement>('.sy-card3d')
