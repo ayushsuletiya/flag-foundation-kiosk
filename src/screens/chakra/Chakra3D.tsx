@@ -627,7 +627,7 @@ function createChakraScene(
       invView: { value: new THREE.Matrix4() },
       camPos: { value: new THREE.Vector3() },
       sunDir: { value: new THREE.Vector3() }, // toward the sun
-      strength: { value: 0.6 },
+      strength: { value: 1.5 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
