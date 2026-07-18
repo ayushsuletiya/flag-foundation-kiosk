@@ -570,10 +570,19 @@ function createChakraScene(
 
   // Soft studio environment gives the navy a subtle sheen… (kept LOW so
   // the body colour stays the flag navy, not studio-brightened blue)
+  //
+  // Starts at intensity 0. RoomEnvironment is a COOL probe, and the body colour
+  // is a bright cobalt (0x1236b0), so any studio contribution before the warm
+  // sunset env lands renders the wheel light blue — visible as a one-frame
+  // colour pop on every cold mount, because building the real env from
+  // bg-sunset.png is async and its PMREM pass costs a few frames. Held at 0,
+  // the wheel is lit only by the warm rig below and reads navy immediately;
+  // the loader raises this to its authored value once the real env is ready,
+  // so the change is a gain in sheen rather than a shift in hue.
   const pmrem = new THREE.PMREMGenerator(renderer)
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   scene.environment = envTex
-  scene.environmentIntensity = 0.55
+  scene.environmentIntensity = 0
 
   // Studio rig read straight off the plate (classic 4-point, podcast-style):
   // the plate's SUN is low and BEHIND-RIGHT → the hottest light is a back
@@ -912,6 +921,10 @@ function createChakraScene(
 
   // Swap the studio env for one built from the ACTUAL sunset plate — the
   // wheel then reflects/absorbs the same warm sky and dark sea it sits in.
+  //
+  // This is also what switches environment lighting ON: intensity is held at 0
+  // above so the cool studio probe can never tint the wheel light blue before
+  // this lands. Do not raise the initial value without re-checking that pop.
   new THREE.TextureLoader().load('assets/images/chakra/bg-sunset.png', (t) => {
     t.mapping = THREE.EquirectangularReflectionMapping
     t.colorSpace = THREE.SRGBColorSpace
