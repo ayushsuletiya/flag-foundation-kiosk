@@ -39,8 +39,18 @@ export const easeOutBack = (t: number): number => {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
 }
 
-/** Camera start: high look-down onto the drafting floor. Tune against screenshots. */
-export const BUILD_CAM = new THREE.Vector3(0, 210, 250)
+/**
+ * Camera start: high look-down onto the drafting floor.
+ *
+ * Tuned against screenshots. Pulled back along the view axis (away from
+ * BUILD_TGT, ~25%) from an initial (0, 210, 250): the flat assembly reads wider
+ * on screen than the upright wheel, and at the closer framing the `⌀7 × 24`
+ * callout pushed into the 7% edge-feather mask on `.ck-wheel` and washed out —
+ * the same failure the mask caused before the Design tab was reframed. Backing
+ * the camera off shrinks the whole drawing instead of weakening the mask, which
+ * would let the god-ray field print its rectangle on the plate again.
+ */
+export const BUILD_CAM = new THREE.Vector3(0, 282, 312)
 export const BUILD_TGT = new THREE.Vector3(0, -80, 0)
 /** Where the assembly lies while drafted (shadow catchers sit at y ≈ -91). */
 export const BUILD_LEAN_Y = -80
