@@ -299,12 +299,24 @@ Still inside `createChakraScene`, just before the returned handle object, add:
 ```ts
   // Dev-only: freeze the sequence at an exact progress so beats can be
   // screenshotted deterministically. Stripped from production builds.
+  //
+  // It must genuinely PAUSE. Seeking by back-dating buildT0 lets the render
+  // loop keep advancing, so every "frozen" screenshot silently shows a later
+  // frame — which makes the whole visual gate useless. Hence buildPaused.
   if (import.meta.env.DEV) {
-    ;(window as unknown as { __chakraScrub?: (v: number) => void }).__chakraScrub = (v) => {
+    const dbg = window as unknown as {
+      __chakraScrub?: (v: number) => void
+      __chakraPlay?: () => void
+    }
+    dbg.__chakraScrub = (v) => {
       assemblyRefs ??= makeAssemblyRefs()
+      buildPaused = true
       buildP = clamp01(v)
-      buildT0 = performance.now() - buildP * ASSEMBLY_MS
       applyAssemblyTimeline(buildP, assemblyRefs)
+    }
+    dbg.__chakraPlay = () => {
+      buildPaused = false
+      buildT0 = performance.now() - buildP * ASSEMBLY_MS
     }
   }
 ```
@@ -388,11 +400,17 @@ Then declare `finishAssembly` (Task 1 deliberately omitted it — `noUnusedLocal
   }
 ```
 
-and add its first call site at the end of `createChakraScene`, just before the handle is returned, so non-dims tabs are unaffected:
+and add its first call site at the end of `createChakraScene`, just before the handle is returned:
 
 ```ts
-  // Values / Flag never run a sequence — put every part at its resting scale now.
-  if (initialMode !== 'flag') finishAssembly()
+  // Parts are constructed hidden (above), so every scene must be put back at its
+  // resting scale here. UNCONDITIONAL on purpose — flag mode needs it too: the
+  // docking sequence scales the `chakra` GROUP, but the meshes inside it would
+  // still be at MIN_SCALE, so gating this on mode ships an invisible wheel
+  // through the whole Chakra-in-Flag animation.
+  // Design is unaffected: setDims(true) runs after this and re-hides the parts
+  // via applyAssemblyTimeline(0) before the sequence plays.
+  finishAssembly()
 ```
 
 - [ ] **Step 3: Typecheck and lint**
