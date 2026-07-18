@@ -672,7 +672,7 @@ function createChakraScene(
       camPos: { value: new THREE.Vector3() },
       sunDir: { value: new THREE.Vector3() }, // toward the sun
       strength: { value: 0.4 }, // user-tuned (-20%)
-
+      edgeFade: { value: 0.16 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -688,6 +688,7 @@ function createChakraScene(
       uniform vec3 camPos;
       uniform vec3 sunDir;
       uniform float strength;
+      uniform float edgeFade;
       // march segment = ray ∩ sphere around the wheel's air volume
       const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
       const float VOL_R = 230.0;
@@ -739,11 +740,11 @@ function createChakraScene(
         // forward scattering: shafts bloom when looking toward the sun
         float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
         // fade before the canvas edge — no rectangular seam on the plate.
-        // Wide (30%) so the field is fully dark by the box edge: the wheel has
-        // ~1 radius of margin to the box on every exposed side, so this dims
-        // only the far glow, never the beams hugging the rim.
-        float edge = smoothstep(0.0, 0.30, vUv.x) * smoothstep(1.0, 0.70, vUv.x) *
-          smoothstep(0.0, 0.30, vUv.y) * smoothstep(1.0, 0.70, vUv.y);
+        // Width is per-framing (see setDims): Design's pulled-back camera can
+        // afford a wide dissolve, Values sits closer and needs a narrow one or
+        // the fade eats the sun shafts hugging the rim.
+        float edge = smoothstep(0.0, edgeFade, vUv.x) * smoothstep(1.0, 1.0 - edgeFade, vUv.x) *
+          smoothstep(0.0, edgeFade, vUv.y) * smoothstep(1.0, 1.0 - edgeFade, vUv.y);
         vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength * edge;
         gl_FragColor = vec4(col, 0.0);
       }
@@ -778,6 +779,7 @@ function createChakraScene(
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
       boost: { value: 1.2 },
+      edgeFade: { value: 0.20 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -789,6 +791,7 @@ function createChakraScene(
       uniform vec2 sunUv;
       uniform vec2 texel;
       uniform float boost;
+      uniform float edgeFade;
       void main() {
         const int SAMPLES = 48;
         vec2 delta = (vUv - sunUv) * (0.95 / float(SAMPLES));
@@ -812,10 +815,11 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // wide dissolve: light must die well inside the canvas so the render
-        // box can never print its rectangle on the plate
-        float edge = smoothstep(0.0, 0.32, vUv.x) * smoothstep(1.0, 0.68, vUv.x) *
-          smoothstep(0.0, 0.32, vUv.y) * smoothstep(1.0, 0.68, vUv.y);
+        // dissolve: light must die inside the canvas so the render box can
+        // never print its rectangle on the plate. Width is per-framing (see
+        // setDims) for the same reason as the ray pass.
+        float edge = smoothstep(0.0, edgeFade, vUv.x) * smoothstep(1.0, 1.0 - edgeFade, vUv.x) *
+          smoothstep(0.0, edgeFade, vUv.y) * smoothstep(1.0, 1.0 - edgeFade, vUv.y);
         gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
       }
     `,
@@ -1126,6 +1130,13 @@ function createChakraScene(
     // Entering dims plays the build. Guarded on the transition so the
     // `useEffect([dims])` re-call on the same value cannot restart it.
     if (on && !wasOn && modeState !== 'flag') startAssembly()
+    // The ray field must die before the canvas edge or it prints its rectangle
+    // on the plate. Design's camera is pulled back (DIMS_CAM), so its wheel is
+    // smaller and can afford a wide dissolve; Values sits closer (WHEEL_CAM)
+    // and a wide fade would eat the sun shafts hugging the rim. Tuned per
+    // framing rather than one global compromise.
+    rayMat.uniforms['edgeFade']!.value = on ? 0.30 : 0.16
+    streakMat.uniforms['edgeFade']!.value = on ? 0.32 : 0.20
   }
 
   /* -------------------------------------------------- flag building -- */
@@ -1490,7 +1501,7 @@ function createChakraScene(
   /* ----------------------------------------------------- main loop -- */
   renderer.setAnimationLoop(() => {
     const now = performance.now()
-    if (buildP < 1 && !buildPaused && assemblyRefs !== null) {
+    if (modeState === 'wheel' && buildP < 1 && !buildPaused && assemblyRefs !== null) {
       buildP = clamp01((now - buildT0) / ASSEMBLY_MS)
       applyAssemblyTimeline(buildP, assemblyRefs)
     }
@@ -1596,6 +1607,16 @@ function createChakraScene(
     envTex.dispose()
     pmrem.dispose()
     renderer.dispose()
+    // Dev hooks close over this scene graph — drop them so a disposed scene
+    // isn't retained (and a stale scrub can't drive freed resources).
+    if (import.meta.env.DEV) {
+      const dbg = window as unknown as {
+        __chakraScrub?: (v: number) => void
+        __chakraPlay?: () => void
+      }
+      delete dbg.__chakraScrub
+      delete dbg.__chakraPlay
+    }
   }
 
   // Parts are constructed hidden (above), so every scene must be put back at its
@@ -1612,7 +1633,16 @@ function createChakraScene(
 
   // A scene created directly in flag mode plays the docking animation from
   // the top on mount (re-entering the tab remounts → replays).
-  if (initialMode === 'flag') setMode('flag')
+  if (initialMode === 'flag') {
+    // finishAssembly() ran applyAssemblyTimeline(1), which also owns the camera
+    // and leaves it at DIMS_CAM. setMode('flag') captures the current camera as
+    // the docking timeline's start endpoint, so it must be re-seeded first or
+    // the Flag tab opens on the Design tab's framing.
+    camera.position.copy(FLAG_CAM_HOME)
+    camTarget.copy(FLAG_TGT_HOME)
+    camera.lookAt(camTarget)
+    setMode('flag')
+  }
 
   // Dev-only: freeze the sequence at an exact progress so beats can be
   // screenshotted deterministically. Stripped from production builds.
