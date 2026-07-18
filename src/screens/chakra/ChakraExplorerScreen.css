@@ -92,6 +92,17 @@
   width: 910px;
   height: 910px;
   z-index: 1;
+  /* Feather the canvas box edges to transparent so the additive god-ray field
+     can never print a straight seam where it meets the background plate. The
+     wheel sits ~17% in from the left / ~10% from the top (right is under the
+     panel, bottom runs off-stage), so a 7% edge feather never touches it.
+     Two linear masks intersected = a soft-edged rounded-off rectangle. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 
 /* Sized to its slot: the 910px wheel box on Values/Design, the 801×1197
@@ -112,6 +123,16 @@
   background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(24, 10, 2, 0.55) 0%, rgba(24, 10, 2, 0) 72%);
   filter: blur(6px);
   pointer-events: none;
+}
+
+/* Design tab pulls the camera back (DIMS_CAM), so the wheel's bottom tangent
+   rises ~42px and narrows to ~87%. This shadow is a DOM element and doesn't
+   scale with the 3D scene, so it has to be re-seated or it detaches. */
+.ck-ground-shadow--dims {
+  left: 578px;
+  top: 899px;
+  width: 664px;
+  height: 37px;
 }
 
 /* ---- VALUES tab: left column --------------------------------------- */
@@ -362,6 +383,23 @@
   color: #ffffff;
 }
 
+/* The "why" under the spec — sits in what was ~380px of dead column. Quieter
+   than the subtitle so it reads as a footnote to the drawing, not a second
+   headline. Gold rule ties it back to the headline's underline. */
+.ck-design-meaning {
+  position: absolute;
+  left: 109px;
+  top: 742px;
+  width: 430px;
+  padding-top: 26px;
+  border-top: 2px solid rgba(255, 219, 77, 0.5);
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.86);
+}
+
 /* (The engineering callouts formerly rendered here as DOM chips + an SVG
    guide layer now live inside the 3D scene — Chakra3D's dims mode — so they
    rotate with the wheel when visitors drag-spin it.) */
@@ -462,28 +500,50 @@
   color: #543a21;
 }
 
-.ck-spec-list {
+/* Title block: label left, value right, hairline between rows — a spec sheet
+   scans far better than prose bullets, and the right-aligned values line the
+   numerals up into a column the eye can run down. */
+.ck-spec-table {
   position: absolute;
   left: 36px;
-  top: 118px;
-  width: 458px;
-  list-style: none;
+  top: 122px;
+  width: 448px;
 }
-.ck-spec-list li {
-  position: relative;
-  padding-left: 24px;
-  /* Comp: single-line bullet pitch 49.5px, wrapped lines 33px (leading 1.576). */
-  margin-bottom: 16px;
+.ck-spec-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  height: 46px;
+  border-bottom: 1px solid rgba(84, 58, 33, 0.16);
+}
+.ck-spec-row:last-child {
+  border-bottom: none;
+}
+.ck-spec-row dt {
   font-family: var(--font-ui);
   font-weight: 500;
   font-size: 21px;
-  line-height: 1.576;
-  color: #543a21;
+  color: #6b4a2a;
 }
-.ck-spec-list li::before {
-  content: '•';
+.ck-spec-row dd {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 22px;
+  color: #543a21;
+  font-variant-numeric: tabular-nums;
+}
+
+.ck-spec-credit {
   position: absolute;
-  left: 4px;
+  left: 36px;
+  bottom: 26px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(84, 58, 33, 0.62);
 }
 
 /* ---- CHAKRA IN FLAG tab ---------------------------------------------- */

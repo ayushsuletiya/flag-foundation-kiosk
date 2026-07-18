@@ -377,6 +377,12 @@ const POLE_LEN = 520
    (y 6–29% of the box), pole running off the bottom edge. */
 const WHEEL_CAM = new THREE.Vector3(0, 4, 322)
 const WHEEL_TGT = new THREE.Vector3(0, 0, 0)
+/* Design tab framing. The callout ring reaches ~1.28x the rim radius (the
+   ⌀7 × 24 chip is the far corner), which at WHEEL_CAM lands in the canvas
+   edge-feather and under the stats card. Pulling the camera back shrinks the
+   wheel and its callouts together — the drawing keeps its proportions and
+   gains ~50px of margin on every side. Values/Flag keep WHEEL_CAM. */
+const DIMS_CAM = new THREE.Vector3(0, 4, 370)
 const FLAG_CAM_HOME = new THREE.Vector3(-8, -30, 430)
 const FLAG_TGT_HOME = new THREE.Vector3(-8, -30, 0)
 const FLAG_CAM_DOCK = new THREE.Vector3(30, -120, 715)
@@ -703,9 +709,12 @@ function createChakraScene(
         acc /= float(STEPS);
         // forward scattering: shafts bloom when looking toward the sun
         float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
-        // fade before the canvas edge — no rectangular seam on the plate
-        float edge = smoothstep(0.0, 0.14, vUv.x) * smoothstep(1.0, 0.86, vUv.x) *
-          smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
+        // fade before the canvas edge — no rectangular seam on the plate.
+        // Wide (30%) so the field is fully dark by the box edge: the wheel has
+        // ~1 radius of margin to the box on every exposed side, so this dims
+        // only the far glow, never the beams hugging the rim.
+        float edge = smoothstep(0.0, 0.30, vUv.x) * smoothstep(1.0, 0.70, vUv.x) *
+          smoothstep(0.0, 0.30, vUv.y) * smoothstep(1.0, 0.70, vUv.y);
         vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength * edge;
         gl_FragColor = vec4(col, 0.0);
       }
@@ -776,8 +785,8 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
         // wide dissolve: light must die well inside the canvas so the render
         // box can never print its rectangle on the plate
-        float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x) *
-          smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
+        float edge = smoothstep(0.0, 0.32, vUv.x) * smoothstep(1.0, 0.68, vUv.x) *
+          smoothstep(0.0, 0.32, vUv.y) * smoothstep(1.0, 0.68, vUv.y);
         gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
       }
     `,
@@ -1027,6 +1036,13 @@ function createChakraScene(
       chakra.add(dimGroup) // parented to the wheel — callouts rotate with it
     }
     if (dimGroup !== null) dimGroup.visible = on && modeState !== 'flag' // dims never show in flag mode
+    // Reframe so the callout ring clears the canvas edge-feather and the
+    // stats card. Flag mode owns the camera outright — never fight it.
+    if (modeState !== 'flag') {
+      camera.position.copy(on ? DIMS_CAM : WHEEL_CAM)
+      camTarget.copy(WHEEL_TGT)
+      camera.lookAt(camTarget)
+    }
   }
 
   /* -------------------------------------------------- flag building -- */
@@ -1290,7 +1306,7 @@ function createChakraScene(
   function restoreWheelPose(): void {
     lean.position.set(14, 3, 0)
     lean.rotation.set(LEAN_X, LEAN_Y, 0)
-    camera.position.copy(WHEEL_CAM)
+    camera.position.copy(dimsOn ? DIMS_CAM : WHEEL_CAM)
     camTarget.copy(WHEEL_TGT)
     camera.lookAt(camTarget)
     if (dimGroup !== null) dimGroup.visible = dimsOn

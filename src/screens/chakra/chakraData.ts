@@ -97,13 +97,34 @@ export const VALUES_INTRO =
 // ---------------------------------------------------------------------------
 export const DESIGN_SUBTITLE = 'The Wheel of Dharma at the heart of India’s Tricolour.'
 
-/** "Chakra Design" spec bullets — IS1 constants baked into the Figma render. */
-export const DESIGN_BULLETS: readonly string[] = [
-  '24 spokes at 15° intervals',
-  'OD:185 mm | ID: 160 mm | Hub: Ø32 mm',
-  'Rim Thickness: 12.5 mm.',
-  '24 Ø7 mm notches on the inner rim, aligned with each spoke; maintain perfect radial symmetry',
+/**
+ * "Chakra Design" title block — label/value rows, the way a construction sheet
+ * lists its spec. Every value mirrors the Excel's `Design spec | Geometry` row:
+ *   "Outer ring ⌀185 : inner ⌀160, 24 scalloped notches, spokes swell to
+ *    width 6 and taper to 2 at the ⌀32 hub. (BIS flag specification.)"
+ * Kept as a structured constant rather than parsed out of that sentence — it is
+ * prose, not table data, and a regex over it would break the moment the client
+ * rewords it. If these need to be client-editable, the fix is to add one
+ * `Design spec` row per dimension to the Excel, not to parse this one.
+ *
+ * The Figma render also carried "Rim Thickness: 12.5 mm" — dropped, as no row
+ * in content.xlsx sources that figure.
+ */
+export interface DesignSpecRow {
+  label: string
+  value: string
+}
+export const DESIGN_SPEC_ROWS: readonly DesignSpecRow[] = [
+  { label: 'Outer ring', value: '⌀185' },
+  { label: 'Inner ring', value: '⌀160' },
+  { label: 'Hub', value: '⌀32' },
+  { label: 'Spokes', value: '24 @ 15°' },
+  { label: 'Notches', value: '24 scalloped' },
+  { label: 'Spoke taper', value: '6 → 2' },
 ]
+
+/** Standard the geometry above is quoted from (Excel `Design spec | Geometry`). */
+export const DESIGN_SPEC_CREDIT = 'BIS flag specification'
 
 /** First #RRGGBB in a chakra row's content ("app swatch #06038D" wins — last match). */
 export function chakraRowHex(rows: ChakraRow[]): string {
@@ -115,6 +136,20 @@ export function chakraRowHex(rows: ChakraRow[]): string {
 export function chakraSpokeCount(rows: ChakraRow[]): string {
   const row = rows.find((r) => r.section === 'Design spec' && /spokes/i.test(r.item))
   return row?.content.trim() ?? '24'
+}
+
+/**
+ * Opening sentence of the Excel's `Meaning | 24 spokes` row — the "why" that
+ * anchors the Design tab's left column under the subtitle. That row runs long
+ * (it enumerates the Buddhist/Hindu/Jain cycles), so only the lead sentence is
+ * taken; the full text belongs to the Values tab, not the spec drawing.
+ */
+export function chakraMeaningLine(rows: ChakraRow[]): string {
+  const row = rows.find((r) => r.section === 'Meaning' && /24 spokes/i.test(r.item))
+  const first = row?.content.trim().split(/(?<=\.)\s+/)[0]?.trim()
+  return first !== undefined && first.length > 0
+    ? first
+    : 'Continuous motion = progress and dharma.'
 }
 
 // ---------------------------------------------------------------------------

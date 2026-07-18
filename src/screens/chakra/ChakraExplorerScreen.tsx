@@ -34,10 +34,12 @@ import { PaginationDots } from '../../components/PaginationDots.tsx'
 import type { ChakraVirtue } from '../../data/schema.ts'
 import {
   buildDidYouKnowFacts,
+  chakraMeaningLine,
   chakraRowHex,
   chakraSpokeCount,
   COLOUR_SYMBOLISM,
-  DESIGN_BULLETS,
+  DESIGN_SPEC_CREDIT,
+  DESIGN_SPEC_ROWS,
   DESIGN_SUBTITLE,
   FIGMA_ICON_SLUGS,
   fitHeadline,
@@ -236,9 +238,10 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
 interface DesignTabProps {
   colorCode: string
   spokeCount: string
+  meaning: string
 }
 
-function DesignTab({ colorCode, spokeCount }: DesignTabProps) {
+function DesignTab({ colorCode, spokeCount, meaning }: DesignTabProps) {
   return (
     <>
       <div className="ck-design-headline ck-gold-text">
@@ -248,12 +251,14 @@ function DesignTab({ colorCode, spokeCount }: DesignTabProps) {
       </div>
       <div className="ck-underline" style={{ left: 109, top: 533, width: 332 }} />
       <p className="ck-design-subtitle">{DESIGN_SUBTITLE}</p>
+      {/* Anchors the otherwise-empty lower half of the left column. */}
+      <p className="ck-design-meaning">{meaning}</p>
 
       {/* Center — dims mode: the wheel carries its own construction callouts
           (dashed IS1 circles, 15° wedge, leader lines, chip sprites) inside
           the 3D scene, so they track the wheel as visitors drag-spin it.
           Starts upright, turntable off — like the source build's dims view. */}
-      <div className="ck-ground-shadow" />
+      <div className="ck-ground-shadow ck-ground-shadow--dims" />
       <div className="ck-wheel">
         <LazyChakra3D size={910} spin={false} interactive={false} dims />
       </div>
@@ -272,14 +277,18 @@ function DesignTab({ colorCode, spokeCount }: DesignTabProps) {
         </div>
       </div>
 
-      {/* Right — Chakra Design spec card */}
+      {/* Right — Chakra Design title block (label → value, like a spec sheet) */}
       <div className="ck-card ck-card--spec">
         <div className="ck-card-heading">Chakra Design</div>
-        <ul className="ck-spec-list">
-          {DESIGN_BULLETS.map((b) => (
-            <li key={b}>{b}</li>
+        <dl className="ck-spec-table">
+          {DESIGN_SPEC_ROWS.map((r) => (
+            <div key={r.label} className="ck-spec-row">
+              <dt>{r.label}</dt>
+              <dd>{r.value}</dd>
+            </div>
           ))}
-        </ul>
+        </dl>
+        <div className="ck-spec-credit">{DESIGN_SPEC_CREDIT}</div>
       </div>
     </>
   )
@@ -366,6 +375,7 @@ export function ChakraExplorerScreen() {
 
   const colorCode = useMemo(() => chakraRowHex(chakra?.rows ?? []), [chakra])
   const spokeCount = useMemo(() => chakraSpokeCount(chakra?.rows ?? []), [chakra])
+  const meaning = useMemo(() => chakraMeaningLine(chakra?.rows ?? []), [chakra])
 
   const flagHeadline = useMemo(() => {
     const id = content?.symbolIdentities.find((s) => /tiranga/i.test(s.symbol))
@@ -415,7 +425,9 @@ export function ChakraExplorerScreen() {
       />
 
       {tab === 'values' && <ValuesTab virtues={virtues} spoke={spoke} onSelect={setSpoke} />}
-      {tab === 'design' && <DesignTab colorCode={colorCode} spokeCount={spokeCount} />}
+      {tab === 'design' && (
+        <DesignTab colorCode={colorCode} spokeCount={spokeCount} meaning={meaning} />
+      )}
       {tab === 'flag' && <FlagTab headline={flagHeadline} facts={facts} />}
     </div>
   )
