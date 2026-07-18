@@ -130,13 +130,15 @@ it halves GPU performance and is worth flagging now while you are on the machine
 
 ## Rules for you
 
+- **You do NOT need the source code, and you do NOT need GitHub access.**
+  Every step above runs against the installed `.exe`. Do not try to clone
+  anything, do not install `gh`, and do not set up SSH keys. The repo is
+  private and cloning it is not part of this task. If a clone fails, ignore it
+  and carry on with step 1.
 - **Do not guess fixes.** Find the root cause first. Several obvious theories
   were already eliminated (see above) — adding more guesses wastes the trip.
-- **Do not modify application code from this machine.** The source lives in a
-  private repo on the build machine. Your job is evidence, not patches.
-- If you want the source for reference, it is
-  `github.com/ayushsuletiya/flag-foundation-kiosk` (**private** — needs
-  `gh auth login` first), branch `feat/chakra-assembly`.
+- **Do not modify application code from this machine.** The source lives on the
+  build machine. Your job is evidence, not patches.
 - Report findings as: which step, the exact output, and your conclusion.
 
 ## Useful to know while you are there
