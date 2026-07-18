@@ -40,6 +40,12 @@ import { useEffect, useRef, type CSSProperties } from 'react'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import {
+  applyAssemblyTimeline,
+  ASSEMBLY_MS,
+  clamp01,
+  type AssemblyRefs,
+} from './chakraAssembly.ts'
 
 export interface Chakra3DProps {
   /** Square canvas size in stage px (Figma wheel box is 910). */
@@ -951,6 +957,36 @@ function createChakraScene(
   let dimsOn = false
   let dimGroup: THREE.Group | null = null
 
+  /* ------------------------------------------------ assembly state -- */
+  // buildP === 1 means "no sequence running" — the resting pose. Values and
+  // Flag never start one, so they sit at 1 for the whole of their lifetime.
+  let buildP = 1
+  let buildT0 = 0
+  let assemblyRefs: AssemblyRefs | null = null
+
+  function makeAssemblyRefs(): AssemblyRefs {
+    return {
+      lean,
+      rim,
+      hub,
+      boss,
+      flutes,
+      spokes,
+      camera,
+      camTarget,
+      restCam: DIMS_CAM,
+      restTgt: WHEEL_TGT,
+      restLean: { x: LEAN_X, y: LEAN_Y, posY: 3 },
+    }
+  }
+
+  function startAssembly(): void {
+    assemblyRefs ??= makeAssemblyRefs()
+    buildT0 = performance.now()
+    buildP = 0
+    applyAssemblyTimeline(0, assemblyRefs)
+  }
+
   /* ------------------------------------------------- flag-mode state -- */
   let modeState: 'wheel' | 'flag' = 'wheel'
   let flagGroup: THREE.Group | null = null
@@ -1030,6 +1066,7 @@ function createChakraScene(
   }
 
   function setDims(on: boolean) {
+    const wasOn = dimsOn
     dimsOn = on
     if (on && dimGroup === null) {
       dimGroup = buildDimGroup()
@@ -1043,6 +1080,9 @@ function createChakraScene(
       camTarget.copy(WHEEL_TGT)
       camera.lookAt(camTarget)
     }
+    // Entering dims plays the build. Guarded on the transition so the
+    // `useEffect([dims])` re-call on the same value cannot restart it.
+    if (on && !wasOn && modeState !== 'flag') startAssembly()
   }
 
   /* -------------------------------------------------- flag building -- */
@@ -1400,23 +1440,29 @@ function createChakraScene(
   /* ----------------------------------------------------- main loop -- */
   renderer.setAnimationLoop(() => {
     const now = performance.now()
+    if (buildP < 1 && assemblyRefs !== null) {
+      buildP = clamp01((now - buildT0) / ASSEMBLY_MS)
+      applyAssemblyTimeline(buildP, assemblyRefs)
+    }
     if (modeState === 'wheel' && flagAnim === null && !dragging) {
       // Rest pose: selected spoke at 12 o'clock beats dims-upright beats idle.
-      const goal = selectedIdx !== null ? selectedIdx * SPOKE_STEP : dimsOn ? 0 : null
-      if (Math.abs(spinVel) > MIN_FLING) {
-        chakra.rotation.z += spinVel // flick inertia
-        spinVel *= INERTIA_DAMP
-        if (goal !== null) {
-          // Blend: momentum carries, the ease reels it back in as it decays.
+      if (buildP >= 1) {
+        const goal = selectedIdx !== null ? selectedIdx * SPOKE_STEP : dimsOn ? 0 : null
+        if (Math.abs(spinVel) > MIN_FLING) {
+          chakra.rotation.z += spinVel // flick inertia
+          spinVel *= INERTIA_DAMP
+          if (goal !== null) {
+            // Blend: momentum carries, the ease reels it back in as it decays.
+            const target = nearestTurn(goal, chakra.rotation.z)
+            chakra.rotation.z += (target - chakra.rotation.z) * 0.05
+          }
+        } else if (goal !== null) {
+          spinVel = 0
           const target = nearestTurn(goal, chakra.rotation.z)
-          chakra.rotation.z += (target - chakra.rotation.z) * 0.05
+          chakra.rotation.z += (target - chakra.rotation.z) * (selectedIdx !== null ? 0.07 : 0.08)
+        } else if (spinOn && now - lastInteraction > IDLE_RESUME_MS) {
+          chakra.rotation.z -= IDLE_SPIN
         }
-      } else if (goal !== null) {
-        spinVel = 0
-        const target = nearestTurn(goal, chakra.rotation.z)
-        chakra.rotation.z += (target - chakra.rotation.z) * (selectedIdx !== null ? 0.07 : 0.08)
-      } else if (spinOn && now - lastInteraction > IDLE_RESUME_MS) {
-        chakra.rotation.z -= IDLE_SPIN
       }
     }
     // cloth is FROZEN during the chakra animation; after landing the breeze
@@ -1500,6 +1546,17 @@ function createChakraScene(
   // A scene created directly in flag mode plays the docking animation from
   // the top on mount (re-entering the tab remounts → replays).
   if (initialMode === 'flag') setMode('flag')
+
+  // Dev-only: freeze the sequence at an exact progress so beats can be
+  // screenshotted deterministically. Stripped from production builds.
+  if (import.meta.env.DEV) {
+    ;(window as unknown as { __chakraScrub?: (v: number) => void }).__chakraScrub = (v) => {
+      assemblyRefs ??= makeAssemblyRefs()
+      buildP = clamp01(v)
+      buildT0 = performance.now() - buildP * ASSEMBLY_MS
+      applyAssemblyTimeline(buildP, assemblyRefs)
+    }
+  }
 
   return {
     canvas: renderer.domElement,
