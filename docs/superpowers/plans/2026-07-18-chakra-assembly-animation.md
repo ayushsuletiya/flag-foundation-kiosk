@@ -26,7 +26,12 @@
 The verification gate for every task is:
 
 1. `npm run typecheck` — must pass.
-2. `npm run lint` — must pass.
+2. `npx oxlint src/screens/chakra/` — must be clean.
+   **Do not use bare `npm run lint` as a gate.** It lints the whole repo and
+   already fails on `main` with a pre-existing, unrelated error
+   (`SymbolsCarouselScreen.tsx:312` — `useEffect` called conditionally). Scoping
+   to the touched directory is the only gate this task can actually satisfy.
+   Fixing that pre-existing error is out of scope for this plan.
 3. **Deterministic visual check** using the dev-only scrub hook added in Task 1. It lets you freeze the timeline at an exact `buildP` and screenshot it, so beats are checked at fixed values rather than by trying to catch a moving animation.
 
 Scrub usage in the browser console (or via the Browser pane's `javascript_tool`):
@@ -230,15 +235,11 @@ Inside `createChakraScene`, immediately after the `let dimGroup: THREE.Group | n
     buildP = 0
     applyAssemblyTimeline(0, assemblyRefs)
   }
-
-  /** Jump straight to the settled pose. p=1 yields EXACTLY the resting dims view. */
-  function finishAssembly(): void {
-    if (buildP >= 1) return
-    buildP = 1
-    assemblyRefs ??= makeAssemblyRefs()
-    applyAssemblyTimeline(1, assemblyRefs)
-  }
 ```
+
+> `finishAssembly` is deliberately NOT declared here. This repo sets
+> `noUnusedLocals: true`, so a function without a call site fails
+> `npm run typecheck`. Task 2 introduces it together with its first caller.
 
 - [ ] **Step 4: Start the sequence from setDims and advance it in the render loop**
 
@@ -376,21 +377,22 @@ Expected at `0.05`: no hub, no spokes, no rim — only the ground. Expected at `
   for (const s of spokes) s.scale.y = 0.0001
 ```
 
-Then, so non-dims tabs are unaffected, add to the end of `createChakraScene` just before the handle is returned:
+Then declare `finishAssembly` (Task 1 deliberately omitted it — `noUnusedLocals` rejects a function with no call site). Add it directly below `startAssembly`:
 
 ```ts
-  // Values / Flag never run a sequence — put every part at its resting scale now.
-  if (initialMode !== 'flag') finishAssembly()
-```
-
-and change `finishAssembly`'s early return so it can run from the resting default:
-
-```ts
+  /** Jump straight to the settled pose. p=1 yields EXACTLY the resting dims view. */
   function finishAssembly(): void {
     assemblyRefs ??= makeAssemblyRefs()
     buildP = 1
     applyAssemblyTimeline(1, assemblyRefs)
   }
+```
+
+and add its first call site at the end of `createChakraScene`, just before the handle is returned, so non-dims tabs are unaffected:
+
+```ts
+  // Values / Flag never run a sequence — put every part at its resting scale now.
+  if (initialMode !== 'flag') finishAssembly()
 ```
 
 - [ ] **Step 3: Typecheck and lint**
