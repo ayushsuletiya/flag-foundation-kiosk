@@ -44,6 +44,7 @@ import {
   applyAssemblyTimeline,
   ASSEMBLY_MS,
   clamp01,
+  MIN_SCALE,
   type AssemblyRefs,
 } from './chakraAssembly.ts'
 
@@ -953,10 +954,10 @@ function createChakraScene(
   // Flag call applyAssemblyTimeline(1) via finishAssembly() on their first frame,
   // which restores full scale, so this cannot leak into those tabs.
   rim.visible = false
-  hub.scale.setScalar(0.0001)
-  boss.scale.setScalar(0.0001)
-  flutes.scale.setScalar(0.0001)
-  for (const s of spokes) s.scale.y = 0.0001
+  hub.scale.setScalar(MIN_SCALE)
+  boss.scale.setScalar(MIN_SCALE)
+  flutes.scale.setScalar(MIN_SCALE)
+  for (const s of spokes) s.scale.y = MIN_SCALE
 
   /* ------------------------------------------------ selection state -- */
   let selected: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null = null

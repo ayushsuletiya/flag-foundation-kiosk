@@ -63,8 +63,9 @@ export interface AssemblyRefs {
   restLean: { x: number; y: number; posY: number }
 }
 
-/** Never scale to exactly 0 — degenerate matrices produce NaN normals. */
-const MIN_SCALE = 0.0001
+/** Never scale to exactly 0 — degenerate matrices produce NaN normals. Shared
+ *  with Chakra3D's construction-time hide block so the two cannot drift. */
+export const MIN_SCALE = 0.0001
 
 export function applyAssemblyTimeline(p: number, r: AssemblyRefs): void {
   // ---- staging: flat on the ground → upright, camera follows it up
