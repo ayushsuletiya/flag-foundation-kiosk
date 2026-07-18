@@ -39,14 +39,34 @@ shared callouts. This is a deliberate trade, not an oversight.
 independent). Every sub-state derives deterministically from it, mirroring the
 existing `applyFlagTimeline` pattern.
 
+**Revised 2026-07-18** — the draft beat was removed. Every construction circle now
+forms with the part it measures, rather than all four being struck up front, and
+chip text writes itself on. The 0.8 s the draft beat held was redistributed into
+hub/spokes/rim, which now carry the extra callout work. Total is still 8.0 s.
+
 | Beat | Time (s) | `buildP` | Action |
 |---|---|---|---|
-| **0 · Draft** | 0.0–0.8 | 0.000–0.100 | Gold dashed construction circles sweep on across the ground like a compass stroke — ⌀185, ⌀160, ⌀64, ⌀32. `⌀185` chip lands. |
-| **1 · Hub** | 0.8–1.7 | 0.100–0.2125 | Hub ⌀32 scales up at centre; boss + 40 flutes settle onto it. `⌀32 hub` chip lands. |
-| **2 · Spokes** | 1.7–3.6 | 0.2125–0.450 | 24 spokes grow outward from the hub in a staggered clockwise cascade, each locking into its 15° slot. `15°` wedge and `6 → 2` taper land mid-cascade. The centrepiece. |
-| **3 · Rim** | 3.6–4.7 | 0.450–0.5875 | Rim drops in from outside and seats onto the spoke tips. `⌀160` and `⌀7 × 24` scallop callout land. |
-| **4 · Stand up** | 4.7–6.5 | 0.5875–0.8125 | Assembly rotates flat → upright while the camera lowers from top-down to `DIMS_CAM`. Ground shadow gathers. God-rays ramp in. |
-| **5 · Settle** | 6.5–8.0 | 0.8125–1.000 | Eases into the exact static dims pose. Callouts reach steady-state opacity. |
+| **1 · Hub** | 0.0–1.3 | 0.000–0.1625 | Hub ⌀32 scales up; boss + 40 flutes settle onto it. The **⌀32 circle strikes with it**, then the `⌀32 hub` chip writes on. |
+| **2 · Spokes** | 1.3–3.7 | 0.1625–0.4625 | 24 spokes grow outward from the hub in a staggered clockwise cascade. The **⌀64 bulge circle** and the 15° wedge form here; `⌀64`, `15°` and `6 → 2` chips write on, staggered. The centrepiece. |
+| **3 · Rim** | 3.7–5.3 | 0.4625–0.6625 | Rim drops in and seats onto the spoke tips. The **⌀185 and ⌀160 ring circles** plus the scallop circle form; `⌀185`, `⌀160` and `⌀7 × 24` write on, staggered. |
+| **4 · Stand up** | 5.3–6.9 | 0.6625–0.8625 | Assembly rotates flat → upright while the camera lowers to `DIMS_CAM`. Ground shadow gathers. God-rays ramp in. |
+| **5 · Settle** | 6.9–8.0 | 0.8625–1.000 | Eases into the exact static dims pose. |
+
+### Callout behaviour within a beat
+
+A line sweeps on over the first `LINE_DRAW` (0.6) of its beat, giving it a head
+start on the chips it belongs to. Chips start at `CHIP_LEAD` (0.25) and each runs
+for `CHIP_SPAN` (0.5), staggered so several callouts in one beat arrive in
+sequence rather than together.
+
+Chip text is written, not faded in: symbols and words type left-to-right while
+every number rolls up to its value as it is reached — `⌀31 h` → `⌀32 hub`. A tag
+is parsed into units, one per non-digit character and one per digit **run**, so
+`185` rolls as a single value rather than three characters. Both numbers in
+`⌀7 × 24` count independently.
+
+`tagTextAt(units, 1)` reproduces every tag exactly, which is what keeps the
+settled frame character-for-character identical to the static dims view.
 
 ### Spoke cascade timing
 
