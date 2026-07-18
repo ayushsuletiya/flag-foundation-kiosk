@@ -43,6 +43,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   applyAssemblyTimeline,
   ASSEMBLY_MS,
+  BEAT,
+  beatP,
   clamp01,
   MIN_SCALE,
   type AssemblyRefs,
@@ -994,6 +996,7 @@ function createChakraScene(
   let buildT0 = 0
   let assemblyRefs: AssemblyRefs | null = null
   let buildPaused = false
+  const RAY_STRENGTH_BASE = 0.4 // matches rayMat's authored uniform
 
   function makeAssemblyRefs(): AssemblyRefs {
     return {
@@ -1414,6 +1417,11 @@ function createChakraScene(
   }
 
   const onPointerDown = (e: PointerEvent) => {
+    // Mid-build: the first touch dismisses the sequence and nothing else.
+    if (buildP < 1) {
+      finishAssembly()
+      return
+    }
     if (modeState === 'flag' || flagAnim !== null) return // flag mode: no drag, no picking
     if (activePointer !== null) return // first finger owns the gesture
     activePointer = e.pointerId
@@ -1432,6 +1440,7 @@ function createChakraScene(
     }
   }
   const onPointerMove = (e: PointerEvent) => {
+    if (buildP < 1) return
     if (e.pointerId !== activePointer) return
     const now = performance.now()
     lastInteraction = now
@@ -1446,6 +1455,7 @@ function createChakraScene(
     while (flick.length > 2 && now - flick[0].t > 140) flick.shift()
   }
   const onPointerUp = (e: PointerEvent) => {
+    if (buildP < 1) return
     if (e.pointerId !== activePointer) return
     activePointer = null
     const now = performance.now()
@@ -1538,7 +1548,12 @@ function createChakraScene(
     renderer.render(scene, camera)
     // sun shafts through the spokes — wheel framing only (flag mode has
     // its own choreography and no visible sun)
-    if (modeState === 'wheel') renderGodRays()
+    if (modeState === 'wheel' && buildP >= BEAT.standUp[0]) {
+      // Rays bloom through the spokes as the wheel rises into the light.
+      const ramp = easeInOutCubic(beatP(buildP, [BEAT.standUp[0], 1] as const))
+      rayMat.uniforms['strength']!.value = RAY_STRENGTH_BASE * ramp
+      renderGodRays()
+    }
   })
 
   function dispose() {
