@@ -972,6 +972,7 @@ function createChakraScene(
   let buildP = 1
   let buildT0 = 0
   let assemblyRefs: AssemblyRefs | null = null
+  let buildPaused = false
 
   function makeAssemblyRefs(): AssemblyRefs {
     return {
@@ -991,6 +992,7 @@ function createChakraScene(
 
   function startAssembly(): void {
     assemblyRefs ??= makeAssemblyRefs()
+    buildPaused = false
     buildT0 = performance.now()
     buildP = 0
     applyAssemblyTimeline(0, assemblyRefs)
@@ -1456,7 +1458,7 @@ function createChakraScene(
   /* ----------------------------------------------------- main loop -- */
   renderer.setAnimationLoop(() => {
     const now = performance.now()
-    if (buildP < 1 && assemblyRefs !== null) {
+    if (buildP < 1 && !buildPaused && assemblyRefs !== null) {
       buildP = clamp01((now - buildT0) / ASSEMBLY_MS)
       applyAssemblyTimeline(buildP, assemblyRefs)
     }
@@ -1577,12 +1579,24 @@ function createChakraScene(
 
   // Dev-only: freeze the sequence at an exact progress so beats can be
   // screenshotted deterministically. Stripped from production builds.
+  //
+  // It must genuinely PAUSE. Seeking by back-dating buildT0 lets the render
+  // loop keep advancing, so every "frozen" screenshot silently shows a later
+  // frame — which makes the whole visual gate useless. Hence buildPaused.
   if (import.meta.env.DEV) {
-    ;(window as unknown as { __chakraScrub?: (v: number) => void }).__chakraScrub = (v) => {
+    const dbg = window as unknown as {
+      __chakraScrub?: (v: number) => void
+      __chakraPlay?: () => void
+    }
+    dbg.__chakraScrub = (v) => {
       assemblyRefs ??= makeAssemblyRefs()
+      buildPaused = true
       buildP = clamp01(v)
-      buildT0 = performance.now() - buildP * ASSEMBLY_MS
       applyAssemblyTimeline(buildP, assemblyRefs)
+    }
+    dbg.__chakraPlay = () => {
+      buildPaused = false
+      buildT0 = performance.now() - buildP * ASSEMBLY_MS
     }
   }
 
