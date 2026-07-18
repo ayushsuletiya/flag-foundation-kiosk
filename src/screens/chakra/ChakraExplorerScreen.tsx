@@ -51,7 +51,6 @@ import {
 import type { Chakra3DProps } from './Chakra3D.tsx'
 import './ChakraExplorerScreen.css'
 
-const POSTER_URL = 'assets/images/chakra/wheel-poster.png'
 const BG_URL = 'assets/images/chakra/bg-sunset.png'
 
 // Pill widths are the Figma audit values (795:5985/5977/5980: 222/204/276).
@@ -82,14 +81,17 @@ function VirtueIcon({ virtue }: { virtue: string }) {
   )
 }
 
-function WheelPoster() {
-  return <img className="ck-wheel-poster" src={POSTER_URL} alt="" draggable={false} />
-}
-
 /**
- * Manual lazy wrapper — shows the Figma wheel render until the three.js chunk
- * is in. The resolved component is cached module-wide so later mounts (tab
- * switches) render the live wheel immediately with no poster flash.
+ * Manual lazy wrapper — renders nothing until the three.js chunk is in. The
+ * resolved component is cached module-wide so later mounts (tab switches)
+ * render the live wheel immediately.
+ *
+ * There used to be a poster here (the original light-blue Figma wheel render)
+ * covering the chunk load. It was removed: the poster predates the navy 3D
+ * wheel, so the handoff read as a colour pop rather than a smooth reveal.
+ * Nothing is drawn during the load instead, so the wheel slot is briefly empty
+ * on the first cold entry to this screen (~575 kB chunk). Warming the import
+ * from an earlier screen would close that gap entirely.
  */
 let chakra3DComponent: ComponentType<Chakra3DProps> | null = null
 function LazyChakra3D(props: Chakra3DProps) {
@@ -107,7 +109,7 @@ function LazyChakra3D(props: Chakra3DProps) {
       alive = false
     }
   }, [comp])
-  if (comp === null) return <WheelPoster />
+  if (comp === null) return null
   const Comp = comp
   return <Comp {...props} />
 }

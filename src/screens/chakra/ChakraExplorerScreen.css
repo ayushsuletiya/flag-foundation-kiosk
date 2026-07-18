@@ -105,14 +105,6 @@
   mask-composite: intersect;
 }
 
-/* Sized to its slot: the 910px wheel box on Values/Design, the 801×1197
-   flag-hero box while the three.js chunk loads on a cold Flag-tab entry. */
-.ck-wheel-poster {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
 /* Soft ground contact shadow under the wheel (Figma 795:5835). */
 .ck-ground-shadow {
   position: absolute;
