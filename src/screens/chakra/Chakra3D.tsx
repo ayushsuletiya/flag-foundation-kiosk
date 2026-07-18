@@ -47,6 +47,7 @@ import {
   beatP,
   clamp01,
   MIN_SCALE,
+  parseTagUnits,
   type AssemblyRefs,
 } from './chakraAssembly.ts'
 
@@ -251,6 +252,18 @@ function roundedRectPath(
   ctx.closePath()
 }
 
+/**
+ * A dimension chip whose text can be repainted while the assembly runs, so the
+ * numbers roll up and the symbols type on.
+ *
+ * The canvas is measured and sized from the FULL text and never resized. The
+ * sprite's scale is derived from that fixed canvas, so a half-typed chip keeps
+ * the geometry of the finished one — sizing per frame would make the chip
+ * visibly grow and jitter as characters land.
+ *
+ * `userData.draw(str)` repaints; `userData.units` is the parsed count-up/type-on
+ * script; `userData.lastText` is the repaint cache.
+ */
 function makeDimTag(text: string): THREE.Sprite {
   const fs = 46
   const pad = 18
@@ -262,28 +275,34 @@ function makeDimTag(text: string): THREE.Sprite {
   const tw = Math.ceil(ctx.measureText(text).width)
   c.width = tw + pad * 2
   c.height = Math.round(fs + pad * 1.3)
-  ctx.font = font // resizing the canvas resets context state
-  roundedRectPath(ctx, 2, 2, c.width - 4, c.height - 4, 16)
-  ctx.fillStyle = 'rgba(255, 247, 229, 0.95)' // cream chip
-  ctx.fill()
-  ctx.lineWidth = 3
-  ctx.strokeStyle = '#d9a514' // gold border
-  ctx.stroke()
-  ctx.fillStyle = '#06038d' // navy text (chakra colour)
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(text, c.width / 2, c.height / 2 + 2)
+  const tex = new THREE.CanvasTexture(c)
+
+  const draw = (s: string): void => {
+    ctx.clearRect(0, 0, c.width, c.height)
+    ctx.font = font // resizing/clearing the canvas resets context state
+    roundedRectPath(ctx, 2, 2, c.width - 4, c.height - 4, 16)
+    ctx.fillStyle = 'rgba(255, 247, 229, 0.95)' // cream chip
+    ctx.fill()
+    ctx.lineWidth = 3
+    ctx.strokeStyle = '#d9a514' // gold border
+    ctx.stroke()
+    ctx.fillStyle = '#06038d' // navy text (chakra colour)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(s, c.width / 2, c.height / 2 + 2)
+    tex.needsUpdate = true
+  }
+  draw(text)
+
   const sp = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: new THREE.CanvasTexture(c),
-      depthTest: false,
-      transparent: true,
-      opacity: 1,
-    }),
+    new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, opacity: 1 }),
   )
   sp.renderOrder = 10
   const h = 9
   sp.scale.set((h * c.width) / c.height, h, 1)
+  sp.userData['units'] = parseTagUnits(text)
+  sp.userData['draw'] = draw
+  sp.userData['lastText'] = text
   return sp
 }
 
@@ -294,7 +313,11 @@ function buildDimGroup(): THREE.Group {
   const z = DEPTH / 2 + 5
   const D2R = Math.PI / 180
 
-  let beat = 0 // which assembly beat this callout belongs to (see chakraAssembly BEAT)
+  // Which assembly beat this callout belongs to (see chakraAssembly BEAT):
+  // 1 = hub, 2 = spokes, 3 = rim. Every line forms with the part it measures.
+  let beat = 1
+  /** Chips per beat, so the timeline can stagger them within their window. */
+  const tagCounts: Record<number, number> = {}
 
   function line(pts: THREE.Vector3[], dashed: boolean): void {
     const g = new THREE.BufferGeometry().setFromPoints(pts)
@@ -323,30 +346,31 @@ function buildDimGroup(): THREE.Group {
     const t = makeDimTag(text)
     t.position.set(x, y, z + 2)
     t.userData['beat'] = beat
+    t.userData['seq'] = tagCounts[beat] ?? 0
+    tagCounts[beat] = (tagCounts[beat] ?? 0) + 1
     group.add(t)
   }
 
-  // official construction circles — struck on the ground first
-  beat = 0
-  circle(SPEC.outerR, false) // ⌀185
-  circle(SPEC.rimInnerR, true) // ⌀160
-  circle(SPEC.bulgeR, true) // ⌀64
+  // ---- HUB beat: the ⌀32 circle is struck as the hub itself appears.
+  beat = 1
   circle(SPEC.hubR, true) // ⌀32
+  seg(0, -SPEC.hubR, 0, -25)
+  tag('⌀32 hub', 0, -33)
 
-  seg(0, SPEC.outerR, 0, 99)
-  tag('⌀185', 0, 106)
-
-  beat = 3
-  seg(69.3, 40, 80, 46.5)
-  tag('⌀160', 90, 52)
-
+  // ---- SPOKES beat: the ⌀64 bulge circle forms as the spokes sweep out.
   beat = 2
+  circle(SPEC.bulgeR, true) // ⌀64
   seg(-27.7, -16, -40, -23)
   tag('⌀64', -50, -29)
 
-  beat = 1
-  seg(0, -SPEC.hubR, 0, -25)
-  tag('⌀32 hub', 0, -33)
+  // ---- RIM beat: the two ring circles form as the rim seats onto the tips.
+  beat = 3
+  circle(SPEC.outerR, false) // ⌀185
+  circle(SPEC.rimInnerR, true) // ⌀160
+  seg(0, SPEC.outerR, 0, 99)
+  tag('⌀185', 0, 106)
+  seg(69.3, 40, 80, 46.5)
+  tag('⌀160', 90, 52)
 
   // 15° wedge between two spokes (90° and 105°)
   beat = 2
@@ -368,6 +392,7 @@ function buildDimGroup(): THREE.Group {
   seg(9, 33, 22, 42)
   tag('6 → 2', 34, 47)
 
+  group.userData['tagCounts'] = tagCounts
   return group
 }
 

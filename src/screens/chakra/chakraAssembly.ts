@@ -13,15 +13,34 @@ import * as THREE from 'three'
 
 export const ASSEMBLY_MS = 8000
 
-/** Beat windows as fractions of the master progress. */
+/**
+ * Beat windows as fractions of the master progress.
+ *
+ * There is deliberately no "draft" beat: every construction circle now forms
+ * with the part it measures (⌀32 with the hub, ⌀64 with the spokes, ⌀160/⌀185
+ * with the rim) rather than all being struck up front, so the drawing builds
+ * itself one measurement at a time. The 0.8 s the draft beat used to hold was
+ * redistributed into hub/spokes/rim, which now carry the extra callout work.
+ */
 export const BEAT = {
-  draft: [0.0, 0.1] as const,
-  hub: [0.1, 0.2125] as const,
-  spokes: [0.2125, 0.45] as const,
-  rim: [0.45, 0.5875] as const,
-  standUp: [0.5875, 0.8125] as const,
-  settle: [0.8125, 1.0] as const,
+  hub: [0.0, 0.1625] as const, // 0.0–1.3 s
+  spokes: [0.1625, 0.4625] as const, // 1.3–3.7 s
+  rim: [0.4625, 0.6625] as const, // 3.7–5.3 s
+  standUp: [0.6625, 0.8625] as const, // 5.3–6.9 s
+  settle: [0.8625, 1.0] as const, // 6.9–8.0 s
 }
+
+/* ---------------------------------------------------------- callout timing --
+ * Inside each beat: the construction line sweeps on first, then the chips it
+ * belongs to animate in, staggered so several callouts in one beat arrive in
+ * sequence rather than together. */
+
+/** Fraction of a beat over which a construction line finishes drawing. */
+export const LINE_DRAW = 0.6
+/** Where the first chip in a beat starts (leaves the line a head start). */
+export const CHIP_LEAD = 0.25
+/** How long one chip's count-up / type-on runs, as a fraction of its beat. */
+export const CHIP_SPAN = 0.5
 
 export const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t)
 
@@ -78,6 +97,68 @@ export interface AssemblyRefs {
  *  with Chakra3D's construction-time hide block so the two cannot drift. */
 export const MIN_SCALE = 0.0001
 
+/* ------------------------------------------------------ animated chip text --
+ * A callout reads as if it were being written onto the sheet: symbols and words
+ * type on left-to-right, and every number rolls up to its value as it is
+ * reached. Both are derived from one progress value so the whole thing stays a
+ * pure function of `p`.
+ *
+ * A tag is split into units — one per non-digit character, one per digit RUN
+ * (so "185" rolls as a single number, not three characters). */
+
+export interface TagUnit {
+  /** Literal character, for symbols and words. */
+  text?: string
+  /** Target value, for a digit run — counts up to this. */
+  num?: number
+}
+
+export function parseTagUnits(full: string): TagUnit[] {
+  const units: TagUnit[] = []
+  let i = 0
+  while (i < full.length) {
+    const c = full[i]!
+    if (c >= '0' && c <= '9') {
+      let j = i
+      while (j < full.length && full[j]! >= '0' && full[j]! <= '9') j++
+      units.push({ num: Number(full.slice(i, j)) })
+      i = j
+    } else {
+      units.push({ text: c })
+      i++
+    }
+  }
+  return units
+}
+
+/** Units are revealed across this fraction of the chip window; the tail is left
+ *  so the last number still has room to finish rolling. */
+const TYPE_SPAN = 0.75
+/** How long one number takes to roll up once it is reached. */
+const NUM_SPAN = 0.35
+
+/**
+ * The tag's visible string at chip-progress `p`.
+ *
+ * At p >= 1 this returns the full text exactly — that is what lets the settled
+ * frame match the static dims view character for character.
+ */
+export function tagTextAt(units: TagUnit[], p: number): string {
+  let out = ''
+  for (let i = 0; i < units.length; i++) {
+    const start = (i / units.length) * TYPE_SPAN
+    if (p < start) break // not yet typed — everything after is unreached too
+    const u = units[i]!
+    if (u.text !== undefined) {
+      out += u.text
+    } else {
+      const q = clamp01((p - start) / NUM_SPAN)
+      out += String(Math.round(u.num! * easeOutCubic(q)))
+    }
+  }
+  return out
+}
+
 export function applyAssemblyTimeline(p: number, r: AssemblyRefs): void {
   // ---- staging: flat on the ground → upright, camera follows it up
   const up = easeInOutCubic(beatP(p, BEAT.standUp))
@@ -113,22 +194,46 @@ export function applyAssemblyTimeline(p: number, r: AssemblyRefs): void {
   // ---- callouts arrive with the part they describe
   if (r.dimGroup !== null) {
     const beatWindow: Record<number, readonly [number, number]> = {
-      0: BEAT.draft,
       1: BEAT.hub,
       2: BEAT.spokes,
       3: BEAT.rim,
     }
+    // How many chips share each beat — set by buildDimGroup, used to stagger them.
+    const tagCounts = (r.dimGroup.userData['tagCounts'] as Record<number, number>) ?? {}
+
     for (const child of r.dimGroup.children) {
-      const beat = (child.userData['beat'] as number | undefined) ?? 0
-      const local = beatP(p, beatWindow[beat] ?? BEAT.draft)
+      const beat = (child.userData['beat'] as number | undefined) ?? 1
+      const local = beatP(p, beatWindow[beat] ?? BEAT.hub)
+
       if (child instanceof THREE.Line) {
-        // Sweep the polyline on like a compass stroke.
+        // Sweep the polyline on like a compass stroke, ahead of its chips.
         const count = (child.userData['count'] as number | undefined) ?? 0
-        child.visible = local > 0
-        child.geometry.setDrawRange(0, Math.max(2, Math.ceil(count * easeOutCubic(local))))
+        const lineP = clamp01(local / LINE_DRAW)
+        child.visible = lineP > 0
+        child.geometry.setDrawRange(0, Math.max(2, Math.ceil(count * easeOutCubic(lineP))))
       } else if (child instanceof THREE.Sprite) {
-        child.material.opacity = local
-        child.visible = local > 0
+        // Stagger chips within the beat so several callouts arrive in sequence.
+        const n = tagCounts[beat] ?? 1
+        const seq = (child.userData['seq'] as number | undefined) ?? 0
+        const slack = 1 - CHIP_LEAD - CHIP_SPAN
+        const start = CHIP_LEAD + (n > 1 ? (seq / (n - 1)) * slack : 0)
+        const chipP = clamp01((local - start) / CHIP_SPAN)
+
+        child.material.opacity = clamp01(chipP * 3) // pill fades in fast, then text writes
+        child.visible = chipP > 0
+
+        // Repaint only when the string actually changes. Calling this twice with
+        // the same `p` is a no-op the second time, so purity is preserved while
+        // texture uploads stay down to a handful per chip.
+        const units = child.userData['units'] as TagUnit[] | undefined
+        const draw = child.userData['draw'] as ((s: string) => void) | undefined
+        if (units !== undefined && draw !== undefined) {
+          const next = tagTextAt(units, chipP)
+          if (next !== child.userData['lastText']) {
+            child.userData['lastText'] = next
+            draw(next)
+          }
+        }
       }
     }
   }
