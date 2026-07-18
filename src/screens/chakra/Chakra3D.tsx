@@ -272,7 +272,12 @@ function makeDimTag(text: string): THREE.Sprite {
   ctx.textBaseline = 'middle'
   ctx.fillText(text, c.width / 2, c.height / 2 + 2)
   const sp = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }),
+    new THREE.SpriteMaterial({
+      map: new THREE.CanvasTexture(c),
+      depthTest: false,
+      transparent: true,
+      opacity: 1,
+    }),
   )
   sp.renderOrder = 10
   const h = 9
@@ -287,6 +292,8 @@ function buildDimGroup(): THREE.Group {
   const z = DEPTH / 2 + 5
   const D2R = Math.PI / 180
 
+  let beat = 0 // which assembly beat this callout belongs to (see chakraAssembly BEAT)
+
   function line(pts: THREE.Vector3[], dashed: boolean): void {
     const g = new THREE.BufferGeometry().setFromPoints(pts)
     const m = dashed
@@ -294,6 +301,8 @@ function buildDimGroup(): THREE.Group {
       : new THREE.LineBasicMaterial({ color: DIM_GOLD })
     const l = new THREE.Line(g, m)
     if (dashed) l.computeLineDistances()
+    l.userData['beat'] = beat
+    l.userData['count'] = pts.length // full draw range, for the sweep-on
     group.add(l)
   }
   function circle(r: number, dashed: boolean, a0 = 0, a1 = Math.PI * 2, cx = 0, cy = 0): void {
@@ -311,10 +320,12 @@ function buildDimGroup(): THREE.Group {
   function tag(text: string, x: number, y: number): void {
     const t = makeDimTag(text)
     t.position.set(x, y, z + 2)
+    t.userData['beat'] = beat
     group.add(t)
   }
 
-  // official construction circles
+  // official construction circles — struck on the ground first
+  beat = 0
   circle(SPEC.outerR, false) // ⌀185
   circle(SPEC.rimInnerR, true) // ⌀160
   circle(SPEC.bulgeR, true) // ⌀64
@@ -322,26 +333,35 @@ function buildDimGroup(): THREE.Group {
 
   seg(0, SPEC.outerR, 0, 99)
   tag('⌀185', 0, 106)
+
+  beat = 3
   seg(69.3, 40, 80, 46.5)
   tag('⌀160', 90, 52)
+
+  beat = 2
   seg(-27.7, -16, -40, -23)
   tag('⌀64', -50, -29)
+
+  beat = 1
   seg(0, -SPEC.hubR, 0, -25)
   tag('⌀32 hub', 0, -33)
 
   // 15° wedge between two spokes (90° and 105°)
+  beat = 2
   seg(0, 20, 0, 85)
   seg(20 * Math.cos(105 * D2R), 20 * Math.sin(105 * D2R), 85 * Math.cos(105 * D2R), 85 * Math.sin(105 * D2R))
   circle(60, false, 90 * D2R, 105 * D2R)
   tag('15°', -18, 68)
 
   // one scallop called out (352.5°, on the ⌀160 circle)
+  beat = 3
   const sa = -7.5 * D2R
   circle(SPEC.scallopR, false, 0, Math.PI * 2, SPEC.rimInnerR * Math.cos(sa), SPEC.rimInnerR * Math.sin(sa))
   seg(83, -10.9, 94, -14)
   tag('⌀7 × 24', 103, -17) // pulled in from the source's (108,-16) — 910px canvas edge
 
   // spoke width at the ⌀64 circle (spoke pointing up)
+  beat = 2
   seg(-9, 31.86, 9, 31.86)
   seg(9, 33, 22, 42)
   tag('6 → 2', 34, 47)
@@ -988,11 +1008,12 @@ function createChakraScene(
       restCam: DIMS_CAM,
       restTgt: WHEEL_TGT,
       restLean: { x: LEAN_X, y: LEAN_Y, posY: 3 },
+      dimGroup,
     }
   }
 
   function startAssembly(): void {
-    assemblyRefs ??= makeAssemblyRefs()
+    assemblyRefs = makeAssemblyRefs() // dimGroup may have only just been created
     buildPaused = false
     buildT0 = performance.now()
     buildP = 0

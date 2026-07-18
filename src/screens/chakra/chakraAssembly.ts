@@ -61,6 +61,7 @@ export interface AssemblyRefs {
   restCam: THREE.Vector3
   restTgt: THREE.Vector3
   restLean: { x: number; y: number; posY: number }
+  dimGroup: THREE.Group | null
 }
 
 /** Never scale to exactly 0 — degenerate matrices produce NaN normals. Shared
@@ -98,4 +99,27 @@ export function applyAssemblyTimeline(p: number, r: AssemblyRefs): void {
   const rimP = beatP(p, BEAT.rim)
   r.rim.visible = rimP > 0
   r.rim.scale.setScalar(THREE.MathUtils.lerp(1.25, 1, easeOutCubic(rimP)))
+
+  // ---- callouts arrive with the part they describe
+  if (r.dimGroup !== null) {
+    const beatWindow: Record<number, readonly [number, number]> = {
+      0: BEAT.draft,
+      1: BEAT.hub,
+      2: BEAT.spokes,
+      3: BEAT.rim,
+    }
+    for (const child of r.dimGroup.children) {
+      const beat = (child.userData['beat'] as number | undefined) ?? 0
+      const local = beatP(p, beatWindow[beat] ?? BEAT.draft)
+      if (child instanceof THREE.Line) {
+        // Sweep the polyline on like a compass stroke.
+        const count = (child.userData['count'] as number | undefined) ?? 0
+        child.visible = local > 0
+        child.geometry.setDrawRange(0, Math.max(2, Math.ceil(count * easeOutCubic(local))))
+      } else if (child instanceof THREE.Sprite) {
+        child.material.opacity = local
+        child.visible = local > 0
+      }
+    }
+  }
 }
