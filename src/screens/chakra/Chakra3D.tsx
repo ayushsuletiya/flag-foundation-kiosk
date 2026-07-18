@@ -949,6 +949,15 @@ function createChakraScene(
   for (const part of [rim, hub, boss, flutes]) part.castShadow = true
   chakra.add(rim, hub, boss, flutes)
 
+  // Assembly starts from nothing; setDims(true) drives them back in. Values and
+  // Flag call applyAssemblyTimeline(1) via finishAssembly() on their first frame,
+  // which restores full scale, so this cannot leak into those tabs.
+  rim.visible = false
+  hub.scale.setScalar(0.0001)
+  boss.scale.setScalar(0.0001)
+  flutes.scale.setScalar(0.0001)
+  for (const s of spokes) s.scale.y = 0.0001
+
   /* ------------------------------------------------ selection state -- */
   let selected: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | null = null
   let halo: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> | null = null
@@ -985,6 +994,13 @@ function createChakraScene(
     buildT0 = performance.now()
     buildP = 0
     applyAssemblyTimeline(0, assemblyRefs)
+  }
+
+  /** Jump straight to the settled pose. p=1 yields EXACTLY the resting dims view. */
+  function finishAssembly(): void {
+    assemblyRefs ??= makeAssemblyRefs()
+    buildP = 1
+    applyAssemblyTimeline(1, assemblyRefs)
   }
 
   /* ------------------------------------------------- flag-mode state -- */
@@ -1542,6 +1558,18 @@ function createChakraScene(
     pmrem.dispose()
     renderer.dispose()
   }
+
+  // Parts are constructed hidden (above), so every scene must be put back at its
+  // resting scale here. UNCONDITIONAL on purpose — flag mode needs it too: the
+  // docking sequence scales the `chakra` GROUP, but the meshes inside it would
+  // still be at MIN_SCALE, so gating this on mode ships an invisible wheel
+  // through the whole Chakra-in-Flag animation.
+  // Design is unaffected: setDims(true) runs after this and re-hides the parts
+  // via applyAssemblyTimeline(0) before the sequence plays.
+  // Must precede setMode('flag') below: applyAssemblyTimeline(1) restores the
+  // resting LEAN pose, which flag mode then deliberately zeroes to world-align
+  // the wheel for docking. Reversing the order would dock a tilted wheel.
+  finishAssembly()
 
   // A scene created directly in flag mode plays the docking animation from
   // the top on mount (re-entering the tab remounts → replays).
