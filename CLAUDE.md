@@ -52,6 +52,12 @@ chakra scene + god-ray volumetrics run comfortably at 1080p when dual-channel.
   only the transient arrival border-trace + press touch-glow remain).
 - Chakra: virtue list order = Excel spoke order; DYK facts ≤135 chars; wheel drag-spins on its axle;
   Design tab uses 3D dims mode; Flag tab plays the chakra-docks-into-flag animation.
+- Home → Symbols: tapping the tile plays the HOME-side cinematic only (tiles slide out → black →
+  glow → morph into a RANDOM seed symbol card), then the symbols screen opens AT REST behind a
+  short black fade — **no intro animation on the symbols screen** (user removed the arrive/deal
+  sequence 2026-07-19; the old trail-sweep intro is also gone). The seed still fronts the carousel.
+  Any touch during the home cinematic skips straight over. Contract:
+  src/screens/symbols/transitionContract.ts.
 - History year flags/backgrounds: generated placeholders until real art lands (specs baked into them).
 - No emoji in filenames. Idle reset (120s) returns home — intended kiosk behavior.
 
