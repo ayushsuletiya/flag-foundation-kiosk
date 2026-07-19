@@ -209,6 +209,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Bias the cover-crop upward: most gallery photos are period portraits,
+     and a dead-center crop beheads them in this landscape pane. */
+  object-position: center 22%;
   animation: hk-fade-in 300ms ease both; /* crossfade on thumbnail swap */
 }
 

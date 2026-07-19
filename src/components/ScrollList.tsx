@@ -33,6 +33,18 @@ export interface ScrollListProps {
   trackGap?: number
   /** Which side the rail sits on (map explorer list rails LEFT). */
   railSide?: 'left' | 'right'
+  /**
+   * Extra invisible margin pushed onto the scroll viewport's clip box beyond
+   * the content's own bounds, so effects that need to paint past a child's
+   * edges (e.g. a card's box-shadow glow) aren't hard-clipped by `overflow`
+   * — a scrollable axis can't be `visible`, so *something* always clips.
+   * Content is inset by the same amount so its on-screen position is
+   * unaffected; only the invisible clip/hit-test boundary moves. The rail
+   * is unaffected either way (anchored to the outer box, not the viewport).
+   */
+  overscan?: { top?: number; right?: number; bottom?: number; left?: number }
+  /** Fires on mount and on every scroll with the viewport's current scrollTop. */
+  onScrollTopChange?: (scrollTop: number) => void
   className?: string
   style?: CSSProperties
 }
@@ -81,6 +93,8 @@ export function ScrollList({
   trackWidth = 14,
   trackGap = 20,
   railSide = 'right',
+  overscan,
+  onScrollTopChange,
   className,
   style,
 }: ScrollListProps) {
@@ -109,7 +123,8 @@ export function ScrollList({
         ? prev
         : { top, height: thumbH, scrollable },
     )
-  }, [])
+    onScrollTopChange?.(viewport.scrollTop)
+  }, [onScrollTopChange])
 
   // Measure on mount, then re-measure when the viewport resizes or its
   // content changes (Excel rows arriving, images decoding). Deliberately NOT
@@ -173,6 +188,12 @@ export function ScrollList({
 
   const railWidth = Math.max(trackWidth, chevrons ? CHEVRON_SIZE : 0)
   const trackTop = chevrons ? CHEVRON_SIZE + CHEVRON_TRACK_GAP : 0
+  const ov = {
+    top: overscan?.top ?? 0,
+    right: overscan?.right ?? 0,
+    bottom: overscan?.bottom ?? 0,
+    left: overscan?.left ?? 0,
+  }
 
   return (
     <div className={className} style={{ position: 'relative', width, height, ...style }}>
@@ -186,15 +207,17 @@ export function ScrollList({
         onPointerCancel={endDrag}
         style={{
           position: 'absolute',
-          left: railSide === 'left' ? railWidth + trackGap : 0,
-          top: 0,
-          bottom: 0,
-          right: railSide === 'right' ? railWidth + trackGap : 0,
+          left: (railSide === 'left' ? railWidth + trackGap : 0) - ov.left,
+          top: -ov.top,
+          bottom: -ov.bottom,
+          right: (railSide === 'right' ? railWidth + trackGap : 0) - ov.right,
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        {children}
+        <div style={{ paddingTop: ov.top, paddingRight: ov.right, paddingBottom: ov.bottom, paddingLeft: ov.left }}>
+          {children}
+        </div>
       </div>
 
       {/* Scrollbar rail */}

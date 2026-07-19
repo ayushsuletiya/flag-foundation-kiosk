@@ -84,8 +84,11 @@
 .mon-tile {
   transition:
     height 0.3s ease,
-    background 0.3s ease,
     box-shadow 0.3s ease;
+}
+
+.mon-tile-fill {
+  transition: background 0.3s ease;
 }
 
 .mon-tile-layer {

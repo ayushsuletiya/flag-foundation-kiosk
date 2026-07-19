@@ -88,7 +88,10 @@ function MapBackdrop() {
 
 const TILE_W = 435.49
 const TILE_H = 96.51
-const CARD_H = 415
+// CARD_H (and the photo/button offsets below) leave room for a 2-line title —
+// row.location can wrap (e.g. "KISS Foundation Campus, Bhubaneswar"), and the
+// Figma source (795:7400) only proved a single-line case ("Jindal Steel Plant").
+const CARD_H = 447
 
 function HeightBadge({ heightFt, dark }: { heightFt: number | null; dark: boolean }) {
   if (heightFt === null) return null
@@ -124,11 +127,17 @@ function HeightBadge({ heightFt, dark }: { heightFt: number | null; dark: boolea
 function InstallationTile({
   row,
   expanded,
+  glowSuppressed,
   onToggle,
   onKnowMore,
 }: {
   row: Installation
   expanded: boolean
+  /** True while the untethered first-row glow patch is painting this tile's
+   *  glow outside the clipped scroll viewport — the tile must then drop its
+   *  own box-shadow, or the two glows stack below the viewport's top clip
+   *  line and the brightness step reads as a hard "clipped" edge. */
+  glowSuppressed: boolean
   onToggle: () => void
   onKnowMore: () => void
 }) {
@@ -138,6 +147,9 @@ function InstallationTile({
   }, [row.id])
 
   return (
+    // Shadow lives on this outer box; a child with `overflow: hidden` clips
+    // its own box-shadow in every browser, so the glow can't sit on the same
+    // element that clips the tile's two layers to the rounded corners.
     <div
       className="mon-tile"
       style={{
@@ -146,145 +158,154 @@ function InstallationTile({
         height: expanded ? CARD_H : TILE_H,
         flexShrink: 0,
         borderRadius: 'var(--radius-card)',
-        border: '0.785px solid var(--cream-border)',
-        background: expanded ? 'var(--gold-gradient)' : 'var(--glass-navy-tint)',
-        backdropFilter: expanded ? undefined : 'var(--glass-filter-sm)',
-        WebkitBackdropFilter: expanded ? undefined : 'var(--glass-filter-sm)',
-        boxShadow: expanded ? 'var(--gold-glow)' : undefined,
-        overflow: 'hidden',
+        boxShadow: expanded && !glowSuppressed ? 'var(--gold-glow)' : undefined,
         cursor: 'pointer',
       }}
       onClick={onToggle}
     >
-      {/* Collapsed layer: name + height */}
       <div
-        className="mon-tile-layer"
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: TILE_W,
-          height: TILE_H,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 24px 0 37px',
-          opacity: expanded ? 0 : 1,
-          pointerEvents: 'none',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 400,
-            fontSize: 23.54,
-            lineHeight: 0.93,
-            color: '#FFFFFF',
-            maxWidth: 250,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {row.location}
-        </span>
-        <HeightBadge heightFt={row.heightFt} dark={false} />
-      </div>
-
-      {/* Expanded layer: title + photo + Know More (Figma 795:7400) */}
-      <div
-        className="mon-tile-layer"
+        className="mon-tile-fill"
         style={{
           position: 'absolute',
           inset: 0,
-          opacity: expanded ? 1 : 0,
-          pointerEvents: expanded ? 'auto' : 'none',
+          borderRadius: 'var(--radius-card)',
+          border: '0.785px solid var(--cream-border)',
+          background: expanded ? 'var(--gold-gradient)' : 'var(--glass-navy-tint)',
+          backdropFilter: expanded ? undefined : 'var(--glass-filter-sm)',
+          WebkitBackdropFilter: expanded ? undefined : 'var(--glass-filter-sm)',
+          overflow: 'hidden',
         }}
       >
+        {/* Collapsed layer: name + height */}
         <div
+          className="mon-tile-layer"
           style={{
             position: 'absolute',
-            left: 38,
-            top: 27,
-            width: 360,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 600,
-            fontSize: 29.232,
-            lineHeight: 1.1,
-            color: '#512312',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            left: 0,
+            top: 0,
+            width: TILE_W,
+            height: TILE_H,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px 0 37px',
+            opacity: expanded ? 0 : 1,
+            pointerEvents: 'none',
           }}
         >
-          {row.location}
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 400,
+              fontSize: 23.54,
+              lineHeight: 1.15,
+              color: '#FFFFFF',
+              maxWidth: 250,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {row.location}
+          </span>
+          <HeightBadge heightFt={row.heightFt} dark={false} />
         </div>
+
+        {/* Expanded layer: title + photo + Know More (Figma 795:7400) */}
         <div
+          className="mon-tile-layer"
           style={{
             position: 'absolute',
-            left: 29,
-            top: 76.5,
-            width: 345,
-            height: 250.27,
-            borderRadius: 19.795,
-            border: '1.414px solid #FFFFFF',
-            overflow: 'hidden',
-            background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
+            inset: 0,
+            opacity: expanded ? 1 : 0,
+            pointerEvents: expanded ? 'auto' : 'none',
           }}
         >
-          {!photoFailed ? (
-            <img
-              src={installationPhoto(row.id)}
-              alt=""
-              draggable={false}
-              onError={() => setPhotoFailed(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+          <div
+            style={{
+              position: 'absolute',
+              left: 38,
+              top: 27,
+              width: 360,
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 600,
+              fontSize: 29.232,
+              lineHeight: 1.1,
+              color: '#512312',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {row.location}
+          </div>
+          <div
+            style={{
+              position: 'absolute',
+              left: 29,
+              top: 108,
+              width: 345,
+              height: 250.27,
+              borderRadius: 19.795,
+              border: '1.414px solid #FFFFFF',
+              overflow: 'hidden',
+              background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
+            }}
+          >
+            {!photoFailed ? (
               <img
-                src="assets/sequences/flag-marker/static.png"
+                src={installationPhoto(row.id)}
                 alt=""
                 draggable={false}
-                style={{ height: 170, opacity: 0.8 }}
+                onError={() => setPhotoFailed(true)}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
-            </div>
-          )}
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <img
+                  src="assets/sequences/flag-marker/static.png"
+                  alt=""
+                  draggable={false}
+                  style={{ height: 170, opacity: 0.8 }}
+                />
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="mon-pressable"
+            onClick={(e) => {
+              e.stopPropagation()
+              onKnowMore()
+            }}
+            style={{
+              position: 'absolute',
+              left: 29,
+              top: 378,
+              width: 180.77,
+              height: 42.26,
+              borderRadius: 'var(--radius-know-more)',
+              background: 'linear-gradient(90deg, #FFFDE0 0%, #FFF5C3 100%)',
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 500,
+              fontSize: 22.982,
+              color: '#572F16',
+              cursor: 'pointer',
+            }}
+          >
+            Know More
+          </button>
         </div>
-        <button
-          type="button"
-          className="mon-pressable"
-          onClick={(e) => {
-            e.stopPropagation()
-            onKnowMore()
-          }}
-          style={{
-            position: 'absolute',
-            left: 29,
-            top: 346.5,
-            width: 180.77,
-            height: 42.26,
-            borderRadius: 'var(--radius-know-more)',
-            background: 'linear-gradient(90deg, #FFFDE0 0%, #FFF5C3 100%)',
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 500,
-            fontSize: 22.982,
-            color: '#572F16',
-            cursor: 'pointer',
-          }}
-        >
-          Know More
-        </button>
       </div>
     </div>
   )
@@ -300,6 +321,7 @@ export function MapExplorerScreen() {
   const [selectedState, setSelectedState] = useState(getLastSelectedState)
   const [overlayOpen, setOverlayOpen] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [listScrollTop, setListScrollTop] = useState(0)
   const listKeyRef = useRef(0)
 
   const installations = useMemo(
@@ -330,6 +352,14 @@ export function MapExplorerScreen() {
     setLastSelectedState(state)
     listKeyRef.current += 1 // remount ScrollList → scroll back to top
   }
+
+  // While true, the untethered patch after the list is the SOLE source of the
+  // first tile's glow (the in-list tile suppresses its own box-shadow). The
+  // two must never paint together: the tile's copy is clipped at the scroll
+  // viewport's top edge, so the overlap region below that edge doubles in
+  // brightness and the step reads as a hard clip line under the filter chips.
+  const firstRowGlowPatchActive =
+    expandedId != null && expandedId === installations[0]?.id && listScrollTop <= 1
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -412,7 +442,20 @@ export function MapExplorerScreen() {
         {selectedState}
       </div>
 
-      {/* Installations list — gold scroll rail on the LEFT (audit x51/x63) */}
+      {/* Installations list — gold scroll rail on the LEFT (audit x51/x63).
+          `overscan` gives the scroll viewport's clip boundary room on every
+          side so the expanded card's box-shadow glow (~52px reach) can fade
+          out naturally instead of hard-cutting at the viewport edge — a
+          scrolling axis can never be `overflow: visible`, so without this
+          the glow gets clipped no matter which element it's drawn on. Tile
+          and rail screen positions are unaffected, only the invisible clip
+          margin grows. `top` overscan stays 0: the Select State pill sits
+          just 25px above this list, nowhere near the ~52px the glow needs,
+          and any bigger clip margin here would mean the (necessarily
+          interactive) scroll viewport starts swallowing that pill's clicks.
+          The unclippable top-of-list case (only the very first row, only
+          at rest scroll) is instead handled by the untethered glow patch
+          rendered after this list — see the comment there. */}
       <ScrollList
         key={listKeyRef.current}
         width={543.49}
@@ -420,6 +463,8 @@ export function MapExplorerScreen() {
         railSide="left"
         trackWidth={10}
         trackGap={45}
+        overscan={{ top: 0, right: 70, bottom: 70, left: 70 }}
+        onScrollTopChange={setListScrollTop}
         style={{ position: 'absolute', left: 51, top: 312 }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 23.5, paddingBottom: 24 }}>
@@ -428,6 +473,7 @@ export function MapExplorerScreen() {
               key={row.id}
               row={row}
               expanded={expandedId === row.id}
+              glowSuppressed={firstRowGlowPatchActive && row.id === installations[0]?.id}
               onToggle={() => setExpandedId((cur) => (cur === row.id ? null : row.id))}
               onKnowMore={() => navigate(`/monumental/detail/${row.id}`)}
             />
@@ -451,6 +497,32 @@ export function MapExplorerScreen() {
           )}
         </div>
       </ScrollList>
+
+      {/* First-row glow patch — the only tile whose expanded glow needs to
+          bleed past the list's own top edge (every other tile has an opaque
+          sibling row above it that already occludes the bleed naturally).
+          The scroll viewport can't give that edge real breathing room
+          without covering the Select State pill's clickable area, so this
+          renders the tile's ONLY glow (the tile suppresses its own — see
+          firstRowGlowPatchActive) as a `pointer-events: none` layer outside
+          the clipped list entirely — clicks always fall through to
+          whatever's really there. Only shown at rest scroll (the list
+          isn't scrolled), since that's the one moment the first tile's top
+          actually sits at this fixed y. */}
+      {firstRowGlowPatchActive && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 129,
+            top: 312,
+            width: TILE_W,
+            height: CARD_H,
+            borderRadius: 'var(--radius-card)',
+            boxShadow: 'var(--gold-glow)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       {overlayOpen && (
         <SelectStateOverlay

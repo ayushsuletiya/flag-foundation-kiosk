@@ -76,10 +76,7 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
       dir,
       backgrounds: Array.from({ length: BG_CANDIDATES }, (_, i) => `${dir}/bg-${i + 1}.png`),
       flags: [`${dir}/year-flag.png`, `${dir}/flag.png`],
-      gallery: Array.from({ length: GALLERY_CANDIDATES }, (_, i) => `${dir}/gallery-${i + 1}.png`)
-        // 1947 gallery-2.png is a byte-duplicate of gallery-1.png (Figma image
-        // fill dedupe) — showing both would render twin thumbnails.
-        .filter((url) => !(year === '1947' && url.endsWith('/gallery-2.png'))),
+      gallery: Array.from({ length: GALLERY_CANDIDATES }, (_, i) => `${dir}/gallery-${i + 1}.png`),
     }
   }, [year])
 
