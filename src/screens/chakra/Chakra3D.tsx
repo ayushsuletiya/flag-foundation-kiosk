@@ -925,7 +925,10 @@ function createChakraScene(
   // This is also what switches environment lighting ON: intensity is held at 0
   // above so the cool studio probe can never tint the wheel light blue before
   // this lands. Do not raise the initial value without re-checking that pop.
-  new THREE.TextureLoader().load('assets/images/chakra/bg-sunset.png', (t) => {
+  // Environment texture: always the still (assets/3-ashok-chakra/background/
+  // bg.png) even when the DOM background plays bg.mp4 — three.js needs a
+  // sampleable image, and the two share one folder by convention.
+  new THREE.TextureLoader().load('assets/3-ashok-chakra/background/bg.png', (t) => {
     t.mapping = THREE.EquirectangularReflectionMapping
     t.colorSpace = THREE.SRGBColorSpace
     scene.environment = pmrem.fromEquirectangular(t).texture

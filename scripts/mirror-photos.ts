@@ -1,6 +1,6 @@
 /**
  * mirror-photos — downloads every Photo URL from data/content.xlsx tab
- * "04 · Flag Installations" into assets/images/installations/<id>.jpg so the
+ * "04 · Flag Installations" into assets/1-monumental-flags/installations/<id>.jpg so the
  * kiosk can run fully offline.
  *
  * Behaviour:
@@ -21,7 +21,7 @@ import { loadContent } from '../src/data/excelLoader.ts'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const xlsxPath = path.join(dirname, '..', 'data', 'content.xlsx')
-const outDir = path.join(dirname, '..', 'assets', 'images', 'installations')
+const outDir = path.join(dirname, '..', 'assets', '1-monumental-flags', 'installations')
 
 const CONCURRENCY = 6
 const TIMEOUT_MS = 15_000

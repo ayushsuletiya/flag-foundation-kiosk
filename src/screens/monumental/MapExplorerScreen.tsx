@@ -10,7 +10,7 @@
  * India map cluster (IndiaMap). Select State opens the modal overlay;
  * per user decision the selection only applies on CONTINUE.
  *
- * Background: assets/video/india-map-loop.mp4 (user-provided, may not exist)
+ * Background: assets/1-monumental-flags/map/background/bg.mp4 (may not exist)
  * full-bleed; until it lands, the terrain still is positioned via the
  * calibrated TERRAIN_PLACEMENT so India sits under the map box.
  */
@@ -30,11 +30,10 @@ import {
   getLastSelectedState,
   setLastSelectedState,
 } from './monumentalGeo.ts'
+import { MONUMENTAL, installationPhoto } from '../../assets/paths.ts'
 import './monumental.css'
 
-const INDIA_LOOP_VIDEO = 'assets/video/india-map-loop.mp4'
-
-const installationPhoto = (id: number): string => `assets/images/installations/${id}.jpg`
+const INDIA_LOOP_VIDEO = `${MONUMENTAL.mapBackground}/bg.mp4`
 
 // ---------------------------------------------------------------------------
 // Backdrop — looping map video with calibrated-still fallback
@@ -273,7 +272,7 @@ function InstallationTile({
                 }}
               >
                 <img
-                  src="assets/sequences/flag-marker/static.png"
+                  src={`${MONUMENTAL.flagMarker}/static.png`}
                   alt=""
                   draggable={false}
                   style={{ height: 170, opacity: 0.8 }}

@@ -59,26 +59,26 @@ const TILES: readonly QuickTile[] = [
   {
     route: '/symbols',
     label: 'National Symbols\nof India',
-    image: 'assets/images/home/card-symbols.png',
+    image: 'assets/0-home/cards/card-symbols.png',
     photo: { left: '-7.6%', top: '-24.62%', width: '115.37%', height: '149.38%' },
     solidScrim: true,
   },
   {
     route: '/monumental',
     label: 'Flag Foundation\nInstallations',
-    image: 'assets/images/home/card-monumental.png',
+    image: 'assets/0-home/cards/card-monumental.png',
     photo: { left: '-1.2%', top: '-1.03%', width: '102.28%', height: '143.77%' },
   },
   {
     route: '/history',
     label: 'History\nof Tiranga',
-    image: 'assets/images/home/card-history.png',
+    image: 'assets/0-home/cards/card-history.png',
     photo: { left: '0%', top: '0%', width: '100%', height: '138.07%' },
   },
   {
     route: '/chakra',
     label: 'Explore\nAshok Chakra',
-    image: 'assets/images/home/card-chakra.png',
+    image: 'assets/0-home/cards/card-chakra.png',
     photo: { left: '-35.82%', top: '0%', width: '171.98%', height: '100%' },
   },
 ]

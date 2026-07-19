@@ -4,8 +4,8 @@
  * One normalized coordinate space rules everything: x/y in 0–1 relative to
  * the India map box. Three data sources share it (verified: identical
  * normalized bboxes for the same state across files):
- *  - assets/map/states/active/_layout.json — extruded "glow" PNG placement
- *  - assets/map/states/hit/_layout.json    — state silhouette SVGs (tap map)
+ *  - …map/states/active/_layout.json — extruded "glow" PNG placement
+ *  - …map/states/hit/_layout.json    — state silhouette SVGs (tap map)
  *  - src/data/geo/districts.json           — one marker position per
  *    (state, district) pair from Excel tab 04
  *
@@ -15,8 +15,8 @@
  * MAP_BOX comes from the frame audit of 795:7983/795:7400: the India map
  * occupies (881,90)–(1846,984) on the 1920×1080 stage.
  */
-import activeLayoutRaw from '../../../assets/map/states/active/_layout.json?raw'
-import hitLayoutRaw from '../../../assets/map/states/hit/_layout.json?raw'
+import activeLayoutRaw from '../../../assets/1-monumental-flags/map/states/active/_layout.json?raw'
+import hitLayoutRaw from '../../../assets/1-monumental-flags/map/states/hit/_layout.json?raw'
 import districtsRaw from '../../data/geo/districts.json?raw'
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ export const mapY = (ny: number): number => MAP_BOX.top + ny * MAP_BOX.height
 /**
  * Terrain still placement for the map screen backdrop.
  *
- * assets/map/terrain-still.png (4096×2286) is the INTRO frame's whole-
+ * The intro poster (4096×2286, now intro/poster.png) is the INTRO frame's whole-
  * subcontinent artwork; the map screen's Figma background is the same
  * artwork zoomed so India sits under the political map on the right.
  * These values scale/translate the still so its India lands under MAP_BOX
@@ -44,8 +44,10 @@ export const mapY = (ny: number): number => MAP_BOX.top + ny * MAP_BOX.height
 /* User-provided glowing render (2026-07-16) — composed so India sits under
    the map box at near-full-bleed. Placement solved from the render's bright
    outline bbox (x 0.4656 w 0.4906 / y 0.0898 h 0.8176) → map box (881,90,
-   965×894). Old Figma still kept at assets/map/terrain-still.png. */
-export const TERRAIN_STILL = 'assets/map/terrain-render.png'
+   965×894). Old Figma still kept at assets/1-monumental-flags/intro/poster.png.
+   Same dynamic-background folder as bg.mp4: the map screen plays the video
+   full-bleed when present, else places this still via TERRAIN_PLACEMENT. */
+export const TERRAIN_STILL = 'assets/1-monumental-flags/map/background/bg.png'
 export const TERRAIN_NATURAL = { width: 1920, height: 1080 } as const
 export const TERRAIN_PLACEMENT = {
   left: -35,

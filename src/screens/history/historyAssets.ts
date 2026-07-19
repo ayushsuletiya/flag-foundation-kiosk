@@ -1,13 +1,14 @@
 /**
  * historyAssets — runtime discovery of per-year media under
- * assets/images/history/<year>/.
+ * assets/2-history-of-tiranga/<year>/{background,flag,gallery}/.
  *
  * Media is user-dropped loose files (not bundled), so the app cannot import
- * or list them; instead we probe a fixed candidate set with Image() loads:
- *   bg-1..bg-5.png      → main-screen background (1 = static, 2+ = crossfade)
- *   year-flag.png       → small flag beside the year numeral (preferred)
- *   flag.png            → alternate flag artwork name
- *   gallery-1..6.png    → Know More gallery images
+ * or list them; instead we probe a fixed candidate set:
+ *   background/bg.mp4          → main-screen background video (wins)
+ *   background/bg-1..bg-5.png  → background image (2+ = crossfade)
+ *   flag/year-flag.png         → small flag beside the year numeral (preferred)
+ *   flag/flag.png              → alternate flag artwork name
+ *   gallery/gallery-1..6.png   → Know More gallery images
  * Local files only — the offline kiosk never fetches media from the web;
  * missing files render the styled placeholder until the client drops them in.
  *
@@ -16,7 +17,8 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 
-const HISTORY_BASE = 'assets/images/history'
+import { HISTORY_BASE } from '../../assets/paths.ts'
+import { probeImageCached, probeVideoCached } from '../../assets/probe.ts'
 
 const BG_CANDIDATES = 5
 const GALLERY_CANDIDATES = 6
@@ -24,7 +26,9 @@ const GALLERY_CANDIDATES = 6
 export interface HistoryYearAssets {
   /** False while probes are still in flight (render nothing bg-wise yet). */
   ready: boolean
-  /** Backgrounds that actually exist, in bg-1..bg-N order. */
+  /** background/bg.mp4 when present — wins over the image backgrounds. */
+  backgroundVideo: string | null
+  /** Background images that actually exist, in bg-1..bg-N order (or bg.png). */
   backgrounds: string[]
   /** Small flag for the year hero (year-flag.png > flag.png > Excel URL). */
   yearFlag: string | null
@@ -32,34 +36,8 @@ export interface HistoryYearAssets {
   gallery: string[]
 }
 
-/** Probe one URL; resolves true when the browser can decode it as an image. */
-function probe(url: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => resolve(true)
-    img.onerror = () => resolve(false)
-    img.src = url
-  })
-}
-
-/**
- * Probe a candidate list, resolving to the subset that loaded (order kept).
- * Results are memoised per URL for the app's lifetime — kiosk assets are
- * immutable at runtime, so re-probing on every year switch is waste.
- */
-const probeCache = new Map<string, Promise<boolean>>()
-
-function probeCached(url: string): Promise<boolean> {
-  let hit = probeCache.get(url)
-  if (hit === undefined) {
-    hit = probe(url)
-    probeCache.set(url, hit)
-  }
-  return hit
-}
-
 async function probeAll(urls: string[]): Promise<string[]> {
-  const flags = await Promise.all(urls.map(probeCached))
+  const flags = await Promise.all(urls.map(probeImageCached))
   return urls.filter((_, i) => flags[i] === true)
 }
 
@@ -74,9 +52,17 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
     const dir = `${HISTORY_BASE}/${year}`
     return {
       dir,
-      backgrounds: Array.from({ length: BG_CANDIDATES }, (_, i) => `${dir}/bg-${i + 1}.png`),
-      flags: [`${dir}/year-flag.png`, `${dir}/flag.png`],
-      gallery: Array.from({ length: GALLERY_CANDIDATES }, (_, i) => `${dir}/gallery-${i + 1}.png`),
+      backgroundVideo: `${dir}/background/bg.mp4`,
+      backgroundSingle: `${dir}/background/bg.png`,
+      backgrounds: Array.from(
+        { length: BG_CANDIDATES },
+        (_, i) => `${dir}/background/bg-${i + 1}.png`,
+      ),
+      flags: [`${dir}/flag/year-flag.png`, `${dir}/flag/flag.png`],
+      gallery: Array.from(
+        { length: GALLERY_CANDIDATES },
+        (_, i) => `${dir}/gallery/gallery-${i + 1}.png`,
+      ),
     }
   }, [year])
 
@@ -84,12 +70,15 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
     if (candidates === null) return
     let alive = true
     void (async () => {
-      const [backgrounds, flags, gallery] = await Promise.all([
+      const [hasVideo, hasSingle, backgrounds, flags, gallery] = await Promise.all([
+        probeVideoCached(candidates.backgroundVideo),
+        probeImageCached(candidates.backgroundSingle),
         probeAll(candidates.backgrounds),
         probeAll(candidates.flags),
         probeAll(candidates.gallery),
       ])
       if (!alive) return
+      if (backgrounds.length === 0 && hasSingle) backgrounds.push(candidates.backgroundSingle)
       // Official artwork first for the gallery fallback (flag.png > year-flag).
       const officialFirst = [...flags].sort(
         (a, b) => Number(a.endsWith('/year-flag.png')) - Number(b.endsWith('/year-flag.png')),
@@ -98,6 +87,7 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
         key,
         assets: {
           ready: true,
+          backgroundVideo: hasVideo ? candidates.backgroundVideo : null,
           backgrounds,
           yearFlag: flags[0] ?? null,
           gallery: gallery.length > 0 ? gallery : officialFirst.slice(0, 1),
@@ -110,5 +100,5 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
   }, [candidates, key])
 
   if (state !== null && state.key === key) return state.assets
-  return { ready: false, backgrounds: [], yearFlag: null, gallery: [] }
+  return { ready: false, backgroundVideo: null, backgrounds: [], yearFlag: null, gallery: [] }
 }

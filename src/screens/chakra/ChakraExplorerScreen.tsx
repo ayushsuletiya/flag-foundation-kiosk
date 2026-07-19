@@ -49,9 +49,11 @@ import {
   virtueIconSlug,
 } from './chakraData.ts'
 import type { Chakra3DProps } from './Chakra3D.tsx'
+import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { CHAKRA, SHARED } from '../../assets/paths.ts'
 import './ChakraExplorerScreen.css'
 
-const BG_URL = 'assets/images/chakra/bg-sunset.png'
+const BG_BASE = CHAKRA.background
 
 // Pill widths are the Figma audit values (795:5985/5977/5980: 222/204/276).
 const TABS = [
@@ -69,7 +71,7 @@ const DYK_INTERVAL_MS = 7000
 
 function VirtueIcon({ virtue }: { virtue: string }) {
   const slug = virtueIconSlug(virtue)
-  const url = `assets/icons/virtues/${slug}.svg`
+  const url = `${SHARED.virtueIcons}/${slug}.svg`
   if (FIGMA_ICON_SLUGS.has(slug)) {
     return <img src={url} width={48} height={48} alt="" draggable={false} />
   }
@@ -401,7 +403,9 @@ export function ChakraExplorerScreen() {
 
   return (
     <div className="ck-screen">
-      <img className="ck-bg" src={BG_URL} alt="" draggable={false} />
+      <div className="ck-bg" style={{ overflow: 'hidden' }}>
+        <DynamicBackground base={BG_BASE} />
+      </div>
       <div className="ck-scrim" />
 
       <h1 className="ck-title">

@@ -15,7 +15,7 @@
 import type { ChakraContent, ChakraRow } from '../../data/schema.ts'
 
 // ---------------------------------------------------------------------------
-// Virtue icons — assets/icons/virtues/<slug>.svg.
+// Virtue icons — assets/_shared/icons/virtues/<slug>.svg.
 // 6 are Figma exports (48px viewBox, baked stroke colors) rendered as <img>;
 // the other 18 are generated line icons using currentColor → rendered as a
 // CSS mask so they take the warm-brown stroke of the designed set.

@@ -1,5 +1,12 @@
 # Asset Status — every image & video slot in the app
 
+> **2026-07-19 (later): assets/ was restructured** into numbered category folders
+> (`0-home` · `1-monumental-flags` · `2-history-of-tiranga` · `3-ashok-chakra` ·
+> `4-national-symbols` · `_shared`), each with a client-facing README.txt. Every
+> `background/` folder now accepts `bg.mp4` OR `bg.png`/`bg-1..5.png`
+> (`src/components/DynamicBackground.tsx`); paths are centralized in
+> `src/assets/paths.ts`. Old paths below map 1:1 to the new tree.
+
 _Compiled 2026-07-19 after the full content-preparation pass (FFOI book mining +
 Wikimedia research + designer-handoff wiring + Magnific enhancement).
 Complements `ASSET_MANIFEST.md` (the pre-build Figma audit) in the project root._

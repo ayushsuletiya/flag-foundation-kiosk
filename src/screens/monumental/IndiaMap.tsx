@@ -3,12 +3,12 @@
  * (Figma 795:7983 / 795:7400).
  *
  * Layers (inside MAP_BOX at 881,90 965×894):
- *  1. State silhouettes — the 36 hit SVGs from assets/map/states/hit/
+ *  1. State silhouettes — the 36 hit SVGs from …map/states/hit/
  *     reassembled into ONE inline <svg> (white outlines stand in for the
  *     user-provided political overlay raster; the same paths are the tap
  *     targets). SVG texts are bundled via import.meta.glob(?raw) so the
  *     packaged file:// build needs no fetch.
- *  2. Selected state's extruded/glow PNG(s) from assets/map/states/active/
+ *  2. Selected state's extruded/glow PNG(s) from …map/states/active/
  *     (placement rule from _layout.json: PNG top-left at the node box
  *     top-left, rendered at half the PNG's pixel size in group px —
  *     shadow bleed overhangs right/bottom naturally).
@@ -23,6 +23,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { PngSequencePlayer } from '../../components/PngSequencePlayer.tsx'
+import { MONUMENTAL } from '../../assets/paths.ts'
 import {
   ACTIVE_SCALE_X,
   ACTIVE_SCALE_Y,
@@ -40,7 +41,7 @@ import {
 // Hit SVG parsing (once, at module scope)
 // ---------------------------------------------------------------------------
 
-const hitSvgRaw = import.meta.glob('../../../assets/map/states/hit/*.svg', {
+const hitSvgRaw = import.meta.glob('../../../assets/1-monumental-flags/map/states/hit/*.svg', {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -99,8 +100,8 @@ const STATE_SHAPES: StateShape[] = (() => {
 // Flag marker sequence availability (probed once per session)
 // ---------------------------------------------------------------------------
 
-const MARKER_SEQ_PATTERN = 'assets/sequences/flag-marker/f_{frame}.png'
-const MARKER_STATIC = 'assets/sequences/flag-marker/static.png'
+const MARKER_SEQ_PATTERN = `${MONUMENTAL.flagMarker}/f_{frame}.png`
+const MARKER_STATIC = `${MONUMENTAL.flagMarker}/static.png`
 /** Frame budget for the future user-provided sequence; extra files are
  *  ignored, shorter sequences hold their last loaded frame (player skips). */
 const MARKER_FRAME_COUNT = 60
@@ -295,7 +296,7 @@ export function IndiaMap({ selectedState, onSelectState, statesWithInstallations
         <img
           key={entry.file}
           className="mon-fade-in"
-          src={`assets/map/states/active/${entry.file}`}
+          src={`${MONUMENTAL.mapStates}/active/${entry.file}`}
           alt=""
           draggable={false}
           style={{

@@ -20,6 +20,7 @@ import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { useHistoryYearAssets } from './historyAssets.ts'
 import { ChakraMark, FallbackBackdrop } from './HistoryFallback.tsx'
+import { VideoLoop } from '../../components/VideoLoop.tsx'
 import { DEFAULT_HISTORY_YEAR } from './YearMainScreen.tsx'
 import './KnowMoreScreen.css'
 
@@ -91,6 +92,8 @@ export function KnowMoreScreen() {
       <div className="hk-bg-layer" key={row.year}>
         {!assets.ready ? null : assets.backgrounds.length > 0 ? (
           <img className="hk-bg-img" src={assets.backgrounds[0]} alt="" />
+        ) : assets.backgroundVideo !== null ? (
+          <VideoLoop src={assets.backgroundVideo} className="hk-bg-img" />
         ) : (
           <FallbackBackdrop />
         )}

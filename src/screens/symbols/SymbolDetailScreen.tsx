@@ -21,6 +21,9 @@ import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
 import { useSymbolMedia } from './symbolsMedia.ts'
+import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { SYMBOLS, SHARED } from '../../assets/paths.ts'
+import { probeImageCached } from '../../assets/probe.ts'
 import {
   fitFontSize,
   isNumericMilestone,
@@ -66,7 +69,7 @@ function ChevronButton({
         {/* Exact Figma asset (795:3898) — cream→tan circle, chevron cut out;
             the right button is the mirrored copy, as in the design. */}
         <img
-          src="assets/icons/chevron-gold.svg"
+          src={`${SHARED.icons}/chevron-gold.svg`}
           alt=""
           width={45}
           height={45}
@@ -113,11 +116,30 @@ export function SymbolDetailScreen() {
   /** Real artwork (static or frames) → mock subject frame; else placeholder box. */
   const hasArt = media.ready && (media.hasStatic || media.frameCount > 0)
 
+  // Did You Know card photo: a symbol with a dedicated close-up dropped at
+  // detail/dyk/<slug>.png uses it (today: tiger); others reuse their static
+  // cutout. Adding a new dyk/<slug>.png needs no code change. (Hook lives
+  // above the loading early-return — hook order must not vary.)
+  const dykUrl = `${SYMBOLS.dyk}/${activeSlug}.png`
+  const [hasDyk, setHasDyk] = useState(false)
+  useEffect(() => {
+    let alive = true
+    setHasDyk(false)
+    void probeImageCached(dykUrl).then((ok) => {
+      if (alive) setHasDyk(ok)
+    })
+    return () => {
+      alive = false
+    }
+  }, [dykUrl])
+
   if (identity === null) {
     // Content still loading — hold the stage.
     return (
       <div className="syd-screen">
-        <img className="syd-stage-bg" src="assets/images/symbols/stage-detail.png" alt="" />
+        <div className="syd-stage-bg" style={{ overflow: 'hidden' }}>
+          <DynamicBackground base={SYMBOLS.detailBackground} />
+        </div>
         <div className="syd-scrim" />
       </div>
     )
@@ -126,14 +148,11 @@ export function SymbolDetailScreen() {
   const card = cards[Math.min(cardIndex, Math.max(0, cards.length - 1))] ?? null
   const milestones = identity.milestones.map(parseMilestone)
 
-  // Card photo: tiger has its dedicated stripes close-up; others reuse their
-  // static cutout (placeholder tile when no media exists yet).
-  const cardImage =
-    activeSlug === 'tiger'
-      ? 'assets/images/symbols/tiger-stripes.png'
-      : media.ready && media.hasStatic
-        ? media.staticUrl
-        : null
+  const cardImage = hasDyk
+    ? dykUrl
+    : media.ready && media.hasStatic
+      ? media.staticUrl
+      : null
 
   // Chevrons page through this symbol's fact cards (NOT other symbols —
   // symbol switching happens on the carousel screen only).
@@ -145,7 +164,9 @@ export function SymbolDetailScreen() {
   return (
     <div className="syd-screen">
       {/* Baked stage (podium included) + radial scrim recreated in CSS. */}
-      <img className="syd-stage-bg" src="assets/images/symbols/stage-detail.png" alt="" />
+      <div className="syd-stage-bg" style={{ overflow: 'hidden' }}>
+          <DynamicBackground base={SYMBOLS.detailBackground} />
+        </div>
       <div className="syd-scrim" />
 
       {/* Giant decorative quote — live glyph, Port Lligat Slab 613.33px. */}

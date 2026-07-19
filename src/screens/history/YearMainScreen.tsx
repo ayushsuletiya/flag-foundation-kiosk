@@ -18,6 +18,7 @@ import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { useHistoryYearAssets } from './historyAssets.ts'
 import { ChakraMark, FallbackBackdrop } from './HistoryFallback.tsx'
+import { VideoLoop } from '../../components/VideoLoop.tsx'
 import './YearMainScreen.css'
 
 export const DEFAULT_HISTORY_YEAR = '1947'
@@ -71,9 +72,11 @@ export function YearMainScreen() {
 
   return (
     <div className="hy-screen">
-      {/* Background: era photo(s) or honest fallback, under tint + left scrim */}
+      {/* Background: era video, photo(s), or honest fallback, under tint + scrim */}
       <div className="hy-bg-layer" key={row.year}>
-        {!assets.ready ? null : assets.backgrounds.length > 0 ? (
+        {!assets.ready ? null : assets.backgroundVideo !== null ? (
+          <VideoLoop src={assets.backgroundVideo} poster={assets.backgrounds[0]} />
+        ) : assets.backgrounds.length > 0 ? (
           <BackgroundLoop images={assets.backgrounds} />
         ) : (
           <FallbackBackdrop />

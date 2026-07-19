@@ -18,6 +18,8 @@ import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
 import { fitFontSize, symbolShortName, symbolSlug, symbolSubtitle } from './symbolsData.ts'
+import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { SYMBOLS } from '../../assets/paths.ts'
 import './SymbolsCarouselScreen.css'
 
 const SWIPE_THRESHOLD_PX = 60
@@ -244,7 +246,9 @@ export function SymbolsCarouselScreen() {
     // Content still loading (or empty workbook) — hold the stage only.
     return (
       <div className="sy-screen">
-        <img className="sy-stage-bg" src="assets/images/symbols/stage-intro.png" alt="" />
+        <div className="sy-stage-bg" style={{ overflow: 'hidden' }}>
+          <DynamicBackground base={SYMBOLS.carouselBackground} />
+        </div>
       </div>
     )
   }
@@ -258,7 +262,9 @@ export function SymbolsCarouselScreen() {
     <div className="sy-screen">
       {/* Baked stage (navy + mandala + podium), pre-flipped to match the
           render; design cover-crops region x=217..2094 of the 2113px source. */}
-      <img className="sy-stage-bg" src="assets/images/symbols/stage-intro.png" alt="" />
+      <div className="sy-stage-bg" style={{ overflow: 'hidden' }}>
+        <DynamicBackground base={SYMBOLS.carouselBackground} />
+      </div>
 
       {/* Entry veil — the scene opens from black with a brief fade. */}
       {plainVeil && <div className="sy-veil" />}

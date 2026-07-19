@@ -53,7 +53,7 @@ function serveDataDir(): Plugin {
 
 /**
  * Media lives in the root assets/ directory and is referenced by runtime
- * relative URLs (e.g. "assets/images/home/bg-poster.png") so screens work
+ * relative URLs (e.g. "assets/0-home/background/poster.png") so screens work
  * identically under vite dev (root files are served at /assets/…) and in the
  * packaged Electron build. This copies assets/ next to dist/index.html on
  * build so those URLs resolve under file:// too. Hashed-bundle filenames in

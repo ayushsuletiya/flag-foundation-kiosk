@@ -1,6 +1,6 @@
 /**
  * symbolsMedia — runtime discovery of per-symbol turntable media under
- * assets/sequences/symbols/<slug>/:
+ * assets/4-national-symbols/turntables/<slug>/:
  *
  *   f_0001.png … f_NNNN.png → PNG-sequence turntable (25fps loop)
  *   static.png              → poster / fallback still
@@ -14,8 +14,9 @@
  * at runtime.
  */
 import { useEffect, useState } from 'react'
+import { SYMBOLS } from '../../assets/paths.ts'
 
-export const SYMBOL_SEQUENCE_BASE = 'assets/sequences/symbols'
+export const SYMBOL_SEQUENCE_BASE = SYMBOLS.turntables
 const MAX_FRAMES = 1024
 
 export interface SymbolMedia {
@@ -25,7 +26,7 @@ export interface SymbolMedia {
   frameCount: number
   hasStatic: boolean
   staticUrl: string
-  /** PngSequencePlayer pattern, e.g. "assets/sequences/symbols/tiger/f_{frame}.png". */
+  /** PngSequencePlayer pattern, e.g. "…/turntables/tiger/f_{frame}.png". */
   srcPattern: string
 }
 

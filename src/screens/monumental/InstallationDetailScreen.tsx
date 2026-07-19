@@ -18,9 +18,8 @@ import { BackButton } from '../../components/BackButton.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { TERRAIN_STILL } from './monumentalGeo.ts'
+import { MONUMENTAL, SHARED, installationPhoto } from '../../assets/paths.ts'
 import './monumental.css'
-
-const installationPhoto = (id: number): string => `assets/images/installations/${id}.jpg`
 
 const LABEL_STYLE = {
   fontFamily: 'var(--font-numeral)',
@@ -152,7 +151,7 @@ export function InstallationDetailScreen() {
             }}
           >
             <img
-              src="assets/sequences/flag-marker/static.png"
+              src={`${MONUMENTAL.flagMarker}/static.png`}
               alt=""
               draggable={false}
               style={{ height: 420, opacity: 0.85 }}
@@ -175,13 +174,13 @@ export function InstallationDetailScreen() {
       />
 
       {/* Stat rows */}
-      <StatIcon src="assets/icons/icon-location-pin.svg" boxTop={378} />
+      <StatIcon src={`${SHARED.icons}/icon-location-pin.svg`} boxTop={378} />
       <div style={{ position: 'absolute', left: 1296.85, top: 386.2, ...LABEL_STYLE }}>State</div>
       <div style={{ position: 'absolute', left: 1296.85, top: 421.1, ...VALUE_STYLE }}>
         {stateValue}
       </div>
 
-      <StatIcon src="assets/icons/icon-flag-height.svg" boxTop={542.31} />
+      <StatIcon src={`${SHARED.icons}/icon-flag-height.svg`} boxTop={542.31} />
       <div style={{ position: 'absolute', left: 1296.85, top: 550.5, ...LABEL_STYLE }}>
         Flag Height
       </div>
@@ -203,7 +202,7 @@ export function InstallationDetailScreen() {
         {row !== null && row.heightFt !== null ? `${row.heightFt} ft` : '—'}
       </div>
 
-      <StatIcon src="assets/icons/icon-site.svg" size={69} boxTop={706.7} />
+      <StatIcon src={`${SHARED.icons}/icon-site.svg`} size={69} boxTop={706.7} />
       <div style={{ position: 'absolute', left: 1296.85, top: 714.8, ...LABEL_STYLE }}>Site</div>
       <div style={{ position: 'absolute', left: 1296.85, top: 749.7, ...VALUE_STYLE }}>
         {row?.landmark ?? row?.location ?? ''}

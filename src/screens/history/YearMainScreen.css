@@ -139,7 +139,7 @@
 }
 
 /* Placeholder shown in the same area until the client drops
-   year-flag.png / flag.png into assets/images/history/<year>/ */
+   year-flag.png / flag.png into assets/2-history-of-tiranga/<year>/flag/ */
 .hy-year-flag-ph {
   display: flex;
   align-items: center;

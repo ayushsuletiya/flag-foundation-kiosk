@@ -1,7 +1,7 @@
 /**
  * MonumentalIntroScreen — Figma frame 795:7678 "Flag Installations — intro".
  *
- * Route /monumental. Plays assets/video/monumental-intro-5s.mp4 ONCE
+ * Route /monumental. Plays assets/1-monumental-flags/intro/intro.mp4 ONCE
  * full-bleed, then auto-navigates to /monumental/map. The mp4 is
  * user-provided and may not exist yet:
  *  - <video> onEnded → navigate (the delivered file "just works");
@@ -21,10 +21,11 @@ import { useNavigate } from 'react-router-dom'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { MonumentalHeader } from './MonumentalHeader.tsx'
-import { TERRAIN_STILL } from './monumentalGeo.ts'
+import { MONUMENTAL } from '../../assets/paths.ts'
 import './monumental.css'
 
-const INTRO_VIDEO = 'assets/video/monumental-intro-5s.mp4'
+const INTRO_VIDEO = MONUMENTAL.introVideo
+const INTRO_POSTER = MONUMENTAL.introPoster
 const FALLBACK_ADVANCE_MS = 1200
 
 export function MonumentalIntroScreen() {
@@ -54,7 +55,7 @@ export function MonumentalIntroScreen() {
     >
       {/* Terrain still — poster under the video and the fallback visual */}
       <img
-        src={TERRAIN_STILL}
+        src={INTRO_POSTER}
         alt=""
         draggable={false}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}

@@ -1,5 +1,5 @@
 /* ============================================================
-   Gilroy — user-licensed, bundled from local TTFs in assets/fonts/.
+   Gilroy — user-licensed, bundled from local TTFs in assets/_shared/fonts/.
    Used for the "Flag Foundation" home headline (Figma: Gilroy Regular
    130.319px). Poppins/Parisienne/Inter/Port Lligat Slab are bundled
    via @fontsource imports in src/main.tsx.
@@ -9,7 +9,7 @@
 
 @font-face {
   font-family: 'Gilroy';
-  src: url('../../assets/fonts/Gilroy-Regular.ttf') format('truetype');
+  src: url('../../assets/_shared/fonts/Gilroy-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -17,7 +17,7 @@
 
 @font-face {
   font-family: 'Gilroy';
-  src: url('../../assets/fonts/Gilroy-Medium.ttf') format('truetype');
+  src: url('../../assets/_shared/fonts/Gilroy-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: block;
@@ -25,7 +25,7 @@
 
 @font-face {
   font-family: 'Gilroy';
-  src: url('../../assets/fonts/Gilroy-SemiBold.ttf') format('truetype');
+  src: url('../../assets/_shared/fonts/Gilroy-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-style: normal;
   font-display: block;
@@ -33,7 +33,7 @@
 
 @font-face {
   font-family: 'Gilroy';
-  src: url('../../assets/fonts/Gilroy-Bold.ttf') format('truetype');
+  src: url('../../assets/_shared/fonts/Gilroy-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: block;

@@ -5,8 +5,8 @@
  * flag scene with 4 large touch tiles routing to the category sections.
  * All coordinates are literal Figma pixels inside the 1920x1080 <Stage>.
  *
- * Background is a looping video (assets/video/home-bg.mp4 — user-provided,
- * may not exist yet); <VideoLoop> shows the poster until/unless it loads.
+ * Background is a looping video (assets/0-home/background/bg.mp4 — user-provided,
+ * may not exist yet); <DynamicBackground> resolves bg.mp4 / bg.png / poster.
  * The 13px backdrop blur from Figma is intentionally NOT reproduced live
  * (kiosk GPU) — it must be baked into the delivered video.
  *
@@ -16,17 +16,16 @@
  */
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
-import { VideoLoop } from '../../components/VideoLoop.tsx'
+import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { HOME, SHARED } from '../../assets/paths.ts'
 import './HomeScreen.css'
 
-// Runtime asset URLs, relative so they resolve under vite dev (/assets/…
+// Runtime asset URLs come from src/assets/paths.ts (relative so they resolve
 // served from the project root) and under file:// in the packaged build
 // (assets/ copied next to dist/index.html by the vite build config).
-const BG_VIDEO = 'assets/video/home-bg.mp4'
-const BG_POSTER = 'assets/images/home/bg-poster.png'
-const WAVE_SVG = 'assets/icons/wave.svg'
-const SWASH_SVG = 'assets/icons/title-swash.svg'
-const LOGO_PNG = 'assets/images/home/logo-nju.png'
+const WAVE_SVG = `${SHARED.icons}/wave.svg`
+const SWASH_SVG = `${SHARED.icons}/title-swash.svg`
+const LOGO_PNG = HOME.logo
 
 /**
  * Placement of the photo inside the card, as CSS percentages of the card
@@ -69,7 +68,7 @@ interface TileSpec {
 const TILES: readonly TileSpec[] = [
   {
     route: '/monumental',
-    image: 'assets/images/home/card-monumental.png',
+    image: `${HOME.cards}/card-monumental.png`,
     left: 72,
     width: 294.104,
     photo: { left: '-1.2%', top: '-1.03%', width: '102.28%', height: '143.77%' },
@@ -78,7 +77,7 @@ const TILES: readonly TileSpec[] = [
   },
   {
     route: '/history',
-    image: 'assets/images/home/card-history.png',
+    image: `${HOME.cards}/card-history.png`,
     left: 420.77,
     width: 294.104,
     photo: { left: '0%', top: '0%', width: '100%', height: '138.07%' },
@@ -87,7 +86,7 @@ const TILES: readonly TileSpec[] = [
   },
   {
     route: '/chakra',
-    image: 'assets/images/home/card-chakra.png',
+    image: `${HOME.cards}/card-chakra.png`,
     left: 769.54,
     width: 293.054,
     photo: { left: '-35.82%', top: '0%', width: '171.98%', height: '100%' },
@@ -96,7 +95,7 @@ const TILES: readonly TileSpec[] = [
   },
   {
     route: '/symbols',
-    image: 'assets/images/home/card-symbols.png',
+    image: `${HOME.cards}/card-symbols.png`,
     left: 1123.9,
     width: 294.104,
     photo: { left: '-7.6%', top: '-24.62%', width: '115.37%', height: '149.38%' },
@@ -126,7 +125,7 @@ export function HomeScreen() {
     <div className="home-screen">
       {/* Full-bleed background video (poster until the mp4 is delivered) */}
       <div className="home-bg">
-        <VideoLoop src={BG_VIDEO} poster={BG_POSTER} />
+        <DynamicBackground base={HOME.background} />
       </div>
       <div className="home-scrim" />
 

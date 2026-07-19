@@ -2,7 +2,7 @@
  * SymbolVisual — one symbol's artwork slot on the National Symbols screens.
  *
  * mode "live"  → PngSequencePlayer on the turntable pattern
- *                assets/sequences/symbols/<slug>/f_{frame}.png (25fps loop),
+ *                assets/4-national-symbols/turntables/<slug>/f_{frame}.png (25fps loop),
  *                poster static.png. Today only statics exist, so the player
  *                falls back to the poster; dropping numbered frames later
  *                makes it play with zero code changes (count is probed).

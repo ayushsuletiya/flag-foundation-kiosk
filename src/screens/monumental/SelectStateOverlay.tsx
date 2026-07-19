@@ -17,6 +17,8 @@
  */
 import { useState } from 'react'
 import { CANONICAL_STATES } from '../../data/schema.ts'
+import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { MONUMENTAL } from '../../assets/paths.ts'
 import './monumental.css'
 
 export interface SelectStateOverlayProps {
@@ -40,18 +42,10 @@ export function SelectStateOverlay({
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 60 }}>
-      {/* Backdrop — user-provided glowing India render (assets/map/select-state-bg.png) */}
-      <img
-        src="assets/map/select-state-bg.png"
-        alt=""
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
-      />
+      {/* Backdrop — glowing India render; bg.mp4 or bg.png, client-swappable */}
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <DynamicBackground base={MONUMENTAL.selectStateBackground} />
+      </div>
       {/* Scrim — tap to dismiss without applying; kept light so the glowing
           map render reads through (perf guard: plain scrim, no backdrop blur) */}
       <button

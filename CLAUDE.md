@@ -31,14 +31,22 @@ chakra scene + god-ray volumetrics run comfortably at 1080p when dual-channel.
 - Pixel changes are verified against Figma screenshots (`../figma-refs/` has references).
 
 ## Asset drop-in conventions (zero code changes)
-- Home bg video → `assets/video/home-bg.mp4` (poster shows until present)
-- Monumental intro → `assets/video/monumental-intro-5s.mp4` (plays once → map)
-- Map loop video → `assets/video/india-map-loop.mp4` (still image until present)
-- Waving flag markers → `assets/sequences/flag-marker/f_0001.png…` (static.png until present)
-- Symbol turntables → `assets/sequences/symbols/<slug>/f_0001.png…` (static.png poster)
-- History per year → `assets/images/history/<year>/flag.png` (1200×768, 25:16) and
-  `bg-1.png` (1920×1080; bg-2+ = 2.5s crossfade loop), `gallery-1..6.png`
-- Map backdrop → `assets/map/terrain-render.png` (placement solved in `monumentalGeo.ts`)
+Assets live in numbered category folders (`assets/0-home`, `1-monumental-flags`,
+`2-history-of-tiranga`, `3-ashok-chakra`, `4-national-symbols`, `_shared`) with a
+client-facing README.txt in each. Paths are centralized in `src/assets/paths.ts` —
+screens never hardcode them.
+- **Every `background/` folder is dynamic** (`src/components/DynamicBackground.tsx`):
+  `bg.mp4` wins → else `bg-1..5.png` (2+ = 2.5s crossfade) → else `bg.png` → styled
+  placeholder. Applies to home, map, select-state, all history years, chakra, both
+  symbols stages. Chakra additionally needs `bg.png` kept beside any `bg.mp4`
+  (three.js env texture samples the still).
+- Monumental intro → `1-monumental-flags/intro/intro.mp4` (plays once → map; poster.png under it)
+- Waving flag markers → `1-monumental-flags/map/flag-marker/f_0001.png…` (static.png until present)
+- Symbol turntables → `4-national-symbols/turntables/<slug>/f_0001.png…` (static.png poster)
+- Symbol DYK close-ups → `4-national-symbols/detail/dyk/<slug>.png` (falls back to static cutout)
+- History per year → `2-history-of-tiranga/<year>/flag/flag.png` (1200×768 RGBA, 25:16 —
+  the year-flag box ratio, zero crop) + `background/` + `gallery/gallery-1..6.png`
+- Map backdrop still placement solved in `monumentalGeo.ts` (`map/background/bg.png`)
 
 ## Key user decisions (do not regress)
 - Select State overlay: selection highlights only; **Continue** applies.

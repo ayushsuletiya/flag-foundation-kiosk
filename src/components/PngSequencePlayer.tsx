@@ -1,6 +1,6 @@
 /**
  * PngSequencePlayer — canvas player for numbered PNG frame sequences
- * (flag markers, symbol turntables: assets/sequences/<name>/f_0001.png…).
+ * (flag markers, symbol turntables: <folder>/f_0001.png… numbered frames).
  *
  * All frames are preloaded as HTMLImageElements, then drawn to a <canvas>
  * on a requestAnimationFrame clock locked to `fps`. Degrades gracefully:
@@ -14,7 +14,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 export interface PngSequencePlayerProps {
   /**
    * Frame URL pattern; `{frame}` is replaced with the zero-padded frame
-   * number, e.g. "assets/sequences/tiger/f_{frame}.png" → f_0001.png.
+   * number, e.g. "…/turntables/tiger/f_{frame}.png" → f_0001.png.
    */
   srcPattern: string
   frameCount: number
