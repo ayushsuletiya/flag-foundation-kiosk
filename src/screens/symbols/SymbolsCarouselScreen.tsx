@@ -55,7 +55,7 @@ const TRACK_KEYPOSES = [
   { u: 2, x: 700, y: 130, z: -420, ry: -52, s: 0.75, o: 0, dim: 0.36 },
 ] as const
 
-function trackPose(u: number) {
+function trackPoseNum(u: number) {
   const cu = Math.max(-2, Math.min(2, u))
   const i = Math.max(0, Math.min(3, Math.floor(cu + 2)))
   const a = TRACK_KEYPOSES[i]!
@@ -63,10 +63,24 @@ function trackPose(u: number) {
   const f = (cu - a.u) / (b.u - a.u)
   const l = (p: number, q: number) => p + (q - p) * f
   return {
-    transform: `translate3d(${l(a.x, b.x).toFixed(1)}px, ${l(a.y, b.y).toFixed(1)}px, ${l(a.z, b.z).toFixed(1)}px) rotateY(${l(a.ry, b.ry).toFixed(1)}deg) scale(${l(a.s, b.s).toFixed(3)})`,
-    opacity: l(a.o, b.o),
+    x: l(a.x, b.x),
+    y: l(a.y, b.y),
+    z: l(a.z, b.z),
+    ry: l(a.ry, b.ry),
+    s: l(a.s, b.s),
+    o: l(a.o, b.o),
     dim: l(a.dim, b.dim),
     zIndex: Math.round(120 - Math.abs(cu) * 30),
+  }
+}
+
+function trackPose(u: number) {
+  const p = trackPoseNum(u)
+  return {
+    transform: `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, ${p.z.toFixed(1)}px) rotateY(${p.ry.toFixed(1)}deg) scale(${p.s.toFixed(3)})`,
+    opacity: p.o,
+    dim: p.dim,
+    zIndex: p.zIndex,
   }
 }
 
