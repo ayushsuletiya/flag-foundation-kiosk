@@ -208,3 +208,58 @@
   /* Designed labels carry Figma's hard line breaks ("History\nof Tiranga") */
   white-space: pre-line;
 }
+
+/* ============================================================
+   Exit cinematic → /symbols (spec 2026-07-19). All layers are
+   driven per-frame from the rAF clock via inline styles; these
+   rules only provide the static box recipes.
+   ============================================================ */
+
+/* Black veil — MUST match the symbols screen base (#020715) so the
+   route swap at full black is invisible. Covers and blocks the tiles. */
+.home-exit-veil {
+  position: absolute;
+  inset: 0;
+  background: #020715;
+  z-index: 5;
+}
+
+/* The morphing card. Glass recipe matches .sy-card3d minus the
+   backdrop-filter (there is only black behind it — nothing to blur). */
+.home-morph {
+  position: absolute;
+  z-index: 6;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background-color: rgba(6, 10, 27, 0.52);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  pointer-events: none;
+}
+
+.home-morph-old {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* The tile's cream border rides the old face and fades with it */
+.home-morph-old::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3.924px solid var(--cream-border);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.home-morph-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 379px;
+  height: 472px;
+  transform-origin: 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
