@@ -11,17 +11,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import {
-  ARRIVE_DEAL_START,
-  ARRIVE_TOTAL_MS,
-  DEAL_CARD_MS,
-  DEAL_STAGGER_MS,
-  FLIGHT_MS,
-  FLIGHT_START,
-  VEIL_OUT_MS,
-  VEIL_OUT_START,
-  readEntryState,
-} from './transitionContract.ts'
+import { readEntryState } from './transitionContract.ts'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
@@ -104,22 +94,6 @@ function orbitPose(ringIndex: number, count: number, spinDeg: number) {
   } as const
 }
 
-/**
- * Fan pose for dealt card j of n (j = 1..n, left → right) — a hand of
- * cards spread on an arc above/around the seed card. rotateZ tilts each
- * card along the arc like a dealt hand; flight untwists it to 0.
- */
-function fanPose(j: number, n: number) {
-  const a = n > 1 ? (-1 + (2 * (j - 1)) / (n - 1)) * 68 : 0 // degrees
-  const rad = (a * Math.PI) / 180
-  return {
-    x: Math.sin(rad) * 430,
-    y: -Math.cos(rad) * 120 - 30,
-    rz: a * 0.32,
-    s: 0.62,
-  }
-}
-
 export function SymbolsCarouselScreen() {
   const navigate = useNavigate()
   const { content } = useContent()
@@ -127,10 +101,11 @@ export function SymbolsCarouselScreen() {
   const count = identities.length
 
   const location = useLocation()
-  // Read once — router state survives re-renders but we only honor it at mount.
+  // Read once — router state survives re-renders but we only honor it at
+  // mount. Only the SEED matters now (which symbol fronts the carousel);
+  // the arrive cinematic was removed (user decision 2026-07-19).
   const entryRef = useRef(readEntryState(location.state))
   const entry = entryRef.current
-  const cinematic = entry !== null && entry.cinematic
 
   // Figma opens on the tiger; fall back to the first Excel row.
   const [selected, setSelected] = useState<number | null>(null)
@@ -147,18 +122,12 @@ export function SymbolsCarouselScreen() {
   const swipeStartX = useRef<number | null>(null)
 
   // ---- mode state machine -------------------------------------------
-  // 'arrive' = the home-handoff cinematic (deal + podium reveal + flight)
-  // · 'rest' = Figma slot poses · 'turn' = slide along track · 'orbit' =
+  // 'rest' = Figma slot poses · 'turn' = slide along track · 'orbit' =
   // ring floats · 'settle' = gliding home.
-  const [mode, setMode] = useState<'arrive' | 'rest' | 'turn' | 'orbit' | 'settle'>(
-    cinematic ? 'arrive' : 'rest',
-  )
-  const isArrive = mode === 'arrive'
-  const [arriveT, setArriveT] = useState(0)
-  const arriveDone = useRef(!cinematic)
-  const arriveRaf = useRef<number | null>(null)
-  // Non-cinematic entries still open from black — briefly.
-  const [plainVeil, setPlainVeil] = useState(!cinematic)
+  const [mode, setMode] = useState<'rest' | 'turn' | 'orbit' | 'settle'>('rest')
+  // Every entry opens from black — briefly. The Home-side cinematic ends
+  // on a black frame, so this fade is what hides the route seam.
+  const [plainVeil, setPlainVeil] = useState(true)
   const [spin, setSpin] = useState(0)
   // Track offset while turning: cards render at u = off + turnOffset, so
   // the whole row slides along the track and eases into the new slots.
@@ -193,35 +162,7 @@ export function SymbolsCarouselScreen() {
     }, SETTLE_MS)
   }
 
-  // Arrive timeline: one elapsed-time rAF machine; all card poses derive
-  // from arriveT in render. Completion-gated (arriveDone) and cancels its
-  // own frame — StrictMode-safe (CLAUDE.md gotcha).
-  useEffect(() => {
-    if (count === 0 || arriveDone.current) return
-    let start: number | null = null
-    const tick = (now: number) => {
-      start ??= now
-      const t = now - start
-      setArriveT(t)
-      if (t < ARRIVE_TOTAL_MS) {
-        arriveRaf.current = requestAnimationFrame(tick)
-      } else {
-        arriveRaf.current = null
-        arriveDone.current = true
-        setMode('rest')
-      }
-    }
-    arriveRaf.current = requestAnimationFrame(tick)
-    return () => {
-      if (arriveRaf.current !== null) {
-        cancelAnimationFrame(arriveRaf.current)
-        arriveRaf.current = null
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count])
-
-  // Non-cinematic entry: plain short fade from black, then interactive.
+  // Entry: plain short fade from black, then interactive.
   useEffect(() => {
     if (!plainVeil) return
     const t = setTimeout(() => setPlainVeil(false), 900)
@@ -277,17 +218,6 @@ export function SymbolsCarouselScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, activeIndex, autoTick, count])
 
-  // Kiosk users won't wait: any touch during the arrive fast-forwards it.
-  const skipArrive = () => {
-    arriveDone.current = true
-    if (arriveRaf.current !== null) {
-      cancelAnimationFrame(arriveRaf.current)
-      arriveRaf.current = null
-    }
-    suppressClick.current = true
-    settleToRest() // whole ring mounts and glides home in one settle
-  }
-
   const engageOrbit = () => {
     // a lift can start mid-turn — the turn animation must not finish later
     // and yank the orbit back to rest
@@ -338,35 +268,17 @@ export function SymbolsCarouselScreen() {
   const nameFontSize = fitFontSize(shortName, 96.716, 660)
 
   return (
-    <div className="sy-screen" onPointerDown={isArrive ? skipArrive : undefined}>
+    <div className="sy-screen">
       {/* Baked stage (navy + mandala + podium), pre-flipped to match the
           render; design cover-crops region x=217..2094 of the 2113px source. */}
       <img className="sy-stage-bg" src="assets/images/symbols/stage-intro.png" alt="" />
 
-      {/* Arrive veil — holds black through the deal, eases off to reveal
-          the podium while the cards fan (inline opacity from the clock). */}
-      {isArrive && (
-        <div
-          className="sy-veil sy-veil--arrive"
-          style={{
-            opacity:
-              1 -
-              (() => {
-                const p = Math.max(0, Math.min(1, (arriveT - VEIL_OUT_START) / VEIL_OUT_MS))
-                return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
-              })(),
-          }}
-        />
-      )}
+      {/* Entry veil — the scene opens from black (hides the route seam
+          after the Home-side cinematic, which ends on a black frame). */}
       {plainVeil && <div className="sy-veil" />}
 
       <h1 className="sy-header">
-        <BlurTypeText
-          text="National Symbols of India"
-          delay={cinematic ? VEIL_OUT_START + 400 : 400}
-          stagger={34}
-          budget={900}
-        />
+        <BlurTypeText text="National Symbols of India" delay={400} stagger={34} budget={900} />
       </h1>
 
       <HomeButton
@@ -391,7 +303,6 @@ export function SymbolsCarouselScreen() {
           }
         }}
         onPointerDown={(e) => {
-          if (isArrive) return // the screen-root handler fast-forwards the arrive
           setAutoTick((n) => n + 1) // touching restarts the auto-advance wait
           swipeStartX.current = e.clientX
           dragLastX.current = e.clientX
@@ -438,58 +349,13 @@ export function SymbolsCarouselScreen() {
           if (!lifted && (Math.abs(off) > 2 || (count <= 2 && off < 0))) return null
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
-          // ---- arrive: deal from behind the seed, then fly to slots ----
-          // Cards ordered by signed off map left→right onto the fan, so
-          // flight sends each card toward its own side — no crossings.
-          let arriveStyle: CSSProperties | undefined
-          if (isArrive) {
-            if (off === 0) {
-              // The seed anchors the scene on its slot-0 pose throughout.
-              arriveStyle = {
-                transform: 'translate3d(0px, 0px, 0px) rotateY(0deg) scale(1)',
-                opacity: 1,
-                zIndex: 130,
-              }
-            } else {
-              const half = Math.floor(count / 2)
-              const rank = off < 0 ? half + off + 1 : half + off // 1..count-1, left→right
-              const t0 = ARRIVE_DEAL_START + (rank - 1) * DEAL_STAGGER_MS
-              const dp = Math.max(0, Math.min(1, (arriveT - t0) / DEAL_CARD_MS))
-              const dealP = 1 - Math.pow(1 - dp, 3)
-              const fp = fanPose(rank, count - 1)
-              const flp = Math.max(0, Math.min(1, (arriveT - FLIGHT_START) / FLIGHT_MS))
-              const flightP = flp < 0.5 ? 4 * flp * flp * flp : 1 - Math.pow(-2 * flp + 2, 3) / 2
-              const tp = trackPoseNum(off)
-              const targetO = Math.abs(off) > 2 ? 0 : tp.o
-              // deal: emerge from behind the seed toward the fan pose
-              const fx = fp.x * dealP
-              const fy = fp.y * dealP
-              const frz = fp.rz * dealP
-              const fs = 0.9 + (fp.s - 0.9) * dealP
-              const fo = dealP
-              // flight: fan → track slot (component-wise)
-              const x = fx + (tp.x - fx) * flightP
-              const y = fy + (tp.y - fy) * flightP
-              const z = tp.z * flightP
-              const ry = tp.ry * flightP
-              const rz = frz * (1 - flightP)
-              const sc = fs + (tp.s - fs) * flightP
-              const o = fo + (targetO - fo) * flightP
-              arriveStyle = {
-                transform: `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg) rotateZ(${rz.toFixed(1)}deg) scale(${sc.toFixed(3)})`,
-                opacity: o,
-                zIndex: flightP > 0.5 ? tp.zIndex : 90 - rank,
-              }
-            }
-          }
           const turn = mode === 'turn' ? trackPose(off + turnOffset) : undefined
           const pose = mode === 'orbit' ? orbitPose(ringIndex, count, spin) : undefined
           const style = turn
             ? ({ transform: turn.transform, opacity: turn.opacity, zIndex: turn.zIndex } as CSSProperties)
-            : (arriveStyle ??
-              (pose
-                ? ({ transform: pose.transform, opacity: pose.opacity, zIndex: pose.zIndex } as CSSProperties)
-                : undefined))
+            : pose
+              ? ({ transform: pose.transform, opacity: pose.opacity, zIndex: pose.zIndex } as CSSProperties)
+              : undefined
           return (
             <button
               key={slug}
@@ -528,8 +394,8 @@ export function SymbolsCarouselScreen() {
       </div>
 
       {/* Pagination dots on the podium face — count is Excel-driven.
-          Held back until the arrive's ring settles, then fade in. */}
-      {!isArrive && !plainVeil && (
+          Held back until the entry veil clears, then fade in. */}
+      {!plainVeil && (
         <PaginationDots
           count={count}
           activeIndex={activeIndex}
@@ -540,8 +406,8 @@ export function SymbolsCarouselScreen() {
 
       {/* Right text column — name, category, Know More (all Excel-driven).
           Keyed on the slug so the blur-typewriter replays on every change;
-          first mounted as the arrive settles so the typing caps the arrive. */}
-      {!isArrive && (
+          first mounted as the entry veil clears so the typing opens the scene. */}
+      {!plainVeil && (
         <div key={activeSlug} className="sy-info">
         <p className="sy-name" style={{ fontSize: nameFontSize }}>
           <BlurTypeText text={shortName} delay={80} stagger={48} budget={620} fitWidth={660} />

@@ -18,15 +18,9 @@ export const EXIT_MORPH_START = 1200
 export const EXIT_MORPH_MS = 700 // 1200–1900: tile → glass symbol card
 export const EXIT_TOTAL_MS = 1900
 
-// ---- Phase 2 (SymbolsCarouselScreen arrive) — ~3.1s ----------------
-export const ARRIVE_DEAL_START = 300 // hold black + seed card first
-export const DEAL_STAGGER_MS = 55 // 13 cards deal out one by one
-export const DEAL_CARD_MS = 380 // last deal ends 300+12*55+380 = 1340
-export const VEIL_OUT_START = 1000 // podium reveal overlaps the fan
-export const VEIL_OUT_MS = 1400
-export const FLIGHT_START = 1400 // all deals complete (1340) by then
-export const FLIGHT_MS = 1700
-export const ARRIVE_TOTAL_MS = 3100
+// (Phase 2 — the symbols-side arrive cinematic — was removed by user
+// decision 2026-07-19: the symbols screen opens at rest behind a short
+// black fade. The seed still decides which symbol fronts the carousel.)
 
 /** Router state passed by HomeScreen when navigating to /symbols. */
 export interface SymbolsEntryState {

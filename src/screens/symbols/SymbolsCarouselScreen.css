@@ -51,11 +51,6 @@
   }
 }
 
-/* Arrive-mode veil is driven per-frame from the clock — no keyframe */
-.sy-veil--arrive {
-  animation: none;
-}
-
 /* ---- Header (Poppins SemiBold 65.889, title gradient) --------- */
 /* Gradient sits on the blur-typewriter chars (see .sy-name note). */
 .sy-header {
@@ -178,13 +173,11 @@
   opacity: 0;
 }
 
-/* ---- press-and-hold orbit (+ category intro trail) ----------------- */
-/* The intro is the same machinery as orbit: rAF-driven inline ring poses
-   updated per frame (one continuous decelerating sweep for the intro
-   trail), smoothed by a short linear chase so per-frame targets read as
-   smooth drift. animation:none keeps the arrival glow from riding along. */
+/* ---- press-and-hold orbit ------------------------------------------ */
+/* Orbit/turn are rAF-driven inline ring poses updated per frame, smoothed
+   by a short linear chase so per-frame targets read as smooth drift.
+   animation:none keeps the arrival glow from riding along. */
 .sy-carousel[data-mode='orbit'] .sy-card3d,
-.sy-carousel[data-mode='arrive'] .sy-card3d,
 .sy-carousel[data-mode='turn'] .sy-card3d {
   animation: none;
   transition:
@@ -198,8 +191,7 @@
 }
 
 /* Floating cards all read "awake": dims nearly lift */
-.sy-carousel[data-mode='orbit'] .sy-card-dim,
-.sy-carousel[data-mode='arrive'] .sy-card-dim {
+.sy-carousel[data-mode='orbit'] .sy-card-dim {
   opacity: 0.12;
 }
 
@@ -271,15 +263,12 @@
    slot-0 rules re-apply and the arrival glow replays as the ring lands. */
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
 .sy-carousel[data-mode='orbit'] .sy-glow-ring rect,
-.sy-carousel[data-mode='arrive'] .sy-glow-ring,
-.sy-carousel[data-mode='arrive'] .sy-glow-ring rect,
 .sy-carousel[data-mode='turn'] .sy-glow-ring,
 .sy-carousel[data-mode='turn'] .sy-glow-ring rect {
   animation: none;
 }
 
 .sy-carousel[data-mode='orbit'] .sy-glow-ring,
-.sy-carousel[data-mode='arrive'] .sy-glow-ring,
 .sy-carousel[data-mode='turn'] .sy-glow-ring {
   opacity: 0;
 }
