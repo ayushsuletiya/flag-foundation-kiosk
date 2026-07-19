@@ -47,10 +47,13 @@ async function fileExistsNonEmpty(file: string): Promise<boolean> {
 }
 
 async function download(job: Job): Promise<Outcome> {
-  const dest = path.join(outDir, `${job.id}.jpg`)
+  // One folder per site — <id>/1.jpg is the cover; the client can add
+  // 2.jpg, 3.jpg… by hand and the detail screen turns into a carousel.
+  const dest = path.join(outDir, String(job.id), '1.jpg')
   if (await fileExistsNonEmpty(dest)) {
     return { job, status: 'skipped-existing' }
   }
+  await mkdir(path.join(outDir, String(job.id)), { recursive: true })
   try {
     const res = await fetch(job.url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),

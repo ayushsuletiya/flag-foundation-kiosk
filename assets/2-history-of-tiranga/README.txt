@@ -9,6 +9,8 @@ flag/         flag.png — the year's flag artwork, EXACTLY 1200x768 with
               transparent background. This ratio matches the on-screen flag
               box, so the flag is never cropped. Optional year-flag.png
               (same size) is preferred over flag.png when present.
-gallery/      gallery-1.png ... gallery-6.png — photos for the "Know More"
-              screen, in display order. Any size; portraits work best above
-              600px wide.
+gallery/      gallery-1.png, gallery-2.png ... — photos for the "Know More"
+              screen, in display order. ANY count up to 24: the thumbnail
+              row scrolls sideways when there are more than fit. Number
+              them without gaps (1, 2, 3...). Any size; portraits work
+              best above 600px wide.

@@ -14,7 +14,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 export interface PngSequencePlayerProps {
   /**
    * Frame URL pattern; `{frame}` is replaced with the zero-padded frame
-   * number, e.g. "…/turntables/tiger/f_{frame}.png" → f_0001.png.
+   * number, e.g. "…/symbols/tiger/turntable/f_{frame}.png" → f_0001.png.
    */
   srcPattern: string
   frameCount: number

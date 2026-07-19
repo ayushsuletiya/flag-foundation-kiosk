@@ -8,3 +8,6 @@ flag-tab/    flag-pole.png — reference artwork for the "Chakra in Flag" tab
 wheel/       wheel-poster.png — fallback picture while the 3D wheel loads.
              ashoka_chakra.glb — 3D model backup (the app builds its own
              wheel in code).
+virtue-icons/  the 24 virtue spoke icons, <virtue-name>.svg (gold line
+               style, e.g. justice.svg, courage.svg). Used by the Values
+               list beside the wheel.

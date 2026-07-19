@@ -4,7 +4,7 @@
  *
  * Content strings stay live from data/content.xlsx; this module only maps
  * them to stable URL slugs (which double as asset folder names under
- * assets/4-national-symbols/turntables/<slug>/), short display names for the carousel
+ * assets/4-national-symbols/symbols/<slug>/), short display names for the carousel
  * headline, and parsed milestone label/value pairs for the detail stat cards.
  */
 import type { SymbolIdentity } from '../../data/schema.ts'

@@ -8,7 +8,7 @@
  *   background/bg-1..bg-5.png  → background image (2+ = crossfade)
  *   flag/year-flag.png         → small flag beside the year numeral (preferred)
  *   flag/flag.png              → alternate flag artwork name
- *   gallery/gallery-1..6.png   → Know More gallery images
+ *   gallery/gallery-1..24.png  → Know More gallery images (thumbs scroll)
  * Local files only — the offline kiosk never fetches media from the web;
  * missing files render the styled placeholder until the client drops them in.
  *
@@ -21,7 +21,8 @@ import { HISTORY_BASE } from '../../assets/paths.ts'
 import { probeImageCached, probeVideoCached } from '../../assets/probe.ts'
 
 const BG_CANDIDATES = 5
-const GALLERY_CANDIDATES = 6
+/** Gallery is flexible — drop gallery-1..gallery-24.png, thumbs scroll. */
+const GALLERY_CANDIDATES = 24
 
 export interface HistoryYearAssets {
   /** False while probes are still in flight (render nothing bg-wise yet). */

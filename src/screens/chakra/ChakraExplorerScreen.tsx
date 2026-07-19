@@ -50,7 +50,7 @@ import {
 } from './chakraData.ts'
 import type { Chakra3DProps } from './Chakra3D.tsx'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
-import { CHAKRA, SHARED } from '../../assets/paths.ts'
+import { CHAKRA } from '../../assets/paths.ts'
 import './ChakraExplorerScreen.css'
 
 const BG_BASE = CHAKRA.background
@@ -71,7 +71,7 @@ const DYK_INTERVAL_MS = 7000
 
 function VirtueIcon({ virtue }: { virtue: string }) {
   const slug = virtueIconSlug(virtue)
-  const url = `${SHARED.virtueIcons}/${slug}.svg`
+  const url = `${CHAKRA.virtueIcons}/${slug}.svg`
   if (FIGMA_ICON_SLUGS.has(slug)) {
     return <img src={url} width={48} height={48} alt="" draggable={false} />
   }

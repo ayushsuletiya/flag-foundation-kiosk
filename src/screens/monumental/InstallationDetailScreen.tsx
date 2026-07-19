@@ -18,8 +18,42 @@ import { BackButton } from '../../components/BackButton.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { TERRAIN_STILL } from './monumentalGeo.ts'
-import { MONUMENTAL, SHARED, installationPhoto } from '../../assets/paths.ts'
+import {
+  MAX_INSTALLATION_PHOTOS,
+  MONUMENTAL,
+  SHARED,
+  installationPhoto,
+} from '../../assets/paths.ts'
+import { probeImageCached } from '../../assets/probe.ts'
 import './monumental.css'
+
+/** Contiguous installations/<id>/1.jpg, 2.jpg… (any count, carousel-ready). */
+function useInstallationPhotos(id: number | null): { ready: boolean; photos: string[] } {
+  const [state, setState] = useState<{ id: number; photos: string[] } | null>(null)
+
+  useEffect(() => {
+    if (id === null) return
+    let alive = true
+    void (async () => {
+      const urls = Array.from({ length: MAX_INSTALLATION_PHOTOS }, (_, i) =>
+        installationPhoto(id, i + 1),
+      )
+      const found = await Promise.all(urls.map(probeImageCached))
+      const photos: string[] = []
+      for (let i = 0; i < urls.length; i++) {
+        if (found[i] !== true) break
+        photos.push(urls[i]!)
+      }
+      if (alive) setState({ id, photos })
+    })()
+    return () => {
+      alive = false
+    }
+  }, [id])
+
+  const settled = state !== null && state.id === id
+  return { ready: settled, photos: settled ? state.photos : [] }
+}
 
 const LABEL_STYLE = {
   fontFamily: 'var(--font-numeral)',
@@ -57,23 +91,31 @@ export function InstallationDetailScreen() {
   const navigate = useNavigate()
   const { rowId } = useParams()
   const { content } = useContent()
-  const [photoFailed, setPhotoFailed] = useState(false)
 
   const row = useMemo(() => {
     const id = Number(rowId)
     return content?.installations.find((r) => r.id === id) ?? null
   }, [content, rowId])
 
+  const { ready: photosReady, photos } = useInstallationPhotos(row?.id ?? null)
+
+  // 2+ photos → gentle auto-advancing crossfade with tappable dots.
+  const [photoIndex, setPhotoIndex] = useState(0)
   useEffect(() => {
-    setPhotoFailed(false)
+    setPhotoIndex(0)
   }, [row?.id])
+  useEffect(() => {
+    if (photos.length < 2) return
+    const timer = setInterval(() => setPhotoIndex((i) => (i + 1) % photos.length), 3500)
+    return () => clearInterval(timer)
+  }, [photos.length, photoIndex])
 
   // Content loaded but the id is unknown → never dead-end the kiosk.
   if (content !== null && row === null) {
     return <Navigate to="/monumental/map" replace />
   }
 
-  const photo = row !== null && !photoFailed ? installationPhoto(row.id) : TERRAIN_STILL
+  const photo = photos[0] ?? TERRAIN_STILL
   const stateValue =
     row === null ? '' : row.district !== null ? `${row.state}, ${row.district}` : row.state
 
@@ -84,7 +126,6 @@ export function InstallationDetailScreen() {
         src={photo}
         alt=""
         draggable={false}
-        onError={() => setPhotoFailed(true)}
         style={{
           position: 'absolute',
           left: -46,
@@ -132,15 +173,60 @@ export function InstallationDetailScreen() {
           background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
         }}
       >
-        {row !== null && !photoFailed ? (
-          <img
-            src={installationPhoto(row.id)}
-            alt=""
-            draggable={false}
-            onError={() => setPhotoFailed(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
+        {photos.length > 0 ? (
+          <>
+            {/* Stacked crossfade — any photo count; single photo = plain still */}
+            {photos.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt=""
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  opacity: i === photoIndex ? 1 : 0,
+                  transition: 'opacity 700ms ease',
+                }}
+              />
+            ))}
+            {photos.length >= 2 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 24,
+                  left: 0,
+                  right: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: 12,
+                }}
+              >
+                {photos.map((src, i) => (
+                  <button
+                    key={src}
+                    type="button"
+                    aria-label={`Photo ${i + 1}`}
+                    onClick={() => setPhotoIndex(i)}
+                    style={{
+                      width: 13,
+                      height: 13,
+                      padding: 0,
+                      borderRadius: '50%',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: i === photoIndex ? 'var(--gold-cream, #FFEDC5)' : 'rgba(255, 255, 255, 0.45)',
+                      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.5)',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        ) : photosReady ? (
           <div
             style={{
               width: '100%',
@@ -157,7 +243,7 @@ export function InstallationDetailScreen() {
               style={{ height: 420, opacity: 0.85 }}
             />
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Vertical gradient divider */}

@@ -223,15 +223,30 @@
   box-sizing: border-box;
 }
 
-/* Thumbnail row — centers align at y=903.5 (Figma: 816.5+87 = 825.9+77.6) */
+/* Thumbnail row — centers align at y=903.5 (Figma: 816.5+87 = 825.9+77.6).
+   Horizontally scrollable so the gallery can hold any number of images
+   (gallery-1..24.png); the scrollbar is hidden, touch-drag scrolls. */
 .hk-thumbs {
   position: absolute;
   left: 1127px;
   top: 816.5px;
   height: 174.029px;
+  width: 712px; /* to the 1839px right content edge */
   display: flex;
   align-items: center;
   gap: 29px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x;
+  /* soft fade at the cut edge hints there's more to scroll */
+  -webkit-mask-image: linear-gradient(to right, #000 92%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 92%, transparent 100%);
+}
+
+.hk-thumbs::-webkit-scrollbar {
+  display: none;
 }
 
 .hk-thumb {

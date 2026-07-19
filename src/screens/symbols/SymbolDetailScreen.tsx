@@ -23,7 +23,6 @@ import { SymbolVisual } from './SymbolVisual.tsx'
 import { useSymbolMedia } from './symbolsMedia.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
 import { SYMBOLS, SHARED } from '../../assets/paths.ts'
-import { probeImageCached } from '../../assets/probe.ts'
 import {
   fitFontSize,
   isNumericMilestone,
@@ -116,23 +115,6 @@ export function SymbolDetailScreen() {
   /** Real artwork (static or frames) → mock subject frame; else placeholder box. */
   const hasArt = media.ready && (media.hasStatic || media.frameCount > 0)
 
-  // Did You Know card photo: a symbol with a dedicated close-up dropped at
-  // detail/dyk/<slug>.png uses it (today: tiger); others reuse their static
-  // cutout. Adding a new dyk/<slug>.png needs no code change. (Hook lives
-  // above the loading early-return — hook order must not vary.)
-  const dykUrl = `${SYMBOLS.dyk}/${activeSlug}.png`
-  const [hasDyk, setHasDyk] = useState(false)
-  useEffect(() => {
-    let alive = true
-    setHasDyk(false)
-    void probeImageCached(dykUrl).then((ok) => {
-      if (alive) setHasDyk(ok)
-    })
-    return () => {
-      alive = false
-    }
-  }, [dykUrl])
-
   if (identity === null) {
     // Content still loading — hold the stage.
     return (
@@ -148,11 +130,16 @@ export function SymbolDetailScreen() {
   const card = cards[Math.min(cardIndex, Math.max(0, cards.length - 1))] ?? null
   const milestones = identity.milestones.map(parseMilestone)
 
-  const cardImage = hasDyk
-    ? dykUrl
-    : media.ready && media.hasStatic
-      ? media.staticUrl
-      : null
+  // Did You Know photo: symbols/<slug>/did-you-know/ images cycle with the
+  // fact pages (image count and fact count are independent — modulo pairs
+  // them for any mix of 1..N facts and 1..M photos). No photos → the
+  // symbol's static cutout. Drop-in flexible, no code changes.
+  const cardImage =
+    media.dykImages.length > 0
+      ? media.dykImages[cardIndex % media.dykImages.length]!
+      : media.ready && media.hasStatic
+        ? media.staticUrl
+        : null
 
   // Chevrons page through this symbol's fact cards (NOT other symbols —
   // symbol switching happens on the carousel screen only).

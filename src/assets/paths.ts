@@ -41,21 +41,27 @@ export const CHAKRA = {
   backgroundStill: 'assets/3-ashok-chakra/background/bg.png',
   flagPole: 'assets/3-ashok-chakra/flag-tab/flag-pole.png',
   wheelPoster: 'assets/3-ashok-chakra/wheel/wheel-poster.png',
+  /** The 24 virtue spoke icons: virtue-icons/<slug>.svg */
+  virtueIcons: 'assets/3-ashok-chakra/virtue-icons',
 } as const
 
 export const SYMBOLS = {
-  carouselBackground: 'assets/4-national-symbols/carousel/background',
-  detailBackground: 'assets/4-national-symbols/detail/background',
-  /** Optional per-symbol Did You Know photo: dyk/<slug>.png (falls back to
-   *  the symbol's turntable static cutout). */
-  dyk: 'assets/4-national-symbols/detail/dyk',
-  turntables: 'assets/4-national-symbols/turntables',
+  carouselBackground: 'assets/4-national-symbols/carousel-background',
+  detailBackground: 'assets/4-national-symbols/detail-background',
+  /** Per-symbol media home: symbols/<slug>/turntable/ (f_0001.png… +
+   *  static.png) and symbols/<slug>/did-you-know/ (1.png, 2.png… — any
+   *  count; the Did You Know card cycles them with its facts). */
+  symbols: 'assets/4-national-symbols/symbols',
 } as const
 
 export const SHARED = {
   icons: 'assets/_shared/icons',
-  virtueIcons: 'assets/_shared/icons/virtues',
 } as const
 
-export const installationPhoto = (id: number): string =>
-  `${MONUMENTAL.installations}/${id}.jpg`
+/** Installation photos live one folder per site: installations/<id>/1.jpg,
+ *  2.jpg… (any count — 2+ photos turn the detail screen into a carousel). */
+export const installationPhoto = (id: number, n = 1): string =>
+  `${MONUMENTAL.installations}/${id}/${n}.jpg`
+
+/** Probe cap for per-site photos and per-symbol DYK images. */
+export const MAX_INSTALLATION_PHOTOS = 10
