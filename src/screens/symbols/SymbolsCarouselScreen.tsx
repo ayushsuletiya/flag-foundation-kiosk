@@ -10,7 +10,18 @@
  * (statics only today), and Know More opens /symbols/:slug.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import {
+  ARRIVE_DEAL_START,
+  ARRIVE_TOTAL_MS,
+  DEAL_CARD_MS,
+  DEAL_STAGGER_MS,
+  FLIGHT_MS,
+  FLIGHT_START,
+  VEIL_OUT_MS,
+  VEIL_OUT_START,
+  readEntryState,
+} from './transitionContract.ts'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
@@ -27,18 +38,6 @@ const TURN_MS = 480
 // Attract behavior: at rest the carousel advances by itself (smooth track
 // turn) — full cycle ≈ 3.5s wait + 0.5s glide. Any touch restarts the wait.
 const AUTO_ADVANCE_MS = 3500
-
-// Category intro — "the trail": one continuous cinematic motion. Every
-// tile rides the SAME orbital ellipse; the whole trail sweeps 1¼ turns
-// around the podium while decelerating (ease-out), the ellipse expanding
-// from a tight swirl to full size. Tiles materialize one behind another
-// (stagger tuned to the early angular speed, so they appear to stream in
-// at the ellipse's left edge) and the sweep ends with every tile exactly
-// on its ring pose — then the normal settle glides them into the slots.
-const INTRO_TOTAL_MS = 3200
-const INTRO_ENTRY_TURNS_DEG = 450 // 1¼ revolutions; ends at spin 0
-const INTRO_STAGGER_MS = 55 // ≈ ring step / early angular speed
-const INTRO_APPEAR_MS = 340
 
 /**
  * Continuous pose along the carousel TRACK — the curve the rest slots sit
@@ -89,34 +88,36 @@ function trackPose(u: number) {
  * theta 0 = front of the podium. Ellipse ~460x230 around the center slot,
  * back cards higher, smaller, dimmer — a floating ring of 3D cards.
  */
-function orbitPose(
-  ringIndex: number,
-  count: number,
-  spinDeg: number,
-  radius = 1,
-  scaleMul = 1,
-) {
+function orbitPose(ringIndex: number, count: number, spinDeg: number) {
   const theta = (((ringIndex * 360) / count + spinDeg) * Math.PI) / 180
   const s = Math.sin(theta)
   const c = Math.cos(theta)
-  const x = s * 440 * radius
-  const y = 30 + (1 - c) * 30 * radius
-  const z = (c - 1) * 280 * radius
+  const x = s * 440
+  const y = 30 + (1 - c) * 30
+  const z = (c - 1) * 280
   const ry = -s * 35
-  const scale = (0.44 + 0.24 * (c + 1)) * scaleMul
-  // Steep scale/opacity falloff toward the back: 14 evenly-spaced cards
-  // inevitably bunch at the ellipse's horizontal edges mid-spin — strong
-  // depth separation keeps that from reading as a flat pile-up.
+  const scale = 0.44 + 0.24 * (c + 1)
   return {
-    x,
-    y,
-    z,
-    ry,
-    scale,
     transform: `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg) scale(${scale.toFixed(3)})`,
     opacity: 0.38 + 0.31 * (c + 1),
     zIndex: Math.round(100 + c * 50),
   } as const
+}
+
+/**
+ * Fan pose for dealt card j of n (j = 1..n, left → right) — a hand of
+ * cards spread on an arc above/around the seed card. rotateZ tilts each
+ * card along the arc like a dealt hand; flight untwists it to 0.
+ */
+function fanPose(j: number, n: number) {
+  const a = n > 1 ? (-1 + (2 * (j - 1)) / (n - 1)) * 68 : 0 // degrees
+  const rad = (a * Math.PI) / 180
+  return {
+    x: Math.sin(rad) * 430,
+    y: -Math.cos(rad) * 120 - 30,
+    rz: a * 0.32,
+    s: 0.62,
+  }
 }
 
 export function SymbolsCarouselScreen() {
@@ -125,26 +126,40 @@ export function SymbolsCarouselScreen() {
   const identities = content?.symbolIdentities ?? []
   const count = identities.length
 
+  const location = useLocation()
+  // Read once — router state survives re-renders but we only honor it at mount.
+  const entryRef = useRef(readEntryState(location.state))
+  const entry = entryRef.current
+  const cinematic = entry !== null && entry.cinematic
+
   // Figma opens on the tiger; fall back to the first Excel row.
   const [selected, setSelected] = useState<number | null>(null)
   const defaultIndex = useMemo(() => {
-    const i = identities.findIndex((s) => symbolSlug(s.symbol) === 'tiger')
-    return i >= 0 ? i : 0
-  }, [identities])
+    if (entry !== null) {
+      const i = identities.findIndex((s) => symbolSlug(s.symbol) === entry.seed)
+      if (i >= 0) return i
+    }
+    const t = identities.findIndex((s) => symbolSlug(s.symbol) === 'tiger')
+    return t >= 0 ? t : 0
+  }, [identities, entry])
   const activeIndex = count > 0 ? (selected ?? defaultIndex) % count : 0
 
   const swipeStartX = useRef<number | null>(null)
 
   // ---- mode state machine -------------------------------------------
-  // 'intro' = the continuous trail sweep around the podium · 'rest' =
-  // Figma slot poses · 'turn' = cards sliding along the track to new
-  // slots · 'orbit' = full ring floats (drag-to-spin) · 'settle' =
-  // gliding home.
-  const [mode, setMode] = useState<'intro' | 'rest' | 'turn' | 'orbit' | 'settle'>('intro')
-  const isIntro = mode === 'intro'
+  // 'arrive' = the home-handoff cinematic (deal + podium reveal + flight)
+  // · 'rest' = Figma slot poses · 'turn' = slide along track · 'orbit' =
+  // ring floats · 'settle' = gliding home.
+  const [mode, setMode] = useState<'arrive' | 'rest' | 'turn' | 'orbit' | 'settle'>(
+    cinematic ? 'arrive' : 'rest',
+  )
+  const isArrive = mode === 'arrive'
+  const [arriveT, setArriveT] = useState(0)
+  const arriveDone = useRef(!cinematic)
+  const arriveRaf = useRef<number | null>(null)
+  // Non-cinematic entries still open from black — briefly.
+  const [plainVeil, setPlainVeil] = useState(!cinematic)
   const [spin, setSpin] = useState(0)
-  // Elapsed intro time — the single value the whole trail derives from.
-  const [introT, setIntroT] = useState(0)
   // Track offset while turning: cards render at u = off + turnOffset, so
   // the whole row slides along the track and eases into the new slots.
   const [turnOffset, setTurnOffset] = useState(0)
@@ -157,8 +172,6 @@ export function SymbolsCarouselScreen() {
   const turnRaf = useRef<number | null>(null)
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const introRaf = useRef<number | null>(null)
-  const introDone = useRef(false)
   const dragLastX = useRef<number | null>(null)
   const suppressClick = useRef(false)
 
@@ -180,49 +193,50 @@ export function SymbolsCarouselScreen() {
     }, SETTLE_MS)
   }
 
-  // Intro timeline: a single elapsed-time rAF machine (not chained
-  // timeouts) so a hidden window pauses the intro instead of finishing it
-  // invisibly. All per-card motion derives from introT in render — one
-  // clock, one continuous sweep, zero phase seams.
-  // Gated on COMPLETION (introDone), never on start, and the effect cancels
-  // its own frame: StrictMode's dev double-mount cancels run 1 and cleanly
-  // restarts in run 2 (a start-guard here left the intro frozen mid-fly).
+  // Arrive timeline: one elapsed-time rAF machine; all card poses derive
+  // from arriveT in render. Completion-gated (arriveDone) and cancels its
+  // own frame — StrictMode-safe (CLAUDE.md gotcha).
   useEffect(() => {
-    if (count === 0 || introDone.current) return
+    if (count === 0 || arriveDone.current) return
     let start: number | null = null
     const tick = (now: number) => {
       start ??= now
       const t = now - start
-      setIntroT(t)
-      if (t < INTRO_TOTAL_MS) {
-        introRaf.current = requestAnimationFrame(tick)
+      setArriveT(t)
+      if (t < ARRIVE_TOTAL_MS) {
+        arriveRaf.current = requestAnimationFrame(tick)
       } else {
-        introRaf.current = null
-        introDone.current = true
-        settleToRest()
+        arriveRaf.current = null
+        arriveDone.current = true
+        setMode('rest')
       }
     }
-    introRaf.current = requestAnimationFrame(tick)
+    arriveRaf.current = requestAnimationFrame(tick)
     return () => {
-      if (introRaf.current !== null) {
-        cancelAnimationFrame(introRaf.current)
-        introRaf.current = null
+      if (arriveRaf.current !== null) {
+        cancelAnimationFrame(arriveRaf.current)
+        arriveRaf.current = null
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count])
 
-  // Kiosk users won't wait: any touch during the intro fast-forwards it.
-  const skipIntro = () => {
-    introDone.current = true // don't restart on a later count change
-    if (introRaf.current !== null) {
-      cancelAnimationFrame(introRaf.current)
-      introRaf.current = null
+  // Non-cinematic entry: plain short fade from black, then interactive.
+  useEffect(() => {
+    if (!plainVeil) return
+    const t = setTimeout(() => setPlainVeil(false), 900)
+    return () => clearTimeout(t)
+  }, [plainVeil])
+
+  // Kiosk users won't wait: any touch during the arrive fast-forwards it.
+  const skipArrive = () => {
+    arriveDone.current = true
+    if (arriveRaf.current !== null) {
+      cancelAnimationFrame(arriveRaf.current)
+      arriveRaf.current = null
     }
-    spinRef.current = 0
-    setSpin(0)
     suppressClick.current = true
-    settleToRest()
+    settleToRest() // whole ring mounts and glides home in one settle
   }
 
   const engageOrbit = () => {
@@ -274,13 +288,6 @@ export function SymbolsCarouselScreen() {
   const shortName = symbolShortName(active)
   const nameFontSize = fitFontSize(shortName, 96.716, 660)
 
-  // Trail sweep parameters — every tile's pose derives from the one intro
-  // clock: a decelerating 1¼-turn sweep while the ellipse expands to size.
-  const introP = Math.min(1, introT / INTRO_TOTAL_MS)
-  const introE = 1 - Math.pow(1 - introP, 3)
-  const introSpin = -INTRO_ENTRY_TURNS_DEG * (1 - introE)
-  const introRadius = 0.55 + 0.45 * introE
-
   // Rotate by sliding every card ALONG the track (mode 'turn'): the new
   // selection applies immediately, the row starts offset by the step just
   // taken and eases back to 0. Repeat taps mid-turn ACCUMULATE into the
@@ -331,17 +338,35 @@ export function SymbolsCarouselScreen() {
   }, [mode, activeIndex, autoTick, count])
 
   return (
-    <div className="sy-screen" onPointerDown={isIntro ? skipIntro : undefined}>
+    <div className="sy-screen" onPointerDown={isArrive ? skipArrive : undefined}>
       {/* Baked stage (navy + mandala + podium), pre-flipped to match the
           render; design cover-crops region x=217..2094 of the 2113px source. */}
       <img className="sy-stage-bg" src="assets/images/symbols/stage-intro.png" alt="" />
 
-      {/* Intro veil — the scene opens from black while the stage relaxes
-          out of its zoom; unmounts once the fly-in phase ends. */}
-      {mode === 'intro' && <div className="sy-veil" />}
+      {/* Arrive veil — holds black through the deal, eases off to reveal
+          the podium while the cards fan (inline opacity from the clock). */}
+      {isArrive && (
+        <div
+          className="sy-veil sy-veil--arrive"
+          style={{
+            opacity:
+              1 -
+              (() => {
+                const p = Math.max(0, Math.min(1, (arriveT - VEIL_OUT_START) / VEIL_OUT_MS))
+                return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
+              })(),
+          }}
+        />
+      )}
+      {plainVeil && <div className="sy-veil" />}
 
       <h1 className="sy-header">
-        <BlurTypeText text="National Symbols of India" delay={400} stagger={34} budget={900} />
+        <BlurTypeText
+          text="National Symbols of India"
+          delay={cinematic ? VEIL_OUT_START + 400 : 400}
+          stagger={34}
+          budget={900}
+        />
       </h1>
 
       <HomeButton
@@ -366,7 +391,7 @@ export function SymbolsCarouselScreen() {
           }
         }}
         onPointerDown={(e) => {
-          if (isIntro) return // the screen-root handler fast-forwards the intro
+          if (isArrive) return // the screen-root handler fast-forwards the arrive
           setAutoTick((n) => n + 1) // touching restarts the auto-advance wait
           swipeStartX.current = e.clientX
           dragLastX.current = e.clientX
@@ -413,31 +438,58 @@ export function SymbolsCarouselScreen() {
           if (!lifted && (Math.abs(off) > 2 || (count <= 2 && off < 0))) return null
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
-          // Intro: tiles materialize one behind another (smoothstepped) while
-          // the whole trail rides the same decelerating sweep — the stagger
-          // matches the early angular speed, so each new tile appears where
-          // the previous one just was: a stream pouring onto the orbit.
-          const appearP = isIntro
-            ? Math.min(1, Math.max(0, (introT - ringIndex * INTRO_STAGGER_MS) / INTRO_APPEAR_MS))
-            : 1
-          const appear = appearP * appearP * (3 - 2 * appearP)
-          // 'turn': the whole row slides along the track toward the new slots.
+          // ---- arrive: deal from behind the seed, then fly to slots ----
+          // Cards ordered by signed off map left→right onto the fan, so
+          // flight sends each card toward its own side — no crossings.
+          let arriveStyle: CSSProperties | undefined
+          if (isArrive) {
+            if (off === 0) {
+              // The seed anchors the scene on its slot-0 pose throughout.
+              arriveStyle = {
+                transform: 'translate3d(0px, 0px, 0px) rotateY(0deg) scale(1)',
+                opacity: 1,
+                zIndex: 130,
+              }
+            } else {
+              const half = Math.floor(count / 2)
+              const rank = off < 0 ? half + off + 1 : half + off // 1..count-1, left→right
+              const t0 = ARRIVE_DEAL_START + (rank - 1) * DEAL_STAGGER_MS
+              const dp = Math.max(0, Math.min(1, (arriveT - t0) / DEAL_CARD_MS))
+              const dealP = 1 - Math.pow(1 - dp, 3)
+              const fp = fanPose(rank, count - 1)
+              const flp = Math.max(0, Math.min(1, (arriveT - FLIGHT_START) / FLIGHT_MS))
+              const flightP = flp < 0.5 ? 4 * flp * flp * flp : 1 - Math.pow(-2 * flp + 2, 3) / 2
+              const tp = trackPoseNum(off)
+              const targetO = Math.abs(off) > 2 ? 0 : tp.o
+              // deal: emerge from behind the seed toward the fan pose
+              const fx = fp.x * dealP
+              const fy = fp.y * dealP
+              const frz = fp.rz * dealP
+              const fs = 0.9 + (fp.s - 0.9) * dealP
+              const fo = dealP
+              // flight: fan → track slot (component-wise)
+              const x = fx + (tp.x - fx) * flightP
+              const y = fy + (tp.y - fy) * flightP
+              const z = tp.z * flightP
+              const ry = tp.ry * flightP
+              const rz = frz * (1 - flightP)
+              const sc = fs + (tp.s - fs) * flightP
+              const o = fo + (targetO - fo) * flightP
+              arriveStyle = {
+                transform: `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, ${z.toFixed(1)}px) rotateY(${ry.toFixed(1)}deg) rotateZ(${rz.toFixed(1)}deg) scale(${sc.toFixed(3)})`,
+                opacity: o,
+                zIndex: flightP > 0.5 ? tp.zIndex : 90 - rank,
+              }
+            }
+          }
           const turn = mode === 'turn' ? trackPose(off + turnOffset) : undefined
-          const pose =
-            mode === 'orbit'
-              ? orbitPose(ringIndex, count, spin)
-              : isIntro
-                ? orbitPose(ringIndex, count, introSpin, introRadius, 0.7 + 0.3 * appear)
-                : undefined
+          const pose = mode === 'orbit' ? orbitPose(ringIndex, count, spin) : undefined
           const style = turn
             ? ({ transform: turn.transform, opacity: turn.opacity, zIndex: turn.zIndex } as CSSProperties)
-            : pose
-              ? ({
-                  transform: pose.transform,
-                  opacity: isIntro ? pose.opacity * appear : pose.opacity,
-                  zIndex: pose.zIndex,
-                } as CSSProperties)
-              : undefined
+            : (arriveStyle ??
+              (pose
+                ? ({ transform: pose.transform, opacity: pose.opacity, zIndex: pose.zIndex } as CSSProperties)
+                : undefined))
           return (
             <button
               key={slug}
@@ -476,8 +528,8 @@ export function SymbolsCarouselScreen() {
       </div>
 
       {/* Pagination dots on the podium face — count is Excel-driven.
-          Held back until the intro's ring settles, then fade in. */}
-      {!isIntro && (
+          Held back until the arrive's ring settles, then fade in. */}
+      {!isArrive && !plainVeil && (
         <PaginationDots
           count={count}
           activeIndex={activeIndex}
@@ -488,8 +540,8 @@ export function SymbolsCarouselScreen() {
 
       {/* Right text column — name, category, Know More (all Excel-driven).
           Keyed on the slug so the blur-typewriter replays on every change;
-          first mounted as the intro settles so the typing caps the intro. */}
-      {!isIntro && (
+          first mounted as the arrive settles so the typing caps the arrive. */}
+      {!isArrive && (
         <div key={activeSlug} className="sy-info">
         <p className="sy-name" style={{ fontSize: nameFontSize }}>
           <BlurTypeText text={shortName} delay={80} stagger={48} budget={620} fitWidth={660} />
