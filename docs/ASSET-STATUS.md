@@ -56,7 +56,7 @@ The watermarked 1947 image (indianexpress) and the duplicate gallery-1/2 pair ar
 
 ## Monumental Flags (`assets/map/`, `assets/images/installations/`)
 - Map kit (terrain still/render, 39 state active/hit shapes, select-state bg) — REAL.
-- Installation photos: **109 of 219** mirrored; 110 rows have no Photo URL (Excel warning). Book photos for Kargil/Kaithal/Raigarh matched rows that already have photos, so they were not used. Filling the 110 needs FFOI site/photo-gallery mining — open item.
+- Installation photos: **135 of 219** covered (109 mirrored earlier + 26 mined from FFOI's own image galleries on 2026-07-19, each caption-matched to its row and visually verified; 2 candidates rejected for caption/image mismatch). 84 rows still lack any photo — no photo of those sites exists on the FFOI site; needs client photos.
 - Flag-marker PNG sequence — static only (animated sequence still user-provided).
 
 ## Chakra (`assets/images/chakra/`, `assets/3d/`)
