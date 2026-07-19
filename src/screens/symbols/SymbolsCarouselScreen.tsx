@@ -228,6 +228,55 @@ export function SymbolsCarouselScreen() {
     return () => clearTimeout(t)
   }, [plainVeil])
 
+  // Rotate by sliding every card ALONG the track (mode 'turn'): the new
+  // selection applies immediately, the row starts offset by the step just
+  // taken and eases back to 0. Repeat taps mid-turn ACCUMULATE into the
+  // offset, so spamming reads as one long fluid flick, and paths never
+  // cross — the outgoing and incoming cards stay side by side on the arc.
+  const rotateTo = (index: number) => {
+    if (count === 0) return
+    let step = (((index - activeIndex) % count) + count) % count
+    if (step > count / 2) step -= count // shortest signed distance
+    if (step === 0) return
+    setSelected(((index % count) + count) % count)
+    turnRef.current = Math.max(-2.5, Math.min(2.5, turnRef.current + step))
+    setTurnOffset(turnRef.current)
+    setMode('turn')
+    if (turnRaf.current !== null) cancelAnimationFrame(turnRaf.current)
+    const from = turnRef.current
+    let t0: number | null = null
+    const tick = (now: number) => {
+      t0 ??= now
+      const p = Math.min(1, (now - t0) / TURN_MS)
+      const e = 1 - Math.pow(1 - p, 3)
+      turnRef.current = from * (1 - e)
+      setTurnOffset(turnRef.current)
+      if (p < 1) {
+        turnRaf.current = requestAnimationFrame(tick)
+      } else {
+        turnRaf.current = null
+        turnRef.current = 0
+        setTurnOffset(0)
+        setMode('rest')
+      }
+    }
+    turnRaf.current = requestAnimationFrame(tick)
+  }
+
+  const rotate = (dir: 1 | -1) => {
+    rotateTo(activeIndex + dir)
+  }
+
+  // Auto-advance: whenever the carousel sits at rest untouched for
+  // AUTO_ADVANCE_MS, glide to the next symbol. Rearms on every mode change
+  // (turn/orbit/settle all leave 'rest') and on every touch (autoTick).
+  useEffect(() => {
+    if (mode !== 'rest' || count <= 1) return
+    const t = setTimeout(() => rotate(1), AUTO_ADVANCE_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, activeIndex, autoTick, count])
+
   // Kiosk users won't wait: any touch during the arrive fast-forwards it.
   const skipArrive = () => {
     arriveDone.current = true
@@ -287,55 +336,6 @@ export function SymbolsCarouselScreen() {
   const activeSlug = symbolSlug(active.symbol)
   const shortName = symbolShortName(active)
   const nameFontSize = fitFontSize(shortName, 96.716, 660)
-
-  // Rotate by sliding every card ALONG the track (mode 'turn'): the new
-  // selection applies immediately, the row starts offset by the step just
-  // taken and eases back to 0. Repeat taps mid-turn ACCUMULATE into the
-  // offset, so spamming reads as one long fluid flick, and paths never
-  // cross — the outgoing and incoming cards stay side by side on the arc.
-  const rotateTo = (index: number) => {
-    if (count === 0) return
-    let step = (((index - activeIndex) % count) + count) % count
-    if (step > count / 2) step -= count // shortest signed distance
-    if (step === 0) return
-    setSelected(((index % count) + count) % count)
-    turnRef.current = Math.max(-2.5, Math.min(2.5, turnRef.current + step))
-    setTurnOffset(turnRef.current)
-    setMode('turn')
-    if (turnRaf.current !== null) cancelAnimationFrame(turnRaf.current)
-    const from = turnRef.current
-    let t0: number | null = null
-    const tick = (now: number) => {
-      t0 ??= now
-      const p = Math.min(1, (now - t0) / TURN_MS)
-      const e = 1 - Math.pow(1 - p, 3)
-      turnRef.current = from * (1 - e)
-      setTurnOffset(turnRef.current)
-      if (p < 1) {
-        turnRaf.current = requestAnimationFrame(tick)
-      } else {
-        turnRaf.current = null
-        turnRef.current = 0
-        setTurnOffset(0)
-        setMode('rest')
-      }
-    }
-    turnRaf.current = requestAnimationFrame(tick)
-  }
-
-  const rotate = (dir: 1 | -1) => {
-    rotateTo(activeIndex + dir)
-  }
-
-  // Auto-advance: whenever the carousel sits at rest untouched for
-  // AUTO_ADVANCE_MS, glide to the next symbol. Rearms on every mode change
-  // (turn/orbit/settle all leave 'rest') and on every touch (autoTick).
-  useEffect(() => {
-    if (mode !== 'rest' || count <= 1) return
-    const t = setTimeout(() => rotate(1), AUTO_ADVANCE_MS)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, activeIndex, autoTick, count])
 
   return (
     <div className="sy-screen" onPointerDown={isArrive ? skipArrive : undefined}>
