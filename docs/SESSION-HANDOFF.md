@@ -1,7 +1,82 @@
-# Session handoff — 2026-07-18/19
+# Session handoff — 2026-07-19/20 (content + assets marathon)
 
-Written for a fresh session with zero context. Covers what shipped, what is
-half-done, and the mistakes worth not repeating.
+Written for a fresh session with zero context. The 2026-07-18/19 handoff
+(chakra assembly, Windows crash triage) is preserved below this section.
+
+## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
+
+Milestone commits, in order:
+- `30b9123` fix: monumental expanded-card glow clipping (single glow source
+  when the first-row patch is active) + KnowMore portrait crop bias.
+- `965bbfd` content: FULL asset pass — all 9 history year flags real
+  (official FFOI art ×6 + book art 1857/1905/1941, 1200×768 RGBA, zero-crop),
+  35 gallery images (FFOI book scans + Wikimedia PD, all visually verified),
+  era bg-1 ×6 from designer handoff 4K, videos wired 1080p (home-bg,
+  india-map-loop, monumental-intro-5s — repaired `*.mp4.mp4` misnames),
+  ganges-river-dolphin 107-frame rembg turntable, Excel updates
+  (flag paths, 7 real Know More descriptions, provenance rows).
+- `273124b` refactor: category-first `assets/` tree — `0-home /
+  1-monumental-flags / 2-history-of-tiranga/<year> / 3-ashok-chakra /
+  4-national-symbols / _shared`, client README.txt in each. **Every
+  `background/` folder is dynamic** (`bg.mp4` wins → `bg-1..5.png`
+  crossfade → `bg.png` → placeholder) via `src/components/
+  DynamicBackground.tsx` + `src/assets/probe.ts`; every path lives in
+  `src/assets/paths.ts` — screens never hardcode.
+- `225b7ab` refactor round 2 (user-directed): installations = one FOLDER
+  per site (`installations/<id>/1.jpg, 2.jpg…` → 2+ photos = auto
+  carousel with dots on the detail screen); national symbols =
+  `carousel-background/ + detail-background/ + symbols/<slug>/
+  {turntable, did-you-know}/` (DYK photos `1.png…N.png`, any count,
+  cycle with the fact pages); history gallery flexible to 24 images with
+  a scrollable thumb row; chakra virtue icons moved into
+  `3-ashok-chakra/virtue-icons/`; `data/README.txt` documents every
+  Excel tab.
+- `5686969` content: era backgrounds for 1857/1905/1941 (Magnific sepia
+  scenes matched to the handoff set, disclosed in Sources; 1905's
+  archival border auto-cropped) + sharper 1905/1941 flag art (fresh 4x
+  passes — the first jobs died server-side while reporting "processing").
+- `09e06e0` content: 26 installation photos mined from FFOI's own
+  galleries (caption+height matched, all visually reviewed, 2 rejected)
+  → **135/219 sites covered**; Excel Photo URLs filled + mirrored to
+  `installations/<id>/1.jpg`.
+- `db3df15` docs: **museum image-provenance register** — Excel tab
+  `10 · Image Credits` (70 rows) + `docs/IMAGE-PROVENANCE.md`. All 28
+  Wikimedia gallery images re-verified against the Commons API on
+  2026-07-20 (license/author/date + dimension match). 1947 gallery-3
+  REPLACED (legacy image had no traceable source) with 'Chandni Chowk on
+  15 August 1947' (Govt Photo Division, PD). Caption fact: Bande Mataram
+  front page is 29 Sep 1906, not 1907.
+
+Reference docs now in repo: `docs/ASSET-STATUS.md` (every slot + status),
+`docs/IMAGE-PROVENANCE.md`, `data/README.txt`, per-folder `assets/**/README.txt`.
+
+## 0.1 HARD RULES (user-set this session)
+- **NEVER call any billing Magnific tool without explicit per-batch user
+  approval** — propose with rough cost, wait. (Saved to memory too.)
+- Asset drop-ins must stay zero-code: numbered folders, `bg.*` convention,
+  numbered sequences — keep it that way in any new feature.
+
+## 0.2 OPEN ITEMS after this session
+- **84/219 installation photos** — nothing exists on the FFOI site;
+  needs client photography.
+- **4 already-paid Magnific enhancements** (book photos: lotus, peacock,
+  mango, Ganga-at-Devprayag intended as `did-you-know/1.png` for those
+  symbols) are finished at Magnific, awaiting the user's yes/no to
+  download + install. Do NOT spend more without approval.
+- **Dolphin turntable species check** — clip's dolphin has a marine-style
+  dorsal fin; regenerate keyframed on `symbol-source/river-dolphin.png`
+  (needs approval; the previous approved static was overwritten but is
+  recoverable from that source file).
+- Animated flag-marker sequence (map markers) still static-only.
+- Handoff timeline thumbnails deliberately NOT wired (AI-composited
+  people — risky on a museum wall).
+- Phase 7 Windows packaging/hardening (pre-existing, unchanged below).
+
+---
+
+# Previous handoff — 2026-07-18/19
+
+Covers what shipped, what is half-done, and the mistakes worth not repeating.
 
 ---
 
