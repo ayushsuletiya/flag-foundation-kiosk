@@ -14,21 +14,9 @@
  * order 1-4 map to routes in TILES order); Figma strings are the fallback
  * so the screen never renders empty while content loads.
  */
-import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { VideoLoop } from '../../components/VideoLoop.tsx'
-import { SymbolVisual } from '../symbols/SymbolVisual.tsx'
-import { symbolShortName, symbolSlug } from '../symbols/symbolsData.ts'
-import {
-  EXIT_GLOW_MS,
-  EXIT_MORPH_MS,
-  EXIT_MORPH_START,
-  EXIT_SLIDE_MS,
-  EXIT_TOTAL_MS,
-  HANDOFF,
-  type SymbolsEntryState,
-} from '../symbols/transitionContract.ts'
 import './HomeScreen.css'
 
 // Runtime asset URLs, relative so they resolve under vite dev (/assets/…
@@ -134,218 +122,53 @@ export function HomeScreen() {
   const { content } = useContent()
   const homeTiles = content?.homeTiles ?? []
 
-  // ---- Symbols exit cinematic (spec 2026-07-19) ---------------------
-  // One rAF master clock; every beat below derives from exitT in render.
-  // Completion-gated (exitDone) so StrictMode's double-mount restarts the
-  // clock instead of freezing it (CLAUDE.md gotcha).
-  const [exitSeed, setExitSeed] = useState<{ slug: string; name: string } | null>(null)
-  const [exitT, setExitT] = useState(0)
-  const exitDone = useRef(false)
-  const exitRaf = useRef<number | null>(null)
-  const exiting = exitSeed !== null
-
-  const beginSymbolsExit = () => {
-    if (exiting) return
-    const ids = content?.symbolIdentities ?? []
-    if (ids.length === 0) {
-      navigate('/symbols') // content not ready — plain navigation
-      return
-    }
-    const pick = ids[Math.floor(Math.random() * ids.length)]!
-    setExitSeed({ slug: symbolSlug(pick.symbol), name: symbolShortName(pick) })
-  }
-
-  useEffect(() => {
-    if (exitSeed === null || exitDone.current) return
-    let start: number | null = null
-    const tick = (now: number) => {
-      start ??= now
-      const t = now - start
-      setExitT(t)
-      if (t < EXIT_TOTAL_MS) {
-        exitRaf.current = requestAnimationFrame(tick)
-      } else {
-        exitRaf.current = null
-        exitDone.current = true
-        const state: SymbolsEntryState = { seed: exitSeed.slug, cinematic: true }
-        navigate('/symbols', { state })
-      }
-    }
-    exitRaf.current = requestAnimationFrame(tick)
-    return () => {
-      if (exitRaf.current !== null) {
-        cancelAnimationFrame(exitRaf.current)
-        exitRaf.current = null
-      }
-    }
-  }, [exitSeed]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Kiosk rule: any touch mid-cinematic skips it.
-  const skipExit = () => {
-    if (exitSeed === null || exitDone.current) return
-    exitDone.current = true
-    if (exitRaf.current !== null) {
-      cancelAnimationFrame(exitRaf.current)
-      exitRaf.current = null
-    }
-    const state: SymbolsEntryState = { seed: exitSeed.slug, cinematic: false }
-    navigate('/symbols', { state })
-  }
-
-  // ---- beat values (all pure functions of exitT) --------------------
-  const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
-  const easeOut = (v: number) => 1 - Math.pow(1 - v, 3)
-  const easeInOut = (v: number) => (v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2)
-  const veilP = clamp01((exitT - 250) / 600)
-  const chromeFade = 1 - clamp01(exitT / 500)
-  const glowP = easeOut(clamp01((exitT - EXIT_SLIDE_MS) / EXIT_GLOW_MS))
-  const morphP = easeInOut(clamp01((exitT - EXIT_MORPH_START) / EXIT_MORPH_MS))
-  const lerp = (a: number, b: number) => a + (b - a) * morphP
-  // Home tile rect of the symbols card → HANDOFF rect on the stage.
-  const morphRect = {
-    left: lerp(1123.9, HANDOFF.left),
-    top: lerp(553, HANDOFF.top),
-    width: lerp(294.104, HANDOFF.width),
-    height: lerp(403.343, HANDOFF.height),
-    radius: lerp(49.61, HANDOFF.radius),
-  }
-  const glowOpacity = glowP * (1 - 0.6 * morphP)
-
   return (
-    <div className="home-screen" onPointerDown={exiting ? skipExit : undefined}>
+    <div className="home-screen">
       {/* Full-bleed background video (poster until the mp4 is delivered) */}
       <div className="home-bg">
         <VideoLoop src={BG_VIDEO} poster={BG_POSTER} />
       </div>
       <div className="home-scrim" />
 
-      {/* Title lockup — fades first during the exit cinematic */}
-      <h1 className="home-title" style={exiting ? { opacity: chromeFade } : undefined}>
+      {/* Title lockup */}
+      <h1 className="home-title">
         <span className="home-title-script">The </span>
         Flag Foundation
       </h1>
-      <img
-        className="home-swash"
-        src={SWASH_SVG}
-        alt=""
-        draggable={false}
-        style={exiting ? { opacity: chromeFade } : undefined}
-      />
-      <div className="home-of-india" style={exiting ? { opacity: chromeFade } : undefined}>
-        of india
-      </div>
+      <img className="home-swash" src={SWASH_SVG} alt="" draggable={false} />
+      <div className="home-of-india">of india</div>
 
       {/* Category tiles */}
-      {TILES.map((tile, i) => {
-        const isSymbols = tile.route === '/symbols'
-        // Non-symbols tiles slide LEFT off-stage, staggered by column.
-        const slideP = exiting ? easeOut(Math.max(0, Math.min(1, (exitT - i * 90) / (EXIT_SLIDE_MS - 100)))) : 0
-        const slideStyle =
-          exiting && !isSymbols
-            ? {
-                transform: `translateX(${(-(tile.left + tile.width + 80) * slideP).toFixed(1)}px)`,
-                opacity: 1 - slideP,
-                pointerEvents: 'none' as const,
-              }
-            : exiting
-              ? { visibility: 'hidden' as const } // symbols tile: the morph element takes over
-              : undefined
-        return (
-          <button
-            key={tile.route}
-            type="button"
-            className="home-tile"
-            style={{ left: tile.left, width: tile.width, ...slideStyle }}
-            onClick={() => {
-              if (exiting) return
-              if (isSymbols) beginSymbolsExit()
-              else navigate(tile.route)
-            }}
-          >
-            <img
-              className="home-tile-photo"
-              src={tile.image}
-              alt=""
-              draggable={false}
-              style={{ ...tile.photo }}
-            />
-            <div
-              className={
-                tile.solidScrim === true ? 'home-tile-scrim home-tile-scrim--solid' : 'home-tile-scrim'
-              }
-            />
-            <span className="home-tile-label" style={{ width: tile.labelWidth }}>
-              {designedLabel(homeTiles[i]?.label, tile.fallbackLabel)}
-            </span>
-          </button>
-        )
-      })}
+      {TILES.map((tile, i) => (
+        <button
+          key={tile.route}
+          type="button"
+          className="home-tile"
+          style={{ left: tile.left, width: tile.width }}
+          onClick={() => navigate(tile.route)}
+        >
+          <img
+            className="home-tile-photo"
+            src={tile.image}
+            alt=""
+            draggable={false}
+            style={{ ...tile.photo }}
+          />
+          <div
+            className={
+              tile.solidScrim === true ? 'home-tile-scrim home-tile-scrim--solid' : 'home-tile-scrim'
+            }
+          />
+          <span className="home-tile-label" style={{ width: tile.labelWidth }}>
+            {designedLabel(homeTiles[i]?.label, tile.fallbackLabel)}
+          </span>
+        </button>
+      ))}
 
       {/* Cream wave sits above title/tiles; exported pre-clipped to frame (0,0) */}
-      <img
-        className="home-wave"
-        src={WAVE_SVG}
-        alt=""
-        draggable={false}
-        style={exiting ? { opacity: chromeFade } : undefined}
-      />
-      {/* NJU logo lockup — topmost chrome layer */}
-      <img
-        className="home-logo"
-        src={LOGO_PNG}
-        alt="The Naveen Jindal Universe"
-        draggable={false}
-        style={exiting ? { opacity: chromeFade } : undefined}
-      />
-
-      {/* ---- Exit cinematic layers (above everything) ---------------- */}
-      {exiting && <div className="home-exit-veil" style={{ opacity: veilP }} />}
-      {exiting && exitSeed !== null && (
-        <div
-          className="home-morph"
-          style={{
-            left: morphRect.left,
-            top: morphRect.top,
-            width: morphRect.width,
-            height: morphRect.height,
-            borderRadius: morphRect.radius,
-            boxShadow: `0 0 ${(24 + 66 * glowOpacity).toFixed(0)}px ${(4 + 14 * glowOpacity).toFixed(0)}px rgba(255, 196, 84, ${(0.55 * glowOpacity).toFixed(3)}), 0 0 0 2.5px rgba(255, 226, 150, ${(0.9 * glowOpacity).toFixed(3)})`,
-          }}
-        >
-          {/* Old face: the home tile's photo/scrim/label, fading out */}
-          <div className="home-morph-old" style={{ opacity: 1 - morphP }}>
-            <img
-              className="home-tile-photo"
-              src={TILES[3]!.image}
-              alt=""
-              draggable={false}
-              style={{ ...TILES[3]!.photo }}
-            />
-            <div className="home-tile-scrim home-tile-scrim--solid" />
-            <span className="home-tile-label" style={{ width: TILES[3]!.labelWidth }}>
-              {designedLabel(homeTiles[3]?.label, TILES[3]!.fallbackLabel)}
-            </span>
-          </div>
-          {/* New face: the seeded glass symbol card, fading in. Rendered at
-              final 379x472 and scaled so SymbolVisual never re-lays-out. */}
-          <div
-            className="home-morph-card"
-            style={{
-              opacity: morphP,
-              transform: `scale(${(morphRect.width / HANDOFF.width).toFixed(4)}, ${(morphRect.height / HANDOFF.height).toFixed(4)})`,
-            }}
-          >
-            <SymbolVisual
-              slug={exitSeed.slug}
-              name={exitSeed.name}
-              width={HANDOFF.width}
-              height={HANDOFF.height}
-              mode="still"
-              fit="contain"
-            />
-          </div>
-        </div>
-      )}
+      <img className="home-wave" src={WAVE_SVG} alt="" draggable={false} />
+      {/* NJU logo lockup — topmost layer */}
+      <img className="home-logo" src={LOGO_PNG} alt="The Naveen Jindal Universe" draggable={false} />
     </div>
   )
 }

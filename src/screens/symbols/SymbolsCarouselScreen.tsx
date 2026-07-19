@@ -10,8 +10,7 @@
  * (statics only today), and Know More opens /symbols/:slug.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { readEntryState } from './transitionContract.ts'
+import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
@@ -100,23 +99,12 @@ export function SymbolsCarouselScreen() {
   const identities = content?.symbolIdentities ?? []
   const count = identities.length
 
-  const location = useLocation()
-  // Read once — router state survives re-renders but we only honor it at
-  // mount. Only the SEED matters now (which symbol fronts the carousel);
-  // the arrive cinematic was removed (user decision 2026-07-19).
-  const entryRef = useRef(readEntryState(location.state))
-  const entry = entryRef.current
-
   // Figma opens on the tiger; fall back to the first Excel row.
   const [selected, setSelected] = useState<number | null>(null)
   const defaultIndex = useMemo(() => {
-    if (entry !== null) {
-      const i = identities.findIndex((s) => symbolSlug(s.symbol) === entry.seed)
-      if (i >= 0) return i
-    }
     const t = identities.findIndex((s) => symbolSlug(s.symbol) === 'tiger')
     return t >= 0 ? t : 0
-  }, [identities, entry])
+  }, [identities])
   const activeIndex = count > 0 ? (selected ?? defaultIndex) % count : 0
 
   const swipeStartX = useRef<number | null>(null)
@@ -125,8 +113,7 @@ export function SymbolsCarouselScreen() {
   // 'rest' = Figma slot poses · 'turn' = slide along track · 'orbit' =
   // ring floats · 'settle' = gliding home.
   const [mode, setMode] = useState<'rest' | 'turn' | 'orbit' | 'settle'>('rest')
-  // Every entry opens from black — briefly. The Home-side cinematic ends
-  // on a black frame, so this fade is what hides the route seam.
+  // Every entry opens from black — a brief veil fade, then interactive.
   const [plainVeil, setPlainVeil] = useState(true)
   const [spin, setSpin] = useState(0)
   // Track offset while turning: cards render at u = off + turnOffset, so
@@ -273,8 +260,7 @@ export function SymbolsCarouselScreen() {
           render; design cover-crops region x=217..2094 of the 2113px source. */}
       <img className="sy-stage-bg" src="assets/images/symbols/stage-intro.png" alt="" />
 
-      {/* Entry veil — the scene opens from black (hides the route seam
-          after the Home-side cinematic, which ends on a black frame). */}
+      {/* Entry veil — the scene opens from black with a brief fade. */}
       {plainVeil && <div className="sy-veil" />}
 
       <h1 className="sy-header">
