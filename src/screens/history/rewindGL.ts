@@ -105,8 +105,11 @@ void main() {
 
   vec3 col = mix(a, b, smoothstep(0.0, 1.0, uProgress));
 
-  // Exposure flash on each cut (the projector "blink").
-  col *= 1.0 + uFlash * 0.6;
+  // Exposure flash on each cut (the projector "blink") + a warm gold
+  // light-leak rolling up from the bottom of the gate.
+  col *= 1.0 + uFlash * 0.35;
+  float leak = uFlash * (0.65 - 0.45 * uv.y);
+  col += vec3(1.0, 0.72, 0.42) * leak * 0.6;
 
   // Film grain, heavier at speed.
   float grain = hash(uv * vec2(1920.0, 1080.0) + fract(uTime) * 91.7);
@@ -123,6 +126,66 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }
 `
+
+/* ---- Golden dust particles ------------------------------------------ */
+/* A THREE.Points cloud streaming with the rewind: gentle drifting motes
+   while the frame is at rest, stretching into ember streaks at speed.
+   Encoded per-point in `position`: x = clip-space X, y = phase seed,
+   z = per-point random (size / rate / alpha). ~900 points — negligible. */
+
+const PARTICLE_COUNT = 900
+
+const P_VERT = /* glsl */ `
+uniform float uTime;
+uniform float uSpeed;
+varying float vAlpha;
+void main() {
+  float rate = 0.045 + uSpeed * (0.7 + position.z * 0.9);
+  float y = fract(position.y + uTime * rate);
+  gl_Position = vec4(position.x, y * 2.0 - 1.0, 0.0, 1.0);
+  gl_PointSize = (2.0 + position.z * 4.5) * (1.0 + uSpeed * 1.8);
+  vAlpha = (0.16 + position.z * 0.38) * (0.35 + 0.65 * uSpeed);
+}
+`
+
+const P_FRAG = /* glsl */ `
+precision highp float;
+varying float vAlpha;
+void main() {
+  float d = length(gl_PointCoord - 0.5);
+  float a = smoothstep(0.5, 0.06, d) * vAlpha;
+  gl_FragColor = vec4(vec3(1.0, 0.85, 0.56) * a, a);
+}
+`
+
+function buildParticles(): {
+  points: THREE.Points
+  material: THREE.ShaderMaterial
+} {
+  const positions = new Float32Array(PARTICLE_COUNT * 3)
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    positions[i * 3] = Math.random() * 2 - 1 // clip X
+    positions[i * 3 + 1] = Math.random() // phase seed
+    positions[i * 3 + 2] = Math.random() // size / rate / alpha random
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  const material = new THREE.ShaderMaterial({
+    vertexShader: P_VERT,
+    fragmentShader: P_FRAG,
+    uniforms: {
+      uTime: { value: 0 },
+      uSpeed: { value: 0 },
+    },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthTest: false,
+    depthWrite: false,
+  })
+  const points = new THREE.Points(geometry, material)
+  points.frustumCulled = false
+  return { points, material }
+}
 
 function loadTexture(url: string): Promise<THREE.Texture> {
   return new Promise((resolve, reject) => {
@@ -182,6 +245,10 @@ export async function createRewindGL(
   quad.frustumCulled = false
   scene.add(quad)
 
+  const particles = buildParticles()
+  particles.points.renderOrder = 1 // dust drifts OVER the film frame
+  scene.add(particles.points)
+
   return {
     setState(state: RewindState) {
       const u = material.uniforms
@@ -192,6 +259,9 @@ export async function createRewindGL(
       u.uBlur!.value = state.blur
       u.uFlash!.value = state.flash
       u.uTime!.value = state.time
+      const p = particles.material.uniforms
+      p.uTime!.value = state.time
+      p.uSpeed!.value = state.speed
     },
     render() {
       renderer.render(scene, camera)
@@ -200,6 +270,8 @@ export async function createRewindGL(
       for (const tex of textures) tex.dispose()
       quad.geometry.dispose()
       material.dispose()
+      particles.points.geometry.dispose()
+      particles.material.dispose()
       renderer.dispose()
     },
   }

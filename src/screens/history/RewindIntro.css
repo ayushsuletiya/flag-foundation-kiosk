@@ -1,10 +1,13 @@
 /* ============================================================
    RewindIntro — History of Tiranga "going into the past" entrance.
    Fullscreen overlay on the 1920x1080 stage; WebGL canvas below,
-   DOM numeral above. Fades out to hand over to the live screen.
+   DOM odometer numeral above. --rw-speed (0..1, set per-frame by
+   the timeline) drives the motion blur, letterbox and glow so the
+   DOM chrome breathes with the shader.
    ============================================================ */
 
 .rw-intro {
+  --rw-speed: 0;
   position: absolute;
   inset: 0;
   z-index: 40;
@@ -41,18 +44,53 @@
   pointer-events: none;
 }
 
-/* Giant year numeral — same gold ramp as the history hero, remounted per
-   year (key={numeral}) so each cut pops and de-blurs into place. */
+/* Cinematic letterbox — the bars slide in as the rewind accelerates and
+   melt away on landing (scaleY follows --rw-speed every frame). */
+.rw-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 96px;
+  background: #050301;
+  pointer-events: none;
+}
+
+.rw-bar--top {
+  top: 0;
+  transform-origin: top;
+  transform: scaleY(var(--rw-speed));
+}
+
+.rw-bar--bottom {
+  bottom: 0;
+  transform-origin: bottom;
+  transform: scaleY(var(--rw-speed));
+}
+
+/* Giant odometer numeral — same gold ramp as the history hero. Digits are
+   individual slots; motion blur scales with rewind speed so the fast
+   columns smear like a real counter. */
 .rw-year {
   position: absolute;
   left: 50%;
   top: 42%;
   transform: translate(-50%, -50%);
+  display: flex;
   font-family: var(--font-ui);
   font-weight: 600;
   font-size: 300px;
   line-height: 1;
   letter-spacing: 4px;
+  font-variant-numeric: tabular-nums;
+  filter: drop-shadow(0 10px 44px rgba(0, 0, 0, 0.55))
+    blur(calc(var(--rw-speed) * 1.6px));
+  pointer-events: none;
+}
+
+.rw-digit {
+  display: inline-block;
+  min-width: 0.62em;
+  text-align: center;
   background: linear-gradient(
     109.896deg,
     #ffffff 6.3%,
@@ -64,18 +102,35 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 10px 44px rgba(0, 0, 0, 0.55));
-  animation: rw-year-in 300ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
-  pointer-events: none;
+  animation: rw-digit-roll 140ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  will-change: transform;
 }
 
-@keyframes rw-year-in {
+@keyframes rw-digit-roll {
   from {
-    opacity: 0.25;
-    transform: translate(-50%, -50%) scale(1.09);
+    opacity: 0.2;
+    transform: translateY(0.3em);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Landing on the oldest year: a slow triumphant pulse + gold halo.
+   (drop-shadow, not text-shadow — shadows bleed through transparent
+   background-clip:text glyphs.) */
+.rw-year--landed {
+  animation: rw-landed 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  filter: drop-shadow(0 10px 44px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 60px rgba(255, 214, 110, 0.45));
+}
+
+@keyframes rw-landed {
+  0% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
     transform: translate(-50%, -50%) scale(1);
   }
 }

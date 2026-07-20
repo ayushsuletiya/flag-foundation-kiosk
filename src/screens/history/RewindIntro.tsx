@@ -45,6 +45,22 @@ export interface RewindIntroProps {
   onDone: () => void
 }
 
+/** Odometer numeral: each digit is its own span, keyed by slot+glyph, so a
+ * change rolls just that digit. At full rewind speed the ones column spins
+ * into a blur (CSS adds motion blur from --rw-speed); braking into the
+ * landing year it decelerates like a slot machine. */
+function OdometerYear({ value, landed }: { value: string; landed: boolean }) {
+  return (
+    <span className={landed ? 'rw-year rw-year--landed' : 'rw-year'} aria-hidden="true">
+      {value.split('').map((digit, slot) => (
+        <span key={`${slot}-${digit}`} className="rw-digit">
+          {digit}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export function RewindIntro({ years, onDone }: RewindIntroProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -52,6 +68,7 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
   // Rewind order: newest → oldest.
   const rewindYears = useRef([...years].reverse()).current
   const [numeral, setNumeral] = useState(rewindYears[0] ?? '')
+  const [landed, setLanded] = useState(false)
   const [fading, setFading] = useState(false)
   const skipRef = useRef<() => void>(() => {})
 
@@ -107,11 +124,23 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
       const total = ARRIVE_MS + rewindTotal + SETTLE_MS
       const start = performance.now()
       let numeralShown = usableYears[0]!
+      const yearNums = usableYears.map((y) => parseInt(y, 10))
+      let landedShown = false
 
       // Watchdog: rAF is fully suspended on hidden pages — if the intro's
       // frames can never run, force the handoff on wall-clock time so the
       // kiosk (or a backgrounded dev tab) never hangs behind the overlay.
       watchdog = window.setTimeout(() => finish(), total + FADE_MS + 1500)
+
+      const showYear = (value: string) => {
+        if (value !== numeralShown) {
+          numeralShown = value
+          setNumeral(value)
+        }
+      }
+      const setCssVars = (speed: number) => {
+        rootRef.current?.style.setProperty('--rw-speed', speed.toFixed(3))
+      }
 
       const tick = () => {
         if (doneRef.current || gl === null) return
@@ -132,6 +161,7 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
             flash: 0,
             time,
           }
+          setCssVars(0)
         } else if (t < ARRIVE_MS + rewindTotal) {
           // The rewind — find the active cut.
           let acc = ARRIVE_MS
@@ -146,12 +176,13 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
           const ramp = Math.min(1, overall / 0.33)
           const brake = cut === cuts - 1 ? 1 - local * local : 1
           const speed = ramp * brake
-          // Numeral follows the incoming year at each cut midpoint.
-          const shown = local < 0.5 ? usableYears[cut]! : usableYears[cut + 1]!
-          if (shown !== numeralShown) {
-            numeralShown = shown
-            setNumeral(shown)
-          }
+          // COUNTER: the numeral rolls through EVERY year between the cut's
+          // endpoints — decelerating on the brake cut so the digits land
+          // like a slot machine instead of jumping 1947→1941→…
+          const yFrom = yearNums[cut]!
+          const yTo = yearNums[cut + 1]!
+          const ease = cut === cuts - 1 ? 1 - (1 - local) * (1 - local) : local
+          showYear(String(Math.round(yFrom + (yTo - yFrom) * ease)))
           state = {
             from: cut,
             to: cut + 1,
@@ -161,18 +192,25 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
             flash: Math.max(0, 1 - local * 3) * Math.min(1, speed + 0.3),
             time,
           }
+          setCssVars(speed)
         } else {
-          // Brake complete — sharpen onto the oldest year.
+          // Brake complete — sharpen onto the oldest year with a warm bloom.
           const p = Math.min(1, (t - ARRIVE_MS - rewindTotal) / SETTLE_MS)
+          showYear(usableYears[cuts]!)
+          if (!landedShown) {
+            landedShown = true
+            setLanded(true)
+          }
           state = {
             from: cuts,
             to: cuts,
             progress: 0,
             speed: 0,
             blur: 0.3 * (1 - p),
-            flash: 0,
+            flash: 0.75 * (1 - p) * (1 - p),
             time,
           }
+          setCssVars(0)
         }
 
         gl.setState(state)
@@ -206,9 +244,9 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
     >
       <canvas ref={canvasRef} className="rw-canvas" width={1920} height={1080} />
       <div className="rw-scrim" />
-      <span key={numeral} className="rw-year" aria-hidden="true">
-        {numeral}
-      </span>
+      <div className="rw-bar rw-bar--top" />
+      <div className="rw-bar rw-bar--bottom" />
+      <OdometerYear value={numeral} landed={landed} />
     </div>
   )
 }
