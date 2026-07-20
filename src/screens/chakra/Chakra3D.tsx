@@ -476,33 +476,33 @@ const FLAG_ANIM_MS = 3200 // full-timeline duration, scaled by remaining distanc
 const POLE_X = -92
 const POLE_TOP = 84
 const POLE_LEN = 520
-/* ONE PERSISTENT CANVAS for all three tabs (user 2026-07-20: the chakra
-   must never disappear across pill switches). The box is 961×1608 at stage
-   (449,183) — the union of the old Values square and the flag hero slot —
-   and every camera below is re-derived so each tab's framing lands on the
-   SAME stage pixels as the old per-tab canvases:
-     Values wheel  stage (964.4, 626.4) r 360.4   (old 910² box @ z=322)
-     Design wheel  stage (957.3, 627.9) r 313.4   (old DIMS_CAM z=370)
-     Flag opening  stage (962.6, 702.0) r 339.8   (old 961×1436 @ z=537)
-   Derivation: canvas centre stage (929.5, 987); px/unit s = 1608/(2·tan20°·z);
+/* ONE PERSISTENT FULL-STAGE CANVAS for all three tabs (user 2026-07-20:
+   the chakra must never disappear across pill switches, and its light must
+   fill the WHOLE screen — no clipping, no edge feathering). The canvas is
+   exactly the 1920×1080 stage, so the god-ray light simply ends at the
+   screen like any real light would. Every camera below is re-derived so
+   each tab's framing lands on the SAME stage pixels as always:
+     Values wheel  stage (964.4, 626.4) r 360.4
+     Design wheel  stage (957.3, 627.9) r 313.4
+     Flag opening  stage (962.6, 702.0) r 339.8
+   Derivation: canvas centre stage (960, 540); px/unit s = 1080/(2·tan20°·z);
    camera+target share xy (axis through them), a world point (x,y) lands at
    canvasCentre + ((x−tx)·s, −(y−ty)·s). Tab switches TWEEN between these. */
-const WHEEL_CAM = new THREE.Vector3(5.1, -89.5, 567)
-const WHEEL_TGT = new THREE.Vector3(5.1, -89.5, 0)
+const WHEEL_CAM = new THREE.Vector3(12.88, 25.16, 380.8)
+const WHEEL_TGT = new THREE.Vector3(12.88, 25.16, 0)
 /* Design framing: pulled back so the callout ring (~1.28× rim) clears the
-   stats card and the canvas edge-feather. */
-const DIMS_CAM = new THREE.Vector3(5.8, -103, 652)
-const DIMS_TGT = new THREE.Vector3(5.8, -103, 0)
+   stats card. */
+const DIMS_CAM = new THREE.Vector3(14.8, 28.94, 437.9)
+const DIMS_TGT = new THREE.Vector3(14.8, 28.94, 0)
 /* Flag HOME: the docking timeline's wheel-side framing (also the initial
-   camera if a scene is created directly in flag mode). Sized ~95% of the
-   Values wheel — the slot's visible band can't fit ⌀718 without clipping. */
-const FLAG_CAM_HOME = new THREE.Vector3(-9, -77.6, 601)
-const FLAG_TGT_HOME = new THREE.Vector3(-9, -77.6, 0)
-/* DOCK: same apparent flag size/position as the old 961×1436 framing —
-   s preserved (2.759 px/unit → z 801), y raised 86px/s to compensate the
-   taller canvas's centre shift. */
-const FLAG_CAM_DOCK = new THREE.Vector3(30, -88.8, 801)
-const FLAG_TGT_DOCK = new THREE.Vector3(-30, -116.8, 0)
+   camera if a scene is created directly in flag mode). ~95% of the Values
+   wheel, seated a touch lower — the shrink-to-dock owns it from there. */
+const FLAG_CAM_HOME = new THREE.Vector3(-0.71, 44.1, 403.9)
+const FLAG_TGT_HOME = new THREE.Vector3(-0.71, 44.1, 0)
+/* DOCK: same apparent flag size/stage position as ever — s preserved at
+   2.759 px/unit (z 537.7), target shifted for the full-stage centre. */
+const FLAG_CAM_DOCK = new THREE.Vector3(41.05, 73.2, 537.7)
+const FLAG_TGT_DOCK = new THREE.Vector3(-18.95, 45.2, 0)
 const CHAKRA_HOME_POS = new THREE.Vector3(0, 0, 0)
 const GLOW_COLOR = new THREE.Color(1.0, 0.82, 0.45)
 
@@ -616,7 +616,10 @@ function createChakraScene(
   entranceRoll: boolean,
 ): SceneHandle {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  // Full-stage canvas: cap dpr at 1.5 to bound the per-frame cost (the kiosk
+  // panel is dpr 1 and unaffected; only hi-dpi dev machines trade a little
+  // supersampling for headroom).
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
   renderer.setSize(width, height)
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   // Matched against figma-refs/chakra-values.png: lit faces read rich
@@ -782,11 +785,12 @@ function createChakraScene(
       invView: { value: new THREE.Matrix4() },
       camPos: { value: new THREE.Vector3() },
       sunDir: { value: new THREE.Vector3() }, // toward the sun
-      strength: { value: 0.4 }, // user-tuned (-20%)
-      // vec2: per-axis dissolve widths — the union canvas is 961×1608, so
-      // one fraction can't serve both axes (a horizontal width that kills
-      // the edge seam would eat the crown shafts vertically).
-      edgeFade: { value: new THREE.Vector2(0.2, 0.06) },
+      // Trimmed from 0.4 when the canvas went full-stage: the same strength
+      // over 2.5× the area over-exposed the frame (virtue panel washed out).
+      strength: { value: 0.33 },
+      // Near-zero: the canvas IS the screen now, so light running off the
+      // edge is natural — no seam to hide (user: no clipping anywhere).
+      edgeFade: { value: new THREE.Vector2(0.02, 0.02) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -805,7 +809,7 @@ function createChakraScene(
       uniform vec2 edgeFade;
       // march segment = ray ∩ sphere around the wheel's air volume
       const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
-      const float VOL_R = 230.0;
+      const float VOL_R = 320.0; // reaches the full-stage corners (~1250px)
       const int STEPS = 20;
       // three.js RGBA depth packing (shadow + depth maps are RGBA-packed)
       const float UnpackDownscale = 255.0 / 256.0;
@@ -892,8 +896,8 @@ function createChakraScene(
       tRay: { value: rayRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
-      boost: { value: 1.2 },
-      edgeFade: { value: new THREE.Vector2(0.22, 0.07) },
+      boost: { value: 1.05 }, // trimmed with strength for the full-stage field
+      edgeFade: { value: new THREE.Vector2(0.02, 0.02) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -1155,7 +1159,7 @@ function createChakraScene(
   let buildT0 = 0
   let assemblyRefs: AssemblyRefs | null = null
   let buildPaused = false
-  const RAY_STRENGTH_BASE = 0.4 // matches rayMat's authored uniform
+  const RAY_STRENGTH_BASE = 0.33 // matches rayMat's authored uniform
 
   function makeAssemblyRefs(): AssemblyRefs {
     return {
@@ -1347,14 +1351,8 @@ function createChakraScene(
     // CREATED into dims (dev scrub / direct mounts) — live pill switches
     // keep the finished wheel and fade the callouts instead.
     if (on && !bootDone && modeState !== 'flag') startAssembly()
-    // The ray field must die before the canvas edge or it prints its rectangle
-    // on the plate. Design's camera is pulled back (DIMS_CAM), so its wheel is
-    // smaller and can afford a wide dissolve; Values sits closer (WHEEL_CAM)
-    // and a wide fade would eat the sun shafts hugging the rim. Tuned per
-    // framing rather than one global compromise. (Fractions of the 961×1608
-    // union canvas — smaller than the old per-tab values.)
-    ;(rayMat.uniforms['edgeFade']!.value as THREE.Vector2).set(on ? 0.24 : 0.2, on ? 0.08 : 0.06)
-    ;(streakMat.uniforms['edgeFade']!.value as THREE.Vector2).set(on ? 0.26 : 0.22, on ? 0.09 : 0.07)
+    // (No per-framing edge dissolve anymore — the canvas is the full stage,
+    // so the light legitimately runs to the screen edge on every tab.)
   }
 
   /* -------------------------------------------------- flag building -- */

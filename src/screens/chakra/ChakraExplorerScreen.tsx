@@ -541,8 +541,8 @@ export function ChakraExplorerScreen() {
         style={intro === 'wait' || intro === 'roll' ? { transform: 'translateX(-1500px)' } : undefined}
       >
         <LazyChakra3D
-          width={961}
-          height={1608}
+          width={1920}
+          height={1080}
           mode={visTab === 'flag' ? 'flag' : 'wheel'}
           dims={visTab === 'design'}
           spin={visTab === 'values'}
@@ -565,9 +565,9 @@ export function ChakraExplorerScreen() {
 
       <HomeButton
         onClick={() => navigate('/')}
-        style={{ position: 'absolute', left: 1491, top: 36 }}
+        style={{ position: 'absolute', left: 1491, top: 36, zIndex: 2 }}
       />
-      <QuickAccessPill style={{ position: 'absolute', left: 1626, top: 36 }} />
+      <QuickAccessPill style={{ position: 'absolute', left: 1626, top: 36, zIndex: 2 }} />
 
       <TabPills
         className="ck-tabs"

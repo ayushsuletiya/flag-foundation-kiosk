@@ -263,40 +263,29 @@
 }
 
 /* ---- stacking ------------------------------------------------------ */
-/* The transparent 910px wheel canvas overlaps the tab row and the panel's
-   left edge; interactive chrome must sit above it or it eats their taps. */
+/* The transparent wheel canvas now covers the WHOLE stage; every
+   interactive element must sit above it or it eats their taps. (The light
+   deliberately glows OVER non-interactive text — it is in front.) */
 
 .ck-tabs,
 .ck-panel,
 .ck-dots-pill,
+.ck-card,
 .ck-cta {
   z-index: 2;
 }
 
 /* ---- wheel stage --------------------------------------------------- */
 
-/* THE persistent wheel canvas — one box serving all three tabs (union of
-   the old Values square and the flag hero slot; bottom runs off-stage so
-   the flag pole exits the frame). Cameras in Chakra3D are derived for this
-   exact box — do not move/resize it without re-deriving them. */
+/* THE persistent wheel canvas — the FULL 1920×1080 stage (user 2026-07-20:
+   no clipping, the light fills the whole screen on every tab; running off
+   the screen edge is what real light does). No mask, no edge feather.
+   Cameras in Chakra3D are derived for this exact box — do not move/resize
+   it without re-deriving them. */
 .ck-wheel-stage {
   position: absolute;
-  left: 449px;
-  top: 183px;
-  width: 961px;
-  height: 1608px;
+  inset: 0;
   z-index: 1;
-  /* Feather the canvas box edges to transparent so the additive god-ray field
-     can never print a straight seam where it meets the background plate.
-     ~86px left/right (the sun shafts stream far sideways — user saw them
-     clip at the box edge), ~64px top; none at the bottom (off-stage). The
-     wheel's left rim sits 155px in, safely clear of the feather. */
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%),
-    linear-gradient(to bottom, transparent 0, #000 4%, #000 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%),
-    linear-gradient(to bottom, transparent 0, #000 4%, #000 100%);
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
 }
 
 /* Soft ground contact shadow under the wheel (Figma 795:5835). Persistent
