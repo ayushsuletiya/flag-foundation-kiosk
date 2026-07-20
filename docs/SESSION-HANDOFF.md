@@ -5,6 +5,34 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-20 late — Ashok Chakra rolling entrance (category intro #2)
+- `350f0b8` **/chakra section intro**: arriving from OUTSIDE (navTrace-gated,
+  same rule as the History rewind) → sunset background alone for 750ms → the
+  finished wheel ROLLS in from off-stage left over 1.8s → chrome rises in
+  staggered (620ms, title→tabs→left column→panel). Mechanics: Chakra3D
+  `entrance="roll"` — the scene derives BOTH the `.ck-wheel` box translateX
+  (reported via `onRollFrame`; translating the BOX keeps its edge-feather
+  mask riding along) and `chakra.rotation.z` from ONE remaining-travel
+  number over the wheel's screen radius (359px), so it rolls without
+  slipping. easeOutBack settle (+33px overshoot ≈ 5° rock-back). God-rays
+  held off while the wheel is displaced (their sun would sit off the
+  plate's real sun) and reignite over 700ms on landing; in-scene contact
+  shadows travel WITH the wheel. Any touch skips (`.ck-intro-touch` overlay
+  → finishRoll snap); parent 7s watchdog reveals chrome even if the chunk/
+  WebGL dies or rAF is suspended; classes drop at 'done' so the rise-in can
+  never fight interactive transforms. In-section tab hops never replay
+  (tabs are state, not routes). Dev QA: `window.__chakraRollScrub(p)`
+  renders frozen roll frames even on hidden pages. Verified in preview:
+  hold/skip/watchdog paths, frames at p=0/.08/.35/.70/1, Design/Flag tabs
+  and Values-return unregressed, typecheck clean. Full-motion pacing still
+  needs the USER's visible Chrome (pane runs hidden → rAF suspended).
+  Pacing knobs: ROLL_HOLD_MS 750 / ROLL_MS 1800 / ROLL_BACK 0.8 (Chakra3D).
+  NOTE: an ultracode review workflow was attempted but both agents hit the
+  session usage limit — no external review ran; verification above is ours.
+- Category-intro track status: History ✓ (rewind) · Chakra ✓ (roll-in) ·
+  Monumental already opens with intro.mp4 · Symbols has a standing NO-INTRO
+  user decision (2026-07-19) — ASK before adding one there.
+
 ### 2026-07-20 evening — history backgrounds v3, rewind intro, v0.2.0 build
 Commits, in order:
 - `c67d6d2` chakra page entrance smoothed (DynamicBackground fade-in for ALL
