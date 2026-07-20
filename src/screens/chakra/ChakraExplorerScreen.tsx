@@ -524,6 +524,13 @@ export function ChakraExplorerScreen() {
     >
       <div className="ck-bg" style={{ overflow: 'hidden' }}>
         <DynamicBackground base={BG_BASE} />
+        {/* Progressive blur: a blurred copy masked to die out by the ground
+            (see .ck-bg-blur). Probes are cached, so the second mount costs
+            no extra requests. (A bg.mp4 drop-in would double video decode —
+            the chakra folder convention is a bg.png still.) */}
+        <div className="ck-bg-blur" aria-hidden="true">
+          <DynamicBackground base={BG_BASE} />
+        </div>
       </div>
       <div className="ck-scrim" />
 

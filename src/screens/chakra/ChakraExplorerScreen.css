@@ -39,14 +39,27 @@
   width: 1920px;
   height: 1080px;
   object-fit: cover;
-  /* Figma's scrim carries backdrop-blur 13px; blur the static plate instead
-     (one-off raster, compositor-cached) — full-screen backdrop-filter is
-     banned by the perf guard. Slight scale hides the blur's edge bleed.
-     The function list matches the intro's bare state exactly (blur/
-     brightness/saturate) — mismatched filter lists don't interpolate. */
-  filter: blur(3.5px) brightness(1) saturate(1);
+  /* The function list matches the intro's bare state exactly (brightness/
+     saturate) — mismatched filter lists don't interpolate. */
+  filter: brightness(1) saturate(1);
   transform: scale(1.01);
   transition: filter 750ms ease;
+}
+
+/* PROGRESSIVE blur (user 2026-07-20): a blurred copy of the same plate sits
+   over the sharp one, gradient-masked so the sky carries the full softness
+   and the blur dies to 0 by the ground — the sea/shore stays crisp. Both
+   copies are the SAME image, so the blur's edge bleed lands on identical
+   sharp pixels and is invisible. Static one-off rasters, no backdrop-filter
+   (perf guard); the intro fades this layer's OPACITY (compositor-only)
+   instead of animating the filter. */
+.ck-bg-blur {
+  position: absolute;
+  inset: 0;
+  filter: blur(7px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 42%, transparent 80%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 42%, transparent 80%);
+  transition: opacity 750ms ease;
 }
 
 /* Figma scrim layer 795:5834 (flipped vertically → dark band at top).
@@ -154,7 +167,11 @@
 }
 
 .ck-screen.ck-intro-hold .ck-bg {
-  filter: blur(0px) brightness(1.14) saturate(1.06);
+  filter: brightness(1.14) saturate(1.06);
+}
+
+.ck-screen.ck-intro-hold .ck-bg-blur {
+  opacity: 0;
 }
 
 .ck-screen.ck-intro-hold .ck-scrim {
