@@ -100,12 +100,6 @@ export interface Chakra3DProps {
   onRollFrame?: (xPx: number) => void
   /** Rolling entrance settled (or was skipped) — reveal the chrome. */
   onRollDone?: () => void
-  /**
-   * True while the parent is switching to the Chakra-in-Flag tab: the wheel
-   * stands upright and squares to a spoke (HANDOFF_MS) so the flag scene's
-   * opening pose matches at the swap. Wheel-mode scenes only.
-   */
-  handoff?: boolean
   onSpokeTap?: (spoke: number) => void
   onBackgroundTap?: () => void
   className?: string
@@ -482,32 +476,33 @@ const FLAG_ANIM_MS = 3200 // full-timeline duration, scaled by remaining distanc
 const POLE_X = -92
 const POLE_TOP = 84
 const POLE_LEN = 520
-/* Camera endpoints re-derived for the 801×1197 hero slot (aspect 0.669, the
-   source framed a full window at 105,55,265 → 55,8,330). HOME frames the
-   full-size wheel just clear of the headline column; DOCK matches the static
-   flag-pole.png footprint — pole at ~32% of the box, cloth in the top third
-   (y 6–29% of the box), pole running off the bottom edge. */
-const WHEEL_CAM = new THREE.Vector3(0, 4, 322)
-const WHEEL_TGT = new THREE.Vector3(0, 0, 0)
-/* Design tab framing. The callout ring reaches ~1.28x the rim radius (the
-   ⌀7 × 24 chip is the far corner), which at WHEEL_CAM lands in the canvas
-   edge-feather and under the stats card. Pulling the camera back shrinks the
-   wheel and its callouts together — the drawing keeps its proportions and
-   gains ~50px of margin on every side. Values/Flag keep WHEEL_CAM. */
-const DIMS_CAM = new THREE.Vector3(0, 4, 370)
-/* HOME framing derived so the flag tab OPENS with the wheel close to the
-   Values wheel's apparent size — switching pills must not jump-cut to a
-   bigger, lower wheel (user 2026-07-20). Hard constraint: the hero slot's
-   visible band is stage y 355..1080 (725px), so a full Values-size wheel
-   (⌀718 at centre y 591) cannot fit without clipping the top rim. Chosen:
-   radius ≈340px (95% of Values) centred at stage ≈(964,700) — top rim 5px
-   inside the slot, and the immediate shrink-to-dock makes the slightly
-   smaller start read as the animation already breathing in. Slot 961×1436
-   at (449,355), z=537 → 3.67 px/unit. */
-const FLAG_CAM_HOME = new THREE.Vector3(-9, -101, 537)
-const FLAG_TGT_HOME = new THREE.Vector3(-9, -101, 0)
-const FLAG_CAM_DOCK = new THREE.Vector3(30, -120, 715)
-const FLAG_TGT_DOCK = new THREE.Vector3(-30, -148, 0)
+/* ONE PERSISTENT CANVAS for all three tabs (user 2026-07-20: the chakra
+   must never disappear across pill switches). The box is 961×1608 at stage
+   (449,183) — the union of the old Values square and the flag hero slot —
+   and every camera below is re-derived so each tab's framing lands on the
+   SAME stage pixels as the old per-tab canvases:
+     Values wheel  stage (964.4, 626.4) r 360.4   (old 910² box @ z=322)
+     Design wheel  stage (957.3, 627.9) r 313.4   (old DIMS_CAM z=370)
+     Flag opening  stage (962.6, 702.0) r 339.8   (old 961×1436 @ z=537)
+   Derivation: canvas centre stage (929.5, 987); px/unit s = 1608/(2·tan20°·z);
+   camera+target share xy (axis through them), a world point (x,y) lands at
+   canvasCentre + ((x−tx)·s, −(y−ty)·s). Tab switches TWEEN between these. */
+const WHEEL_CAM = new THREE.Vector3(5.1, -89.5, 567)
+const WHEEL_TGT = new THREE.Vector3(5.1, -89.5, 0)
+/* Design framing: pulled back so the callout ring (~1.28× rim) clears the
+   stats card and the canvas edge-feather. */
+const DIMS_CAM = new THREE.Vector3(5.8, -103, 652)
+const DIMS_TGT = new THREE.Vector3(5.8, -103, 0)
+/* Flag HOME: the docking timeline's wheel-side framing (also the initial
+   camera if a scene is created directly in flag mode). Sized ~95% of the
+   Values wheel — the slot's visible band can't fit ⌀718 without clipping. */
+const FLAG_CAM_HOME = new THREE.Vector3(-9, -77.6, 601)
+const FLAG_TGT_HOME = new THREE.Vector3(-9, -77.6, 0)
+/* DOCK: same apparent flag size/position as the old 961×1436 framing —
+   s preserved (2.759 px/unit → z 801), y raised 86px/s to compensate the
+   taller canvas's centre shift. */
+const FLAG_CAM_DOCK = new THREE.Vector3(30, -88.8, 801)
+const FLAG_TGT_DOCK = new THREE.Vector3(-30, -116.8, 0)
 const CHAKRA_HOME_POS = new THREE.Vector3(0, 0, 0)
 const GLOW_COLOR = new THREE.Color(1.0, 0.82, 0.45)
 
@@ -602,7 +597,6 @@ interface SceneHandle {
   setMode(mode: 'wheel' | 'flag'): void
   startRoll(): void
   finishRoll(): void
-  startDockHandoff(): void
   dispose(): void
 }
 
@@ -1116,6 +1110,40 @@ function createChakraScene(
   let selectedIdx: number | null = null // 0-based; the loop eases this spoke to 12 o'clock
   let dimsOn = false
   let dimGroup: THREE.Group | null = null
+  /** Callout fade 0..1 — live tab switches fade the dims in/out (300ms). */
+  let dimsFade = 0
+
+  /* ------------------------------------------------ camera tweening -- */
+  // The scene is PERSISTENT across the section's tabs — pill switches move
+  // the camera between framings live instead of remounting, so the wheel
+  // never blinks (user 2026-07-20). Inactive while the flag timeline owns
+  // the camera.
+  let bootDone = false // first frame rendered — before that, snaps are free
+  let camTween: {
+    c0: THREE.Vector3
+    c1: THREE.Vector3
+    g0: THREE.Vector3
+    g1: THREE.Vector3
+    start: number
+    dur: number
+  } | null = null
+
+  function tweenCamera(toCam: THREE.Vector3, toTgt: THREE.Vector3, dur = 550): void {
+    if (!bootDone) {
+      camera.position.copy(toCam)
+      camTarget.copy(toTgt)
+      camera.lookAt(camTarget)
+      return
+    }
+    camTween = {
+      c0: camera.position.clone(),
+      c1: toCam.clone(),
+      g0: camTarget.clone(),
+      g1: toTgt.clone(),
+      start: performance.now(),
+      dur,
+    }
+  }
 
   /* ------------------------------------------------ assembly state -- */
   // buildP === 1 means "no sequence running" — the resting pose. Values and
@@ -1137,7 +1165,7 @@ function createChakraScene(
       camera,
       camTarget,
       restCam: DIMS_CAM,
-      restTgt: WHEEL_TGT,
+      restTgt: DIMS_TGT,
       restLean: { x: LEAN_X, y: LEAN_Y, posY: 3 },
       dimGroup,
     }
@@ -1204,29 +1232,6 @@ function createChakraScene(
     lean.rotation.set(LEAN_X, LEAN_Y, 0)
   }
 
-  /* ------------------------------------------------- dock handoff -- */
-  // Switching to the Chakra-in-Flag tab must read as the SAME wheel
-  // carrying over (user 2026-07-20): while the parent glides the wheel box
-  // toward the flag scene's opening spot, this stands the wheel upright
-  // (the flag scene opens world-aligned) and squares it to the nearest
-  // spoke (24-fold symmetry ⇒ rotation 0 is indistinguishable), so the
-  // 1-frame scene swap lands on an identical pose.
-  const HANDOFF_MS = 320
-  let handoffT0 = -1
-  let handoffLean = { x: LEAN_X, y: LEAN_Y }
-  let handoffRot = { from: 0, to: 0 }
-
-  function startDockHandoff(): void {
-    if (handoffT0 >= 0 || modeState !== 'wheel') return
-    handoffT0 = performance.now()
-    handoffLean = { x: lean.rotation.x, y: lean.rotation.y }
-    handoffRot = {
-      from: chakra.rotation.z,
-      to: Math.round(chakra.rotation.z / SPOKE_STEP) * SPOKE_STEP,
-    }
-    spinVel = 0
-    if (dimGroup !== null) dimGroup.visible = false // callouts sit out the glide
-  }
 
   /* ------------------------------------------------- flag-mode state -- */
   let modeState: 'wheel' | 'flag' = 'wheel'
@@ -1308,30 +1313,45 @@ function createChakraScene(
   }
 
   function setDims(on: boolean) {
-    const wasOn = dimsOn
+    if (on === dimsOn && bootDone) return
     dimsOn = on
     if (on && dimGroup === null) {
       dimGroup = buildDimGroup()
+      // Callouts fade in/out on live switches — mark every material
+      // transparent once so the loop can drive their opacity.
+      dimGroup.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.Material | undefined
+        if (m !== undefined) {
+          m.transparent = true
+          if (bootDone) m.opacity = 0 // live switch: fade up from nothing
+        }
+      })
+      if (bootDone) {
+        dimsFade = 0
+        dimGroup.visible = false
+      } else {
+        dimsFade = 1 // boot-into-dims: the assembly sequence owns the entrance
+      }
       chakra.add(dimGroup) // parented to the wheel — callouts rotate with it
     }
-    if (dimGroup !== null) dimGroup.visible = on && modeState !== 'flag' // dims never show in flag mode
     // Reframe so the callout ring clears the canvas edge-feather and the
-    // stats card. Flag mode owns the camera outright — never fight it.
-    if (modeState !== 'flag') {
-      camera.position.copy(on ? DIMS_CAM : WHEEL_CAM)
-      camTarget.copy(WHEEL_TGT)
-      camera.lookAt(camTarget)
+    // stats card. Live switches GLIDE (persistent scene — the wheel must
+    // never blink); flag mode owns the camera outright — never fight it.
+    if (modeState !== 'flag' && flagAnim === null) {
+      tweenCamera(on ? DIMS_CAM : WHEEL_CAM, on ? DIMS_TGT : WHEEL_TGT)
     }
-    // Entering dims plays the build. Guarded on the transition so the
-    // `useEffect([dims])` re-call on the same value cannot restart it.
-    if (on && !wasOn && modeState !== 'flag') startAssembly()
+    // The build-from-nothing assembly entrance only plays when a scene is
+    // CREATED into dims (dev scrub / direct mounts) — live pill switches
+    // keep the finished wheel and fade the callouts instead.
+    if (on && !bootDone && modeState !== 'flag') startAssembly()
     // The ray field must die before the canvas edge or it prints its rectangle
     // on the plate. Design's camera is pulled back (DIMS_CAM), so its wheel is
     // smaller and can afford a wide dissolve; Values sits closer (WHEEL_CAM)
     // and a wide fade would eat the sun shafts hugging the rim. Tuned per
-    // framing rather than one global compromise.
-    rayMat.uniforms['edgeFade']!.value = on ? 0.30 : 0.16
-    streakMat.uniforms['edgeFade']!.value = on ? 0.32 : 0.20
+    // framing rather than one global compromise. (Fractions of the 961×1608
+    // union canvas — smaller than the old per-tab values.)
+    rayMat.uniforms['edgeFade']!.value = on ? 0.20 : 0.12
+    streakMat.uniforms['edgeFade']!.value = on ? 0.22 : 0.14
   }
 
   /* -------------------------------------------------- flag building -- */
@@ -1509,6 +1529,12 @@ function createChakraScene(
   function applyFlagTimeline(p: number): void {
     if (flagGroup === null) return
     const sub = (a: number, b: number) => S((p - a) / (b - a))
+    // World-align the wheel as the timeline opens (and back on reverse):
+    // the kiosk lean pose eases out over p 0..0.14 instead of snapping —
+    // with the persistent scene the switch is watched live.
+    const lw = 1 - sub(0, 0.14)
+    lean.position.set(14 * lw, 3 * lw, 0)
+    lean.rotation.set(LEAN_X * lw, LEAN_Y * lw, 0)
     /* No-overlap choreography — the chakra and the full-size flag never share
        the stage:
          phase 1 (0.00–0.50)  chakra shrinks IN PLACE while the camera pulls back
@@ -1555,12 +1581,19 @@ function createChakraScene(
     dragging = false
     spinVel = 0
     setSelected(null)
-    if (dimGroup !== null) dimGroup.visible = dimsOn && !v
+    if (dimGroup !== null && v) {
+      // Callouts never show in flag mode; leaving flag lets the loop's fade
+      // bring them back if the destination tab is Design.
+      dimGroup.visible = false
+      dimsFade = 0
+      dimGroup.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.Material | undefined
+        if (m !== undefined) m.opacity = 0
+      })
+    }
+    camTween = null // the flag timeline owns the camera from here
     if (v) {
       buildFlag()
-      // world-align the wheel: the dock choreography works in cloth coords
-      lean.position.set(0, 0, 0)
-      lean.rotation.set(0, 0, 0)
       // every entry starts from the same calm baked pose — never a wild mid-wave
       if (bakedCloth !== null) {
         for (let i = 0; i < clothPos.length; i++) {
@@ -1596,21 +1629,24 @@ function createChakraScene(
       to: v ? 1 : 0,
       t0: performance.now(),
       dur: Math.max(1, FLAG_ANIM_MS * Math.abs((v ? 1 : 0) - flagP)),
-      // camera endpoints keyed to the timeline (P0 = chakra side, P1 = flag side)
-      // so the camera finishes moving BEFORE the drift/merge begins
-      camP0: v ? camera.position.clone() : FLAG_CAM_HOME.clone(),
+      // camera endpoints keyed to the timeline (P0 = chakra side, P1 = flag
+      // side) so the camera finishes moving BEFORE the drift/merge begins.
+      // Reverse returns straight to the CURRENT tab's wheel framing — the
+      // persistent scene must land exactly where restoreWheelPose settles.
+      camP0: v ? camera.position.clone() : (dimsOn ? DIMS_CAM : WHEEL_CAM).clone(),
       camP1: v ? FLAG_CAM_DOCK.clone() : camera.position.clone(),
-      tgtP0: v ? camTarget.clone() : FLAG_TGT_HOME.clone(),
+      tgtP0: v ? camTarget.clone() : (dimsOn ? DIMS_TGT : WHEEL_TGT).clone(),
       tgtP1: v ? FLAG_TGT_DOCK.clone() : camTarget.clone(),
     }
   }
 
-  /** Reverse timeline finished — put the wheel back on its kiosk pedestal. */
+  /** Reverse timeline finished — put the wheel back on its kiosk pedestal.
+   * (The reverse camera lerp already ends on these values — see camP0.) */
   function restoreWheelPose(): void {
     lean.position.set(14, 3, 0)
     lean.rotation.set(LEAN_X, LEAN_Y, 0)
     camera.position.copy(dimsOn ? DIMS_CAM : WHEEL_CAM)
-    camTarget.copy(WHEEL_TGT)
+    camTarget.copy(dimsOn ? DIMS_TGT : WHEEL_TGT)
     camera.lookAt(camTarget)
     if (dimGroup !== null) dimGroup.visible = dimsOn
   }
@@ -1737,14 +1773,32 @@ function createChakraScene(
       lean.rotation.x = LEAN_X * e
       if (k >= 1) roll.leanDone = true
     }
-    // Dock handoff: stand upright + square to a spoke so the flag scene's
-    // opening pose matches this wheel exactly at the swap.
-    if (handoffT0 >= 0) {
-      const k = clamp01((now - handoffT0) / HANDOFF_MS)
+
+    // Live camera glide between tab framings (persistent scene). The flag
+    // timeline drives the camera itself — setMode cancels any tween.
+    if (camTween !== null) {
+      const k = clamp01((now - camTween.start) / camTween.dur)
       const e = easeInOutCubic(k)
-      lean.rotation.y = handoffLean.y * (1 - e)
-      lean.rotation.x = handoffLean.x * (1 - e)
-      chakra.rotation.z = handoffRot.from + (handoffRot.to - handoffRot.from) * e
+      camera.position.lerpVectors(camTween.c0, camTween.c1, e)
+      camTarget.lerpVectors(camTween.g0, camTween.g1, e)
+      camera.lookAt(camTarget)
+      if (k >= 1) camTween = null
+    }
+
+    // Dims callouts fade in/out on live switches (the build-from-nothing
+    // assembly stays reserved for scenes CREATED into dims).
+    if (dimGroup !== null && buildP >= 1) {
+      const target = dimsOn && modeState !== 'flag' ? 1 : 0
+      if (dimsFade !== target) {
+        const step = 16.7 / 300 // ~300ms at 60fps; time-based enough for a fade
+        dimsFade = clamp01(dimsFade + (target > dimsFade ? step : -step))
+        const fade = dimsFade
+        dimGroup.traverse((o) => {
+          const m = (o as THREE.Mesh).material as THREE.Material | undefined
+          if (m !== undefined) m.opacity = fade
+        })
+        dimGroup.visible = fade > 0
+      }
     }
 
     // Ground shadows: invisible while forming, 600ms ease-in once settled.
@@ -1754,7 +1808,7 @@ function createChakraScene(
     liveCatcher.visible = shadowRamp > 0
     contactShadow.material.opacity = shadowRamp
     contactShadow.visible = shadowRamp > 0
-    if (modeState === 'wheel' && flagAnim === null && !dragging && !rolling && handoffT0 < 0) {
+    if (modeState === 'wheel' && flagAnim === null && !dragging && !rolling) {
       // Rest pose: selected spoke at 12 o'clock beats dims-upright beats idle.
       if (buildP >= 1) {
         const goal = selectedIdx !== null ? selectedIdx * SPOKE_STEP : dimsOn ? 0 : null
@@ -1805,6 +1859,7 @@ function createChakraScene(
         halo.rotation.copy(selected.rotation)
       }
     }
+    bootDone = true
     renderer.render(scene, camera)
     // sun shafts through the spokes — wheel framing only (flag mode has
     // its own choreography and no visible sun). Held OFF while the rolling
@@ -1987,7 +2042,6 @@ function createChakraScene(
     setMode,
     startRoll,
     finishRoll,
-    startDockHandoff,
     dispose,
   }
 }
@@ -2006,7 +2060,6 @@ export default function Chakra3D({
   entrance = 'none',
   onRollFrame,
   onRollDone,
-  handoff = false,
   onSpokeTap,
   onBackgroundTap,
   className,
@@ -2018,8 +2071,8 @@ export default function Chakra3D({
   const h = height ?? size
 
   // Live prop mirrors so the imperative scene always sees current values.
-  const liveRef = useRef({ mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, handoff, onSpokeTap, onBackgroundTap })
-  liveRef.current = { mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, handoff, onSpokeTap, onBackgroundTap }
+  const liveRef = useRef({ mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, onSpokeTap, onBackgroundTap })
+  liveRef.current = { mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, onSpokeTap, onBackgroundTap }
 
   useEffect(() => {
     const host = hostRef.current
@@ -2081,11 +2134,6 @@ export default function Chakra3D({
     if (entrance === 'roll') sceneRef.current?.startRoll()
     else if (entrance === 'none') sceneRef.current?.finishRoll()
   }, [entrance])
-
-  // Parent is gliding this wheel toward the Chakra-in-Flag opening pose.
-  useEffect(() => {
-    if (handoff) sceneRef.current?.startDockHandoff()
-  }, [handoff])
 
   return (
     <div

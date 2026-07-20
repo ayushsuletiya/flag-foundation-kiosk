@@ -131,18 +131,12 @@ interface ValuesTabProps {
   virtues: ChakraVirtue[]
   spoke: number | null
   onSelect: (spoke: number | null) => void
-  /** Section entrance: 'hold' = wheel waits off-stage, 'roll' = rolling in. */
-  entrance: 'hold' | 'roll' | 'none'
-  onRollDone: () => void
-  /** Switching to Chakra in Flag: the wheel squares up for the pose match. */
-  handoff: boolean
 }
 
-function ValuesTab({ virtues, spoke, onSelect, entrance, onRollDone, handoff }: ValuesTabProps) {
+// The 3D wheel itself is NOT here — one persistent Chakra3D lives in the
+// screen root and survives every pill switch (the chakra never disappears).
+function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
   const panelRef = useRef<HTMLDivElement | null>(null)
-  // The scene drives this box during the rolling entrance (onRollFrame) —
-  // translating the BOX keeps its edge-feather mask travelling with the wheel.
-  const wheelRef = useRef<HTMLDivElement | null>(null)
   const [page, setPage] = useState(0)
   const pageCount = Math.max(1, Math.ceil(virtues.length / ROWS_PER_PAGE))
 
@@ -226,32 +220,6 @@ function ValuesTab({ virtues, spoke, onSelect, entrance, onRollDone, handoff }: 
         })()
       )}
 
-      {/* Center — interactive 3D wheel over its ground shadow */}
-      <div className="ck-ground-shadow" />
-      <div
-        ref={wheelRef}
-        className="ck-wheel"
-        // Off-stage from the FIRST commit while the entrance is due — the
-        // scene's own start pose (-1420px) lands with its first frame and
-        // both values keep the box fully past the stage's left edge.
-        style={entrance !== 'none' ? { transform: 'translateX(-1500px)' } : undefined}
-      >
-        <LazyChakra3D
-          size={910}
-          selectedSpoke={spoke}
-          spin
-          interactive
-          entrance={entrance}
-          onRollFrame={(x) => {
-            wheelRef.current?.style.setProperty('transform', `translateX(${x.toFixed(2)}px)`)
-          }}
-          onRollDone={onRollDone}
-          handoff={handoff}
-          onSpokeTap={(s) => onSelect(s)}
-          onBackgroundTap={() => onSelect(null)}
-        />
-      </div>
-
       {/* Right — glass panel with the 24-virtue scroll list */}
       <div ref={panelRef} className="ck-panel">
         <ScrollList
@@ -316,11 +284,9 @@ interface DesignTabProps {
   colorCode: string
   spokeCount: string
   meaning: string
-  /** Switching to Chakra in Flag: the wheel squares up for the pose match. */
-  handoff: boolean
 }
 
-function DesignTab({ colorCode, spokeCount, meaning, handoff }: DesignTabProps) {
+function DesignTab({ colorCode, spokeCount, meaning }: DesignTabProps) {
   return (
     <>
       <div className="ck-design-headline ck-gold-text">
@@ -333,14 +299,7 @@ function DesignTab({ colorCode, spokeCount, meaning, handoff }: DesignTabProps) 
       {/* Anchors the otherwise-empty lower half of the left column. */}
       <p className="ck-design-meaning">{meaning}</p>
 
-      {/* Center — dims mode: the wheel carries its own construction callouts
-          (dashed IS1 circles, 15° wedge, leader lines, chip sprites) inside
-          the 3D scene, so they track the wheel as visitors drag-spin it.
-          Starts upright, turntable off — like the source build's dims view. */}
-      <div className="ck-ground-shadow ck-ground-shadow--dims" />
-      <div className="ck-wheel">
-        <LazyChakra3D size={910} spin={false} interactive={false} dims handoff={handoff} />
-      </div>
+      {/* The persistent wheel (screen root) carries the dims callouts here. */}
 
       {/* Right — stats card (Color code / Spokes) */}
       <div className="ck-card ck-card--stats">
@@ -398,14 +357,7 @@ function FlagTab({ headline, facts }: FlagTabProps) {
       <div className="ck-underline" style={{ left: 109, top: 461, width: 332 }} />
       <p className="ck-flag-intro">{TIRANGA_INTRO}</p>
 
-      {/* Live hero — the source build's "See chakra in flag" scene: the wheel
-          shrinks, docks into the white band of the Tiranga (⌀185 = 92.5% of
-          the band) and the flag waves on. Remounts on every tab entry, so the
-          docking animation replays each visit. 961x1436 = the original
-          801x1197 slot scaled 1.2x (same aspect → same camera framing). */}
-      <div className="ck-flag-hero">
-        <LazyChakra3D mode="flag" width={961} height={1436} spin={false} interactive={false} />
-      </div>
+      {/* The persistent wheel (screen root) plays the docking scene here. */}
 
       <div className="ck-card ck-card--symbolism">
         <div className="ck-symbolism-title">Symbolism of Colours</div>
@@ -458,9 +410,9 @@ export function ChakraExplorerScreen() {
   // immediately. Scenes stay sequential (old disposes before new mounts).
   const [leaveTo, setLeaveTo] = useState<TabId | null>(null)
   const leaveTimer = useRef<number | undefined>(undefined)
-  // Into Chakra in Flag the wheel doesn't leave at all: the box GLIDES to
-  // the flag scene's opening spot (CSS ck-wheel-to-flag-*) while the scene
-  // squares the wheel up (handoff prop) — the swap lands on the same pose.
+  // The wheel itself never leaves — the persistent scene below starts its
+  // transition (camera glide / dock / undock) the moment the pill is tapped
+  // (visTab), while only the DOM content fades between tab bodies.
   const switchTab = (next: TabId) => {
     if (next === tab || leaveTo !== null) return
     setSpoke(null)
@@ -468,9 +420,15 @@ export function ChakraExplorerScreen() {
     leaveTimer.current = window.setTimeout(() => {
       setLeaveTo(null)
       setTab(next)
-    }, next === 'flag' ? 340 : 240)
+    }, 240)
   }
   useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+  /** The tab the SCENE should already be showing (destination during a leave). */
+  const visTab = leaveTo ?? tab
+
+  // The scene drives this box during the rolling entrance (onRollFrame) —
+  // translating the BOX keeps its edge-feather mask travelling with the wheel.
+  const wheelRef = useRef<HTMLDivElement | null>(null)
 
   // Section entrance (user 2026-07-20): arriving from OUTSIDE /chakra, the
   // sunset background gets a beat alone, the finished wheel ROLLS in from
@@ -559,6 +517,47 @@ export function ChakraExplorerScreen() {
       </div>
       <div className="ck-scrim" />
 
+      {/* Ground shadow tracks the wheel's tab pose (values ↔ dims geometry
+          transitions via CSS; hidden under the flag scene). */}
+      <div
+        className={
+          visTab === 'flag'
+            ? 'ck-ground-shadow ck-ground-shadow--off'
+            : visTab === 'design'
+              ? 'ck-ground-shadow ck-ground-shadow--dims'
+              : 'ck-ground-shadow'
+        }
+      />
+
+      {/* THE wheel — one persistent scene for all three tabs. Pill switches
+          re-pose it live (camera tweens, dims fade, dock/undock timeline);
+          it must never unmount while the visitor is inside the section. */}
+      <div
+        ref={wheelRef}
+        className="ck-wheel-stage"
+        // Off-stage from the FIRST commit while the entrance is due — the
+        // scene's own start pose (-1420px) lands with its first frame and
+        // both values keep the box fully past the stage's left edge.
+        style={intro === 'wait' || intro === 'roll' ? { transform: 'translateX(-1500px)' } : undefined}
+      >
+        <LazyChakra3D
+          width={961}
+          height={1608}
+          mode={visTab === 'flag' ? 'flag' : 'wheel'}
+          dims={visTab === 'design'}
+          spin={visTab === 'values'}
+          interactive={visTab === 'values'}
+          selectedSpoke={spoke}
+          entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
+          onRollFrame={(x) => {
+            wheelRef.current?.style.setProperty('transform', `translateX(${x.toFixed(2)}px)`)
+          }}
+          onRollDone={reveal}
+          onSpokeTap={(s) => setSpoke(s)}
+          onBackgroundTap={() => setSpoke(null)}
+        />
+      </div>
+
       <h1 className="ck-title">
         <span className="ck-title-main">Ashok </span>
         <span className="ck-title-script">Chakra</span>
@@ -580,31 +579,11 @@ export function ChakraExplorerScreen() {
 
       <div
         key={tab}
-        className={
-          leaveTo === 'flag'
-            ? `ck-tab-body ck-tab-body--to-flag${tab === 'design' ? ' ck-from-design' : ''}`
-            : leaveTo !== null
-              ? 'ck-tab-body ck-tab-body--leave'
-              : 'ck-tab-body'
-        }
+        className={leaveTo !== null ? 'ck-tab-body ck-tab-body--leave' : 'ck-tab-body'}
       >
-        {tab === 'values' && (
-          <ValuesTab
-            virtues={virtues}
-            spoke={spoke}
-            onSelect={setSpoke}
-            entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
-            onRollDone={reveal}
-            handoff={leaveTo === 'flag'}
-          />
-        )}
+        {tab === 'values' && <ValuesTab virtues={virtues} spoke={spoke} onSelect={setSpoke} />}
         {tab === 'design' && (
-          <DesignTab
-            colorCode={colorCode}
-            spokeCount={spokeCount}
-            meaning={meaning}
-            handoff={leaveTo === 'flag'}
-          />
+          <DesignTab colorCode={colorCode} spokeCount={spokeCount} meaning={meaning} />
         )}
         {tab === 'flag' && <FlagTab headline={flagHeadline} facts={facts} />}
       </div>

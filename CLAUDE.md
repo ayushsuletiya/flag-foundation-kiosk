@@ -60,6 +60,12 @@ screens never hardcode them.
   only the transient arrival border-trace + press touch-glow remain).
 - Chakra: virtue list order = Excel spoke order; DYK facts ≤135 chars; wheel drag-spins on its axle;
   Design tab uses 3D dims mode; Flag tab plays the chakra-docks-into-flag animation.
+- Chakra tabs share ONE PERSISTENT Chakra3D scene (user 2026-07-20: the wheel must never
+  disappear between pills). Canvas = .ck-wheel-stage 961×1608 at stage (449,183); every camera
+  constant in Chakra3D is derived for that exact box — do not move/resize it or remount the
+  scene per tab. Pill switches re-pose the scene live: camera TWEENS values↔design, dims
+  callouts FADE (the build-from-nothing assembly no longer plays on tab switches), and the
+  flag dock plays forward into the flag and in REVERSE back out of it.
 - Chakra section ENTRANCE (user 2026-07-20): arriving from outside /chakra → background alone
   (~750ms) → the finished wheel ROLLS in from stage left (Chakra3D entrance="roll": the scene
   drives the .ck-wheel box translateX AND the axle spin from one remaining-travel number, so it

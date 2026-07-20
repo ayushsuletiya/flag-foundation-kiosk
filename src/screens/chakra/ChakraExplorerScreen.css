@@ -153,10 +153,11 @@
 }
 
 /* Tab content lives one level down inside .ck-tab-body (the pill-switch
-   animation wrapper) — both rules below reach the chrome (direct children)
-   AND the tab body's children, always sparing the wheel box. */
-.ck-screen.ck-intro-hold > *:not(.ck-bg):not(.ck-scrim):not(.ck-tab-body):not(.ck-intro-touch),
-.ck-screen.ck-intro-hold .ck-tab-body > *:not(.ck-wheel) {
+   animation wrapper); the wheel stage is a DIRECT child and must stay
+   visible — it carries the rolling entrance itself. */
+.ck-screen.ck-intro-hold
+  > *:not(.ck-bg):not(.ck-scrim):not(.ck-tab-body):not(.ck-intro-touch):not(.ck-wheel-stage),
+.ck-screen.ck-intro-hold .ck-tab-body > * {
   opacity: 0;
   pointer-events: none;
 }
@@ -182,8 +183,8 @@
   opacity: 0;
 }
 
-.ck-screen.ck-intro-reveal > *:not(.ck-bg):not(.ck-scrim):not(.ck-tab-body),
-.ck-screen.ck-intro-reveal .ck-tab-body > *:not(.ck-wheel) {
+.ck-screen.ck-intro-reveal > *:not(.ck-bg):not(.ck-scrim):not(.ck-tab-body):not(.ck-wheel-stage),
+.ck-screen.ck-intro-reveal .ck-tab-body > * {
   animation: ck-info-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -241,50 +242,6 @@
   pointer-events: none;
 }
 
-/* Into Chakra in Flag the wheel must NOT leave (user 2026-07-20): the rest
-   of the content gets out of the way fast while the wheel box GLIDES to the
-   flag scene's opening pose — measured live via __chakraWheelScreen():
-     values wheel  stage (964.4, 626.4) r 360.4
-     design wheel  stage (957.3, 627.9) r 313.4
-     flag opening  stage (962.6, 702.0) r 339.8
-   Meanwhile the scene squares the wheel up (handoff prop: lean → 0, nearest
-   spoke to 12 o'clock), so the one-frame swap lands on an identical wheel. */
-.ck-tab-body--to-flag {
-  pointer-events: none;
-}
-
-.ck-tab-body--to-flag > *:not(.ck-wheel) {
-  animation: ck-tab-content-out 180ms ease both;
-}
-
-.ck-tab-body--to-flag .ck-wheel {
-  transform-origin: 509px 443px;
-  animation: ck-wheel-to-flag-values 340ms cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.ck-tab-body--to-flag.ck-from-design .ck-wheel {
-  transform-origin: 502px 445px;
-  animation-name: ck-wheel-to-flag-design;
-}
-
-@keyframes ck-tab-content-out {
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes ck-wheel-to-flag-values {
-  to {
-    transform: translate(-1.8px, 75.6px) scale(0.9428);
-  }
-}
-
-@keyframes ck-wheel-to-flag-design {
-  to {
-    transform: translate(5.3px, 74.1px) scale(1.0843);
-  }
-}
-
 @keyframes ck-tab-in {
   from {
     opacity: 0;
@@ -318,27 +275,31 @@
 
 /* ---- wheel stage --------------------------------------------------- */
 
-.ck-wheel {
+/* THE persistent wheel canvas — one box serving all three tabs (union of
+   the old Values square and the flag hero slot; bottom runs off-stage so
+   the flag pole exits the frame). Cameras in Chakra3D are derived for this
+   exact box — do not move/resize it without re-deriving them. */
+.ck-wheel-stage {
   position: absolute;
-  left: 455px;
+  left: 449px;
   top: 183px;
-  width: 910px;
-  height: 910px;
+  width: 961px;
+  height: 1608px;
   z-index: 1;
   /* Feather the canvas box edges to transparent so the additive god-ray field
-     can never print a straight seam where it meets the background plate. The
-     wheel sits ~17% in from the left / ~10% from the top (right is under the
-     panel, bottom runs off-stage), so a 7% edge feather never touches it.
-     Two linear masks intersected = a soft-edged rounded-off rectangle. */
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%),
-    linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%),
-    linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+     can never print a straight seam where it meets the background plate.
+     ~64px on left/right/top; none at the bottom (off-stage). */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 4%, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%),
+    linear-gradient(to bottom, transparent 0, #000 4%, #000 100%);
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
 }
 
-/* Soft ground contact shadow under the wheel (Figma 795:5835). */
+/* Soft ground contact shadow under the wheel (Figma 795:5835). Persistent
+   like the wheel — it GLIDES between the values/dims geometries as the
+   camera tweens, and fades out under the flag scene. */
 .ck-ground-shadow {
   position: absolute;
   left: 528px;
@@ -348,6 +309,16 @@
   background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(24, 10, 2, 0.55) 0%, rgba(24, 10, 2, 0) 72%);
   filter: blur(6px);
   pointer-events: none;
+  transition:
+    opacity 300ms ease,
+    left 550ms ease,
+    top 550ms ease,
+    width 550ms ease,
+    height 550ms ease;
+}
+
+.ck-ground-shadow--off {
+  opacity: 0;
 }
 
 /* Design tab pulls the camera back (DIMS_CAM), so the wheel's bottom tangent
@@ -811,14 +782,8 @@
    pole tip clears the "Chakra in Flag" tab pill instead of touching it
    (user fix 2026-07-20). pointer-events none: flag mode has no
    interactions. */
-.ck-flag-hero {
-  position: absolute;
-  left: 449px;
-  top: 355px;
-  width: 961px;
-  height: 1436px;
-  pointer-events: none;
-}
+/* (.ck-flag-hero removed — the flag scene renders in the persistent
+   .ck-wheel-stage; its DOCK camera reproduces the old slot's framing.) */
 
 .ck-symbolism-title {
   position: absolute;
