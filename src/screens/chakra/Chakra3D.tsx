@@ -81,12 +81,16 @@ export interface Chakra3DProps {
   /** Enable tap-to-select raycasting (drag-to-spin is always on). */
   interactive?: boolean
   /**
-   * 'roll' plays the section-entrance on mount: the finished wheel rolls in
-   * from off-stage left and rocks to rest. Read at scene creation; flipping
-   * it back to 'none' mid-roll snaps the wheel home (the parent's skip).
-   * Wheel mode only — Design/Flag mounts ignore it.
+   * Section-entrance state machine, owned by the parent:
+   *   'hold' — wheel waits UPRIGHT off-stage left (parent is still waiting
+   *            for the background to be ready);
+   *   'roll' — the roll timeline starts (or started);
+   *   'none' — no entrance; mid-roll this is the parent's skip and snaps
+   *            the wheel home instantly.
+   * Whether an entrance exists at all is read at scene creation ('none' vs
+   * the other two). Wheel mode only — Design/Flag mounts ignore it.
    */
-  entrance?: 'roll' | 'none'
+  entrance?: 'hold' | 'roll' | 'none'
   /**
    * Rolling entrance frames: the current translateX for the WHEEL BOX in
    * canvas px (negative while travelling, 0 at rest). The scene owns the
@@ -131,19 +135,29 @@ const DIM_GOLD = 0xffb300 // construction-line gold (source build)
 const SPOKE_STEP = (Math.PI * 2) / SPEC.spokeCount
 const HIGHLIGHT = new THREE.Color(0xffb300)
 
-/* Rolling entrance (entrance="roll"). Travel is in canvas px: the .ck-wheel
-   box sits at stage x 455 and the wheel's centre lands at ~964, so 1420px
-   clears the whole box past the stage's left edge with margin. */
-const ROLL_HOLD_MS = 750 // empty-background beat before the wheel enters
+/* Rolling entrance (entrance="hold"/"roll"). Travel is in canvas px: the
+   .ck-wheel box sits at stage x 455 and the wheel's centre lands at ~964, so
+   1420px clears the whole box past the stage's left edge with margin. The
+   wheel rolls UPRIGHT (a leaned wheel translating reads as sliding — user
+   2026-07-20) and only leans into the 3/4 hero pose after it has landed. */
 const ROLL_MS = 1800 // travel + settle rock-back
 const ROLL_TRAVEL_PX = 1420
-const ROLL_BACK = 0.8 // easeOutBack overshoot — ~2% ≈ a 5° settle rock
+const ROLL_OVER = 0.023 // rolls ~33px past home before rocking back
+const ROLL_APEX = 0.8 // fraction of the timeline spent reaching that apex
+const ROLL_LEAN_MS = 650 // post-landing turn into the 3/4 resting pose
 const ROLL_RAY_MS = 700 // god-ray reignite after the wheel is home
 
-/** easeOutBack: fast entry, decelerate, roll ~2% past and rock back home. */
+/** Constant-friction roll: velocity decays linearly to zero at an apex just
+ * past home (easeOutQuad — how a real wheel coasts to a stop), then eases
+ * back down the remaining 2.3% — the settle rock. C1-smooth at the apex
+ * (both pieces arrive with zero velocity). */
 function rollEase(t: number): number {
-  const u = t - 1
-  return 1 + (ROLL_BACK + 1) * u * u * u + ROLL_BACK * u * u
+  if (t <= ROLL_APEX) {
+    const u = t / ROLL_APEX
+    return (1 + ROLL_OVER) * u * (2 - u)
+  }
+  const v = (t - ROLL_APEX) / (1 - ROLL_APEX)
+  return 1 + (ROLL_OVER * (1 + Math.cos(Math.PI * v))) / 2
 }
 
 /** Re-home `target` to the equivalent angle (mod 2π) nearest `current`. */
@@ -571,6 +585,7 @@ interface SceneHandle {
   setSpin(on: boolean): void
   setDims(on: boolean): void
   setMode(mode: 'wheel' | 'flag'): void
+  startRoll(): void
   finishRoll(): void
   dispose(): void
 }
@@ -1128,12 +1143,13 @@ function createChakraScene(
   }
 
   /* --------------------------------------------- rolling entrance -- */
-  // Section intro (wheel mode only): hold off-stage through the background
-  // beat, roll in, rock to rest. doneAt < 0 while the roll owns the wheel —
-  // the idle turntable, drag/picking and the god-rays all wait for it.
+  // Section intro (wheel mode only): wait UPRIGHT off-stage until the parent
+  // says go (background ready), roll in, rock to rest, then lean into the
+  // 3/4 hero pose. doneAt < 0 while the roll owns the wheel — the idle
+  // turntable, drag/picking and the god-rays all wait for it.
   const roll =
     entranceRoll && initialMode === 'wheel'
-      ? { t0: performance.now(), doneAt: -1 }
+      ? { started: false, t0: 0, doneAt: -1, leanDone: false }
       : null
   // Screen radius of the ⌀185 rim at the resting camera — the no-slip ratio
   // between box travel (px) and axle spin (rad).
@@ -1146,12 +1162,30 @@ function createChakraScene(
     cbs.onRollFrame(-remainPx)
   }
 
-  function finishRoll(): void {
+  function startRoll(): void {
+    if (roll === null || roll.started) return
+    roll.started = true
+    roll.t0 = performance.now()
+  }
+
+  /** Natural landing: home the box + axle, hand over — the lean-in and the
+   * god-ray reignite then play out over the following frames. */
+  function landRoll(): void {
     if (roll === null || roll.doneAt >= 0) return
     roll.doneAt = performance.now()
     applyRollPose(0)
     lastInteraction = roll.doneAt // rest a beat before the idle turntable
     cbs.onRollDone()
+  }
+
+  /** Parent skip: snap the WHOLE entrance (travel + lean) to its end. Once
+   * the roll has landed naturally this is a no-op — the entrance prop flips
+   * to 'none' right after onRollDone, and that must not cut the lean-in. */
+  function finishRoll(): void {
+    if (roll === null || roll.doneAt >= 0) return
+    landRoll()
+    roll.leanDone = true
+    lean.rotation.set(LEAN_X, LEAN_Y, 0)
   }
 
   /* ------------------------------------------------- flag-mode state -- */
@@ -1634,10 +1668,19 @@ function createChakraScene(
 
     // Rolling entrance: box translation and axle spin from ONE number.
     const rolling = roll !== null && roll.doneAt < 0
-    if (roll !== null && rolling) {
-      const p = clamp01((now - roll.t0 - ROLL_HOLD_MS) / ROLL_MS)
+    if (roll !== null && rolling && roll.started) {
+      const p = clamp01((now - roll.t0) / ROLL_MS)
       applyRollPose(ROLL_TRAVEL_PX * (1 - rollEase(p)))
-      if (p >= 1) finishRoll()
+      if (p >= 1) landRoll()
+    }
+    // …then the landed wheel turns from its upright rolling pose into the
+    // 3/4 hero lean while the chrome rises around it.
+    if (roll !== null && roll.doneAt >= 0 && !roll.leanDone) {
+      const k = clamp01((now - roll.doneAt) / ROLL_LEAN_MS)
+      const e = easeInOutCubic(k)
+      lean.rotation.y = LEAN_Y * e
+      lean.rotation.x = LEAN_X * e
+      if (k >= 1) roll.leanDone = true
     }
 
     // Ground shadows: invisible while forming, 600ms ease-in once settled.
@@ -1781,8 +1824,12 @@ function createChakraScene(
 
   // Rolling entrance: pose the wheel at its off-stage start BEFORE the first
   // frame — creation happens mid-hold, and a single resting-pose frame would
-  // flash the wheel at centre before the roll owns it.
-  if (roll !== null) applyRollPose(ROLL_TRAVEL_PX)
+  // flash the wheel at centre before the roll owns it. Upright: a wheel can
+  // only roll with its plane vertical; the hero lean returns after landing.
+  if (roll !== null) {
+    applyRollPose(ROLL_TRAVEL_PX)
+    lean.rotation.set(0, 0, 0)
+  }
 
   // A scene created directly in flag mode plays the docking animation from
   // the top on mount (re-entering the tab remounts → replays).
@@ -1820,10 +1867,14 @@ function createChakraScene(
       buildT0 = performance.now() - buildP * ASSEMBLY_MS
     }
     // Freeze the rolling entrance at progress v and render one frame — works
-    // even where rAF is suspended (headless preview panes).
+    // even where rAF is suspended (headless preview panes). Travel frames are
+    // upright; v >= 1 shows the landed wheel in its restored hero lean.
     dbg.__chakraRollScrub = (v) => {
-      const remain = ROLL_TRAVEL_PX * (1 - rollEase(clamp01(v)))
+      const p = clamp01(v)
+      const remain = ROLL_TRAVEL_PX * (1 - rollEase(p))
       chakra.rotation.z = remain / rollRadiusPx
+      if (p >= 1) lean.rotation.set(LEAN_X, LEAN_Y, 0)
+      else lean.rotation.set(0, 0, 0)
       cbs.onRollFrame(-remain)
       renderer.render(scene, camera)
     }
@@ -1837,6 +1888,7 @@ function createChakraScene(
     },
     setDims,
     setMode,
+    startRoll,
     finishRoll,
     dispose,
   }
@@ -1886,8 +1938,11 @@ export default function Chakra3D({
       },
       // Read at creation: a skip that lands before the (cold) chunk does
       // means the late scene simply mounts at rest, no roll.
-      liveRef.current.entrance === 'roll',
+      liveRef.current.entrance !== 'none',
     )
+    // Chunk landed while the parent was already in 'roll' (or StrictMode
+    // recreated the scene mid-roll): start the timeline right away.
+    if (liveRef.current.entrance === 'roll') handle.startRoll()
     handle.canvas.style.width = '100%'
     handle.canvas.style.height = '100%'
     handle.canvas.style.touchAction = 'none'
@@ -1920,10 +1975,12 @@ export default function Chakra3D({
     sceneRef.current?.setDims(dims)
   }, [dims])
 
-  // Parent skip: flipping entrance off mid-roll snaps the wheel home. After
-  // a natural finish this is a no-op (finishRoll guards on doneAt).
+  // 'hold' → 'roll' starts the timeline (parent saw the background land);
+  // anything → 'none' mid-roll is the parent's skip and snaps the wheel
+  // home. After a natural finish the snap is a no-op (guards on doneAt).
   useEffect(() => {
-    if (entrance !== 'roll') sceneRef.current?.finishRoll()
+    if (entrance === 'roll') sceneRef.current?.startRoll()
+    else if (entrance === 'none') sceneRef.current?.finishRoll()
   }, [entrance])
 
   return (

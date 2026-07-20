@@ -53,7 +53,7 @@ function WarmChakra() {
         const bg = new Image()
         bg.src = `${HISTORY_BASE}/${y.year}/background/bg-1.png`
       }
-    }, 2500)
+    }, 1200) // early enough that a quick home→chakra tap finds a warm bg
     return () => clearTimeout(timer)
   }, [content])
   return null

@@ -51,7 +51,7 @@ import {
   virtueIconSlug,
 } from './chakraData.ts'
 import type { Chakra3DProps } from './Chakra3D.tsx'
-import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { DynamicBackground, useDynamicBackground } from '../../components/DynamicBackground.tsx'
 import { previousPathname } from '../../app/navTrace.ts'
 import { CHAKRA } from '../../assets/paths.ts'
 import './ChakraExplorerScreen.css'
@@ -131,8 +131,8 @@ interface ValuesTabProps {
   virtues: ChakraVirtue[]
   spoke: number | null
   onSelect: (spoke: number | null) => void
-  /** Section entrance: 'roll' while the wheel is still due to roll in. */
-  entrance: 'roll' | 'none'
+  /** Section entrance: 'hold' = wheel waits off-stage, 'roll' = rolling in. */
+  entrance: 'hold' | 'roll' | 'none'
   onRollDone: () => void
 }
 
@@ -232,7 +232,7 @@ function ValuesTab({ virtues, spoke, onSelect, entrance, onRollDone }: ValuesTab
         // Off-stage from the FIRST commit while the entrance is due — the
         // scene's own start pose (-1420px) lands with its first frame and
         // both values keep the box fully past the stage's left edge.
-        style={entrance === 'roll' ? { transform: 'translateX(-1500px)' } : undefined}
+        style={entrance !== 'none' ? { transform: 'translateX(-1500px)' } : undefined}
       >
         <LazyChakra3D
           size={910}
@@ -450,18 +450,32 @@ export function ChakraExplorerScreen() {
   // Section entrance (user 2026-07-20): arriving from OUTSIDE /chakra, the
   // sunset background gets a beat alone, the finished wheel ROLLS in from
   // stage left, and only then does the chrome rise in. In-section activity
-  // (tab hops are state, not routes) never replays it. 'hold' = background
-  // only, wheel travelling; 'reveal' = chrome rising; 'done' = plain screen
-  // (classes dropped so the rise-in can never fight later transforms).
-  const [intro, setIntro] = useState<'hold' | 'reveal' | 'done'>(() =>
-    (previousPathname() ?? '').startsWith('/chakra') ? 'done' : 'hold',
+  // (tab hops are state, not routes) never replays it.
+  //   'wait'   — background still probing/decoding, wheel parked off-stage
+  //              (the roll must never enter a gradient void — user report:
+  //              "background loads very lazy");
+  //   'roll'   — background landed + a 700ms beat → wheel rolls in;
+  //   'reveal' — chrome rising; 'done' — plain screen (classes dropped so
+  //              the rise-in can never fight later transforms).
+  const [intro, setIntro] = useState<'wait' | 'roll' | 'reveal' | 'done'>(() =>
+    (previousPathname() ?? '').startsWith('/chakra') ? 'done' : 'wait',
   )
-  const reveal = () => setIntro((p) => (p === 'hold' ? 'reveal' : p))
+  const bg = useDynamicBackground(BG_BASE) // probe results are cached — the
+  // child <DynamicBackground> re-uses them, so this costs nothing extra.
+  const reveal = () => setIntro((p) => (p === 'wait' || p === 'roll' ? 'reveal' : p))
 
+  // Background ready → one breath (its 600ms fade + a beat) → roll. If the
+  // folder is empty/broken, don't stall the visitor: force the roll at 4s.
+  useEffect(() => {
+    if (intro !== 'wait') return
+    const advance = () => setIntro((p) => (p === 'wait' ? 'roll' : p))
+    const t = window.setTimeout(advance, bg.ready ? 700 : 4000)
+    return () => window.clearTimeout(t)
+  }, [intro, bg.ready])
   // The kiosk must never dead-end behind the intro: if the wheel chunk (or
   // WebGL) never delivers onRollDone, force the reveal on wall-clock time.
   useEffect(() => {
-    if (intro !== 'hold') return
+    if (intro !== 'roll') return
     const t = window.setTimeout(reveal, 7000)
     return () => window.clearTimeout(t)
   }, [intro])
@@ -501,7 +515,7 @@ export function ChakraExplorerScreen() {
   return (
     <div
       className={
-        intro === 'hold'
+        intro === 'wait' || intro === 'roll'
           ? 'ck-screen ck-intro-hold'
           : intro === 'reveal'
             ? 'ck-screen ck-intro-reveal'
@@ -540,7 +554,7 @@ export function ChakraExplorerScreen() {
           virtues={virtues}
           spoke={spoke}
           onSelect={setSpoke}
-          entrance={intro === 'hold' ? 'roll' : 'none'}
+          entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
           onRollDone={reveal}
         />
       )}
@@ -550,7 +564,9 @@ export function ChakraExplorerScreen() {
       {tab === 'flag' && <FlagTab headline={flagHeadline} facts={facts} />}
 
       {/* Any touch skips the entrance — museum visitors never wait twice. */}
-      {intro === 'hold' && <div className="ck-intro-touch" onPointerDown={reveal} />}
+      {(intro === 'wait' || intro === 'roll') && (
+        <div className="ck-intro-touch" onPointerDown={reveal} />
+      )}
     </div>
   )
 }
