@@ -9,7 +9,9 @@
 import { useEffect } from 'react'
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { Stage } from './app/Stage.tsx'
-import { CHAKRA } from './assets/paths.ts'
+import { recordNavigation } from './app/navTrace.ts'
+import { CHAKRA, HISTORY_BASE } from './assets/paths.ts'
+import { useContent } from './data/ContentContext.tsx'
 import { useIdleReset } from './app/useIdleReset.ts'
 import { DevContentScreen } from './app/DevContentScreen.tsx'
 import { QuickAccessProvider } from './components/QuickAccessOverlay.tsx'
@@ -37,14 +39,23 @@ function IdleReset() {
  * "page comes black, then abruptly appears").
  */
 function WarmChakra() {
+  const { content } = useContent()
+
   useEffect(() => {
     const timer = setTimeout(() => {
       void import('./screens/chakra/Chakra3D.tsx')
       const img = new Image()
       img.src = `${CHAKRA.background}/bg.png`
+      // History rewind intro: warm its GL chunk + every year background so
+      // the film has all its frames the moment the visitor taps History.
+      void import('./screens/history/rewindGL.ts')
+      for (const y of content?.historyYears ?? []) {
+        const bg = new Image()
+        bg.src = `${HISTORY_BASE}/${y.year}/background/bg-1.png`
+      }
     }, 2500)
     return () => clearTimeout(timer)
-  }, [])
+  }, [content])
   return null
 }
 
@@ -59,6 +70,7 @@ function WarmChakra() {
  */
 function AnimatedRoutes() {
   const location = useLocation()
+  recordNavigation(location.pathname) // idempotent — safe under StrictMode
   const transitionKey = location.pathname.replace(/^\/history\/[^/]+/, '/history')
   const inert = location.pathname === '/symbols'
 

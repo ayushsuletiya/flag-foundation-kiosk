@@ -64,7 +64,12 @@ screens never hardcode them.
   a full home-exit + arrive cinematic was built and then removed entirely; do not reintroduce).
   All 4 home tiles navigate instantly. The symbols screen has no intro either (trail sweep also
   removed): it opens AT REST on the tiger behind a brief 0.9s black fade.
-- History year flags/backgrounds: generated placeholders until real art lands (specs baked into them).
+- History: entering the section from OUTSIDE plays the WebGL "rewind to the past" intro
+  (RewindIntro.tsx + rewindGL.ts — lazy chunk, any touch skips) and the section now
+  DEFAULTS TO 1857 (user decision 2026-07-20 — story reads oldest-first; was 1947).
+  In-section hops (year pills, Know More back) never replay the intro.
+- History year backgrounds are REAL archival images (see docs/IMAGE-PROVENANCE.md;
+  no invented AI scenes — generative EXPAND of the real photo is allowed with approval).
 - No emoji in filenames. Idle reset (120s) returns home — intended kiosk behavior.
 
 ## Pending (next session)

@@ -17,12 +17,16 @@ import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
+import { previousPathname } from '../../app/navTrace.ts'
 import { useHistoryYearAssets } from './historyAssets.ts'
 import { ChakraMark, FallbackBackdrop } from './HistoryFallback.tsx'
+import { RewindIntro } from './RewindIntro.tsx'
 import { VideoLoop } from '../../components/VideoLoop.tsx'
 import './YearMainScreen.css'
 
-export const DEFAULT_HISTORY_YEAR = '1947'
+/** The story starts at the beginning: the rewind intro lands on 1857 and the
+ * section stays there (user decision 2026-07-20 — was 1947). */
+export const DEFAULT_HISTORY_YEAR = '1857'
 
 /** Stacked <img> crossfade — 2.5s hold, 900ms opacity ramp (CSS). */
 function BackgroundLoop({ images }: { images: string[] }) {
@@ -57,6 +61,13 @@ export function YearMainScreen() {
   const { year: yearParam } = useParams()
   const { content } = useContent()
 
+  // Rewind intro: only on SECTION ENTRY from outside (home tile / Quick
+  // Access land on plain /history) — never on in-section hops (year pills
+  // navigate to /history/:year, Know More returns carry the year param).
+  const [introActive, setIntroActive] = useState(
+    () => yearParam === undefined && !(previousPathname() ?? '').startsWith('/history'),
+  )
+
   const years = content?.historyYears ?? []
   const row =
     years.find((y) => y.year === yearParam) ??
@@ -69,6 +80,17 @@ export function YearMainScreen() {
   if (row === null) {
     // Content still loading (or empty workbook) — hold a dark frame.
     return <div className="hy-screen" />
+  }
+
+  if (introActive) {
+    return (
+      <div className="hy-screen">
+        <RewindIntro
+          years={years.map((y) => y.year)}
+          onDone={() => setIntroActive(false)}
+        />
+      </div>
+    )
   }
 
   return (
