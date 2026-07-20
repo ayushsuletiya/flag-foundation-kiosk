@@ -5,6 +5,49 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-20 evening — history backgrounds v3, rewind intro, v0.2.0 build
+Commits, in order:
+- `c67d6d2` chakra page entrance smoothed (DynamicBackground fade-in for ALL
+  screens, warm ck-screen base, WarmChakra idle prefetch of the three.js
+  chunk + chakra bg).
+- `163971f` no ground shadows while the chakra assembles (600ms ease-back).
+- `95c2bf7` + `65a46d0` chakra virtue text: splitTwoLines() two-line stacking
+  ("Spiritual/Knowledge" at 88.5px ×2) + fitHeadlineMeasured() canvas-metric
+  fit ("Faithfulness" 80.8px, was 59) — headline + list pills.
+- `66717ea` history bg round 2: 1917→sharp Tilak blur-fill, 1906→paper-
+  artifact masthead card, 1905→group right of the flag slot.
+- `34707a5` **generative expand, USER-APPROVED**: 1905/1917/1921 archival
+  photos AI-extended to widescreen with **Nano Banana Pro**
+  (`imagen-nano-banana-2` via images_generate + image reference, 21:9 for
+  crop slack). **ideogram images_expand REPLACES subjects — never use.**
+  Disclosed per-asset in provenance + Excel tab 10.
+- `63b76f3` vite dev now sends Cache-Control: no-cache (swapped assets show
+  on plain refresh; user saw stale 1905 from Chrome's heuristic cache).
+- `4e27183` 1941 bg re-rendered with **GPT 2** (`gpt-2`) — Bose likeness
+  face-compared and verified (nano version distorted his jaw, rejected).
+- `4e2a003` 1947 bg MIRRORED (user decision) — Nehru's rostrum now visible
+  right of the text column; tighter window keeps seated faces off the
+  year-flag slot. AIR mic-box lettering reads reversed (disclosed).
+- `cf2c302` **v0.2.0 onsite build** — `release/` holds Setup 0.2.0.exe
+  (465MB) + 0.2.0-win.zip (504MB) + win-unpacked, verified to contain the
+  new assets; ONSITE-TESTING.md refreshed; stale Sources row rewritten.
+- `09b910c` + `5273e62` + `f40e3a9` **History rewind intro**: entering
+  /history from outside plays a ~5.7s WebGL film-rewind (rewindGL.ts lazy
+  shader quad: streaks, aberration, gate weave, grain, light-leaks, gold
+  dust particles ×900) with a per-digit ODOMETER counting every year and
+  slot-machine braking into **1857 — the section's new default year**
+  (DEFAULT_HISTORY_YEAR changed from 1947). Any touch skips; watchdog
+  covers rAF-suspended (hidden) pages; navTrace.ts records prev pathname.
+  Numeral verified dead-center. NOTE: full-motion playback was verified by
+  the USER in Chrome — the dev preview pane runs hidden (rAF suspended),
+  only forced single frames render there.
+
+Open after this session: user may tune rewind pacing (arrive 1.1s / brake
+1.05s / particle density); intros for the OTHER three categories are the
+declared next enhancement (history was #1); optional GPT-2 likeness re-run
+for Tilak (1917) / Gandhi (1921) if the user spots drift; ~810+ Magnific
+credits spent (user-approved batch).
+
 ### 2026-07-20 polish pass (/goal — verified live in preview)
 - **History backgrounds are now REAL archival images** (user directive: NO
   AI-generated backgrounds, ever — upscale/expand real photos only). All 9
