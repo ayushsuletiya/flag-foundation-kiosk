@@ -783,7 +783,10 @@ function createChakraScene(
       camPos: { value: new THREE.Vector3() },
       sunDir: { value: new THREE.Vector3() }, // toward the sun
       strength: { value: 0.4 }, // user-tuned (-20%)
-      edgeFade: { value: 0.16 },
+      // vec2: per-axis dissolve widths — the union canvas is 961×1608, so
+      // one fraction can't serve both axes (a horizontal width that kills
+      // the edge seam would eat the crown shafts vertically).
+      edgeFade: { value: new THREE.Vector2(0.2, 0.06) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -799,7 +802,7 @@ function createChakraScene(
       uniform vec3 camPos;
       uniform vec3 sunDir;
       uniform float strength;
-      uniform float edgeFade;
+      uniform vec2 edgeFade;
       // march segment = ray ∩ sphere around the wheel's air volume
       const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
       const float VOL_R = 230.0;
@@ -854,8 +857,8 @@ function createChakraScene(
         // Width is per-framing (see setDims): Design's pulled-back camera can
         // afford a wide dissolve, Values sits closer and needs a narrow one or
         // the fade eats the sun shafts hugging the rim.
-        float edge = smoothstep(0.0, edgeFade, vUv.x) * smoothstep(1.0, 1.0 - edgeFade, vUv.x) *
-          smoothstep(0.0, edgeFade, vUv.y) * smoothstep(1.0, 1.0 - edgeFade, vUv.y);
+        float edge = smoothstep(0.0, edgeFade.x, vUv.x) * smoothstep(1.0, 1.0 - edgeFade.x, vUv.x) *
+          smoothstep(0.0, edgeFade.y, vUv.y) * smoothstep(1.0, 1.0 - edgeFade.y, vUv.y);
         vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength * edge;
         gl_FragColor = vec4(col, 0.0);
       }
@@ -890,7 +893,7 @@ function createChakraScene(
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
       boost: { value: 1.2 },
-      edgeFade: { value: 0.20 },
+      edgeFade: { value: new THREE.Vector2(0.22, 0.07) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -902,7 +905,7 @@ function createChakraScene(
       uniform vec2 sunUv;
       uniform vec2 texel;
       uniform float boost;
-      uniform float edgeFade;
+      uniform vec2 edgeFade;
       void main() {
         const int SAMPLES = 48;
         vec2 delta = (vUv - sunUv) * (0.95 / float(SAMPLES));
@@ -929,8 +932,8 @@ function createChakraScene(
         // dissolve: light must die inside the canvas so the render box can
         // never print its rectangle on the plate. Width is per-framing (see
         // setDims) for the same reason as the ray pass.
-        float edge = smoothstep(0.0, edgeFade, vUv.x) * smoothstep(1.0, 1.0 - edgeFade, vUv.x) *
-          smoothstep(0.0, edgeFade, vUv.y) * smoothstep(1.0, 1.0 - edgeFade, vUv.y);
+        float edge = smoothstep(0.0, edgeFade.x, vUv.x) * smoothstep(1.0, 1.0 - edgeFade.x, vUv.x) *
+          smoothstep(0.0, edgeFade.y, vUv.y) * smoothstep(1.0, 1.0 - edgeFade.y, vUv.y);
         gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
       }
     `,
@@ -1350,8 +1353,8 @@ function createChakraScene(
     // and a wide fade would eat the sun shafts hugging the rim. Tuned per
     // framing rather than one global compromise. (Fractions of the 961×1608
     // union canvas — smaller than the old per-tab values.)
-    rayMat.uniforms['edgeFade']!.value = on ? 0.20 : 0.12
-    streakMat.uniforms['edgeFade']!.value = on ? 0.22 : 0.14
+    ;(rayMat.uniforms['edgeFade']!.value as THREE.Vector2).set(on ? 0.24 : 0.2, on ? 0.08 : 0.06)
+    ;(streakMat.uniforms['edgeFade']!.value as THREE.Vector2).set(on ? 0.26 : 0.22, on ? 0.09 : 0.07)
   }
 
   /* -------------------------------------------------- flag building -- */
