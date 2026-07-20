@@ -36,7 +36,7 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    ellipse 900px 520px at 50% 46%,
+    ellipse 900px 520px at 50% 50%,
     rgba(10, 6, 1, 0.42) 0%,
     rgba(10, 6, 1, 0.12) 55%,
     rgba(10, 6, 1, 0.35) 100%
@@ -73,7 +73,7 @@
 .rw-year {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   font-family: var(--font-ui);
