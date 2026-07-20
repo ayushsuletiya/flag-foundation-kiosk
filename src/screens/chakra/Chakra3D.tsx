@@ -35,6 +35,13 @@
  * source). Camera endpoints are re-derived for the 801×1197 hero slot (the
  * source framed a full window) and the pole is lengthened so it runs off the
  * bottom of the slot like the static flag-pole.png the scene replaces.
+ *
+ * entrance="roll" (section intro) rolls the finished wheel in from off-stage
+ * left like a real wheel: ONE remaining-travel number drives both the box
+ * translation (reported to the parent via onRollFrame — the parent owns the
+ * .ck-wheel box and its edge-feather mask) and the axle spin (travel over the
+ * wheel's SCREEN radius), so the tread never slips on the ground. It settles
+ * with a small rock-back, then onRollDone fires and the god-rays reignite.
  */
 import { useEffect, useRef, type CSSProperties } from 'react'
 import * as THREE from 'three'
@@ -73,6 +80,22 @@ export interface Chakra3DProps {
   dims?: boolean
   /** Enable tap-to-select raycasting (drag-to-spin is always on). */
   interactive?: boolean
+  /**
+   * 'roll' plays the section-entrance on mount: the finished wheel rolls in
+   * from off-stage left and rocks to rest. Read at scene creation; flipping
+   * it back to 'none' mid-roll snaps the wheel home (the parent's skip).
+   * Wheel mode only — Design/Flag mounts ignore it.
+   */
+  entrance?: 'roll' | 'none'
+  /**
+   * Rolling entrance frames: the current translateX for the WHEEL BOX in
+   * canvas px (negative while travelling, 0 at rest). The scene owns the
+   * timeline so translation and axle spin can never slip against each other;
+   * the parent just writes this onto its .ck-wheel element.
+   */
+  onRollFrame?: (xPx: number) => void
+  /** Rolling entrance settled (or was skipped) — reveal the chrome. */
+  onRollDone?: () => void
   onSpokeTap?: (spoke: number) => void
   onBackgroundTap?: () => void
   className?: string
@@ -107,6 +130,21 @@ const MIN_FLING = 0.00012 // below this the flick is spent
 const DIM_GOLD = 0xffb300 // construction-line gold (source build)
 const SPOKE_STEP = (Math.PI * 2) / SPEC.spokeCount
 const HIGHLIGHT = new THREE.Color(0xffb300)
+
+/* Rolling entrance (entrance="roll"). Travel is in canvas px: the .ck-wheel
+   box sits at stage x 455 and the wheel's centre lands at ~964, so 1420px
+   clears the whole box past the stage's left edge with margin. */
+const ROLL_HOLD_MS = 750 // empty-background beat before the wheel enters
+const ROLL_MS = 1800 // travel + settle rock-back
+const ROLL_TRAVEL_PX = 1420
+const ROLL_BACK = 0.8 // easeOutBack overshoot — ~2% ≈ a 5° settle rock
+const ROLL_RAY_MS = 700 // god-ray reignite after the wheel is home
+
+/** easeOutBack: fast entry, decelerate, roll ~2% past and rock back home. */
+function rollEase(t: number): number {
+  const u = t - 1
+  return 1 + (ROLL_BACK + 1) * u * u * u + ROLL_BACK * u * u
+}
 
 /** Re-home `target` to the equivalent angle (mod 2π) nearest `current`. */
 function nearestTurn(target: number, current: number): number {
@@ -533,6 +571,7 @@ interface SceneHandle {
   setSpin(on: boolean): void
   setDims(on: boolean): void
   setMode(mode: 'wheel' | 'flag'): void
+  finishRoll(): void
   dispose(): void
 }
 
@@ -540,6 +579,8 @@ interface SceneCallbacks {
   onSpokeTap(spoke: number): void
   onBackgroundTap(): void
   isInteractive(): boolean
+  onRollFrame(xPx: number): void
+  onRollDone(): void
 }
 
 function createChakraScene(
@@ -547,6 +588,7 @@ function createChakraScene(
   height: number,
   initialMode: 'wheel' | 'flag',
   cbs: SceneCallbacks,
+  entranceRoll: boolean,
 ): SceneHandle {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -1085,6 +1127,33 @@ function createChakraScene(
     applyAssemblyTimeline(1, assemblyRefs)
   }
 
+  /* --------------------------------------------- rolling entrance -- */
+  // Section intro (wheel mode only): hold off-stage through the background
+  // beat, roll in, rock to rest. doneAt < 0 while the roll owns the wheel —
+  // the idle turntable, drag/picking and the god-rays all wait for it.
+  const roll =
+    entranceRoll && initialMode === 'wheel'
+      ? { t0: performance.now(), doneAt: -1 }
+      : null
+  // Screen radius of the ⌀185 rim at the resting camera — the no-slip ratio
+  // between box travel (px) and axle spin (rad).
+  const rollRadiusPx =
+    (SPEC.outerR * height) / (2 * Math.tan(THREE.MathUtils.degToRad(20)) * WHEEL_CAM.z)
+
+  /** One remaining-travel number poses BOTH the box and the axle. */
+  function applyRollPose(remainPx: number): void {
+    chakra.rotation.z = remainPx / rollRadiusPx
+    cbs.onRollFrame(-remainPx)
+  }
+
+  function finishRoll(): void {
+    if (roll === null || roll.doneAt >= 0) return
+    roll.doneAt = performance.now()
+    applyRollPose(0)
+    lastInteraction = roll.doneAt // rest a beat before the idle turntable
+    cbs.onRollDone()
+  }
+
   /* ------------------------------------------------- flag-mode state -- */
   let modeState: 'wheel' | 'flag' = 'wheel'
   let flagGroup: THREE.Group | null = null
@@ -1479,6 +1548,12 @@ function createChakraScene(
   }
 
   const onPointerDown = (e: PointerEvent) => {
+    // Mid-roll: the first touch snaps the wheel home and nothing else.
+    // (The parent's skip overlay usually catches this first — belt and braces.)
+    if (roll !== null && roll.doneAt < 0) {
+      finishRoll()
+      return
+    }
     // Mid-build: the first touch dismisses the sequence and nothing else.
     if (buildP < 1) {
       finishAssembly()
@@ -1557,6 +1632,14 @@ function createChakraScene(
       applyAssemblyTimeline(buildP, assemblyRefs)
     }
 
+    // Rolling entrance: box translation and axle spin from ONE number.
+    const rolling = roll !== null && roll.doneAt < 0
+    if (roll !== null && rolling) {
+      const p = clamp01((now - roll.t0 - ROLL_HOLD_MS) / ROLL_MS)
+      applyRollPose(ROLL_TRAVEL_PX * (1 - rollEase(p)))
+      if (p >= 1) finishRoll()
+    }
+
     // Ground shadows: invisible while forming, 600ms ease-in once settled.
     if (buildP < 1) shadowFadeStart = now
     const shadowRamp = clamp01((now - shadowFadeStart) / SHADOW_FADE_MS)
@@ -1564,7 +1647,7 @@ function createChakraScene(
     liveCatcher.visible = shadowRamp > 0
     contactShadow.material.opacity = shadowRamp
     contactShadow.visible = shadowRamp > 0
-    if (modeState === 'wheel' && flagAnim === null && !dragging) {
+    if (modeState === 'wheel' && flagAnim === null && !dragging && !rolling) {
       // Rest pose: selected spoke at 12 o'clock beats dims-upright beats idle.
       if (buildP >= 1) {
         const goal = selectedIdx !== null ? selectedIdx * SPOKE_STEP : dimsOn ? 0 : null
@@ -1617,11 +1700,15 @@ function createChakraScene(
     }
     renderer.render(scene, camera)
     // sun shafts through the spokes — wheel framing only (flag mode has
-    // its own choreography and no visible sun)
-    if (modeState === 'wheel' && buildP >= BEAT.standUp[0]) {
+    // its own choreography and no visible sun). Held OFF while the rolling
+    // entrance displaces the box (the shafts' sun would sit off the plate's
+    // real sun — and skipping the pre-pass keeps the roll itself smooth),
+    // then reignited over ROLL_RAY_MS once the wheel is home.
+    if (modeState === 'wheel' && buildP >= BEAT.standUp[0] && !rolling) {
       // Rays bloom through the spokes as the wheel rises into the light.
       const ramp = easeInOutCubic(beatP(buildP, [BEAT.standUp[0], 1] as const))
-      rayMat.uniforms['strength']!.value = RAY_STRENGTH_BASE * ramp
+      const rollLight = roll === null ? 1 : S((now - roll.doneAt) / ROLL_RAY_MS)
+      rayMat.uniforms['strength']!.value = RAY_STRENGTH_BASE * ramp * rollLight
       renderGodRays()
     }
   })
@@ -1672,9 +1759,11 @@ function createChakraScene(
       const dbg = window as unknown as {
         __chakraScrub?: (v: number) => void
         __chakraPlay?: () => void
+        __chakraRollScrub?: (v: number) => void
       }
       delete dbg.__chakraScrub
       delete dbg.__chakraPlay
+      delete dbg.__chakraRollScrub
     }
   }
 
@@ -1689,6 +1778,11 @@ function createChakraScene(
   // resting LEAN pose, which flag mode then deliberately zeroes to world-align
   // the wheel for docking. Reversing the order would dock a tilted wheel.
   finishAssembly()
+
+  // Rolling entrance: pose the wheel at its off-stage start BEFORE the first
+  // frame — creation happens mid-hold, and a single resting-pose frame would
+  // flash the wheel at centre before the roll owns it.
+  if (roll !== null) applyRollPose(ROLL_TRAVEL_PX)
 
   // A scene created directly in flag mode plays the docking animation from
   // the top on mount (re-entering the tab remounts → replays).
@@ -1713,6 +1807,7 @@ function createChakraScene(
     const dbg = window as unknown as {
       __chakraScrub?: (v: number) => void
       __chakraPlay?: () => void
+      __chakraRollScrub?: (v: number) => void
     }
     dbg.__chakraScrub = (v) => {
       assemblyRefs ??= makeAssemblyRefs()
@@ -1724,6 +1819,14 @@ function createChakraScene(
       buildPaused = false
       buildT0 = performance.now() - buildP * ASSEMBLY_MS
     }
+    // Freeze the rolling entrance at progress v and render one frame — works
+    // even where rAF is suspended (headless preview panes).
+    dbg.__chakraRollScrub = (v) => {
+      const remain = ROLL_TRAVEL_PX * (1 - rollEase(clamp01(v)))
+      chakra.rotation.z = remain / rollRadiusPx
+      cbs.onRollFrame(-remain)
+      renderer.render(scene, camera)
+    }
   }
 
   return {
@@ -1734,6 +1837,7 @@ function createChakraScene(
     },
     setDims,
     setMode,
+    finishRoll,
     dispose,
   }
 }
@@ -1749,6 +1853,9 @@ export default function Chakra3D({
   spin = true,
   dims = false,
   interactive = true,
+  entrance = 'none',
+  onRollFrame,
+  onRollDone,
   onSpokeTap,
   onBackgroundTap,
   className,
@@ -1760,17 +1867,27 @@ export default function Chakra3D({
   const h = height ?? size
 
   // Live prop mirrors so the imperative scene always sees current values.
-  const liveRef = useRef({ mode, selectedSpoke, spin, dims, interactive, onSpokeTap, onBackgroundTap })
-  liveRef.current = { mode, selectedSpoke, spin, dims, interactive, onSpokeTap, onBackgroundTap }
+  const liveRef = useRef({ mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, onSpokeTap, onBackgroundTap })
+  liveRef.current = { mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, onSpokeTap, onBackgroundTap }
 
   useEffect(() => {
     const host = hostRef.current
     if (host === null) return
-    const handle = createChakraScene(w, h, liveRef.current.mode, {
-      onSpokeTap: (s) => liveRef.current.onSpokeTap?.(s),
-      onBackgroundTap: () => liveRef.current.onBackgroundTap?.(),
-      isInteractive: () => liveRef.current.interactive,
-    })
+    const handle = createChakraScene(
+      w,
+      h,
+      liveRef.current.mode,
+      {
+        onSpokeTap: (s) => liveRef.current.onSpokeTap?.(s),
+        onBackgroundTap: () => liveRef.current.onBackgroundTap?.(),
+        isInteractive: () => liveRef.current.interactive,
+        onRollFrame: (x) => liveRef.current.onRollFrame?.(x),
+        onRollDone: () => liveRef.current.onRollDone?.(),
+      },
+      // Read at creation: a skip that lands before the (cold) chunk does
+      // means the late scene simply mounts at rest, no roll.
+      liveRef.current.entrance === 'roll',
+    )
     handle.canvas.style.width = '100%'
     handle.canvas.style.height = '100%'
     handle.canvas.style.touchAction = 'none'
@@ -1802,6 +1919,12 @@ export default function Chakra3D({
   useEffect(() => {
     sceneRef.current?.setDims(dims)
   }, [dims])
+
+  // Parent skip: flipping entrance off mid-roll snaps the wheel home. After
+  // a natural finish this is a no-op (finishRoll guards on doneAt).
+  useEffect(() => {
+    if (entrance !== 'roll') sceneRef.current?.finishRoll()
+  }, [entrance])
 
   return (
     <div

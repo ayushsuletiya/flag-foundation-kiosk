@@ -122,6 +122,63 @@
   color: transparent;
 }
 
+/* ---- section entrance: bg alone → wheel rolls in → info rises ------ */
+/* (user 2026-07-20) Plays only when arriving from OUTSIDE /chakra. While
+   the wheel travels ('hold'), every direct child except the plate, scrim
+   and the wheel box holds invisible; once it settles ('reveal') the chrome
+   rises in with a soft left-to-right cascade. The classes drop at 'done'
+   so the fill-mode transforms can never fight interactive styles later. */
+
+.ck-intro-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 60; /* over every card/pill — any touch skips the entrance */
+}
+
+.ck-screen.ck-intro-hold > *:not(.ck-bg):not(.ck-scrim):not(.ck-wheel):not(.ck-intro-touch) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ck-screen.ck-intro-reveal > *:not(.ck-bg):not(.ck-scrim):not(.ck-wheel) {
+  animation: ck-info-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* The ground shadow belongs to the just-landed wheel — pure fade, no rise. */
+.ck-screen.ck-intro-reveal .ck-ground-shadow {
+  animation-name: ck-info-fade;
+}
+
+/* Soft cascade: title first, then tabs, left column, list panel. */
+.ck-screen.ck-intro-reveal .ck-tabs { animation-delay: 110ms; }
+.ck-screen.ck-intro-reveal .ck-big-24 { animation-delay: 180ms; }
+.ck-screen.ck-intro-reveal .ck-spokes-word { animation-delay: 240ms; }
+.ck-screen.ck-intro-reveal .ck-gold-rule,
+.ck-screen.ck-intro-reveal .ck-values-word { animation-delay: 300ms; }
+.ck-screen.ck-intro-reveal .ck-values-intro { animation-delay: 360ms; }
+.ck-screen.ck-intro-reveal .ck-cta { animation-delay: 430ms; }
+.ck-screen.ck-intro-reveal .ck-panel { animation-delay: 300ms; }
+
+@keyframes ck-info-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ck-info-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* ---- stacking ------------------------------------------------------ */
 /* The transparent 910px wheel canvas overlaps the tab row and the panel's
    left edge; interactive chrome must sit above it or it eats their taps. */

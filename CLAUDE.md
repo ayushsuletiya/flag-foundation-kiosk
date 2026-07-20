@@ -60,6 +60,11 @@ screens never hardcode them.
   only the transient arrival border-trace + press touch-glow remain).
 - Chakra: virtue list order = Excel spoke order; DYK facts ≤135 chars; wheel drag-spins on its axle;
   Design tab uses 3D dims mode; Flag tab plays the chakra-docks-into-flag animation.
+- Chakra section ENTRANCE (user 2026-07-20): arriving from outside /chakra → background alone
+  (~750ms) → the finished wheel ROLLS in from stage left (Chakra3D entrance="roll": the scene
+  drives the .ck-wheel box translateX AND the axle spin from one remaining-travel number, so it
+  never slips), settles with a small rock-back → chrome rises in staggered. Any touch skips;
+  in-section tab hops never replay it (gated on navTrace previousPathname, like History).
 - Home → Symbols: **NO transition animation** (user decision 2026-07-19, after two iterations —
   a full home-exit + arrive cinematic was built and then removed entirely; do not reintroduce).
   All 4 home tiles navigate instantly. The symbols screen has no intro either (trail sweep also
