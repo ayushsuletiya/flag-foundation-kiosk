@@ -79,5 +79,13 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Dev serves assets/ with no cache headers, so Chrome heuristically
+    // caches media and a swapped-in file (bg-1.png etc.) keeps showing its
+    // OLD pixels on normal reload. no-cache = always revalidate (304 when
+    // unchanged) — drop-in asset updates appear on plain refresh. The
+    // packaged Electron build loads file:// and is unaffected.
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
   },
 })
