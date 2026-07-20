@@ -80,7 +80,8 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
       ])
       if (!alive) return
       if (backgrounds.length === 0 && hasSingle) backgrounds.push(candidates.backgroundSingle)
-      // Official artwork first for the gallery fallback (flag.png > year-flag).
+      // The year's official flag artwork LEADS the gallery (flag.png >
+      // year-flag), photos follow — so every era opens on its flag.
       const officialFirst = [...flags].sort(
         (a, b) => Number(a.endsWith('/year-flag.png')) - Number(b.endsWith('/year-flag.png')),
       )
@@ -91,7 +92,7 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
           backgroundVideo: hasVideo ? candidates.backgroundVideo : null,
           backgrounds,
           yearFlag: flags[0] ?? null,
-          gallery: gallery.length > 0 ? gallery : officialFirst.slice(0, 1),
+          gallery: [...officialFirst.slice(0, 1), ...gallery],
         },
       })
     })()

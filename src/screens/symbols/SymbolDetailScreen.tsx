@@ -15,12 +15,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
+import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { BackButton } from '../../components/BackButton.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
-import { useSymbolMedia } from './symbolsMedia.ts'
+import { useGroundedOffset, useSymbolMedia } from './symbolsMedia.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
 import { SYMBOLS, SHARED } from '../../assets/paths.ts'
 import {
@@ -114,6 +115,10 @@ export function SymbolDetailScreen() {
   const media = useSymbolMedia(activeSlug !== '' ? activeSlug : 'none')
   /** Real artwork (static or frames) → mock subject frame; else placeholder box. */
   const hasArt = media.ready && (media.hasStatic || media.frameCount > 0)
+  // Standing symbols (animals / tree / flag) get their visible bottom pinned
+  // to the podium top (725.5 — tiger's paws-on-podium line); floaters keep
+  // the mock's frame. Measured from each artwork's alpha bbox at runtime.
+  const groundedDy = useGroundedOffset(activeSlug, hasArt, 216.5, 407, 509, 725.5)
 
   if (identity === null) {
     // Content still loading — hold the stage.
@@ -163,11 +168,17 @@ export function SymbolDetailScreen() {
 
       <div key={activeSlug} className="syd-fade">
         {/* Title stack, centered on x=965. */}
-        <p className="syd-kicker">{identity.category}</p>
-        <p className="syd-title">{identity.symbol}</p>
+        <p className="syd-kicker">
+          <BlurTypeText text={identity.category} delay={40} stagger={22} budget={340} />
+        </p>
+        <p className="syd-title">
+          <BlurTypeText text={identity.symbol} delay={160} stagger={36} budget={480} />
+        </p>
 
         {/* Gold symbolism headline. */}
-        <p className="syd-headline">{identity.symbolismHeading}</p>
+        <p className="syd-headline">
+          <BlurTypeText text={identity.symbolismHeading} delay={260} stagger={18} budget={520} />
+        </p>
 
         {/* Stat cards — Excel milestones parsed as "Label: Value". */}
         {milestones.slice(0, STAT_SLOTS.length).map((m, i) => {
@@ -201,7 +212,11 @@ export function SymbolDetailScreen() {
         <div className="syd-glow" />
         <div
           className="syd-subject"
-          style={hasArt ? { left: 771.5, top: 216.5 } : { left: 784, top: 253 }}
+          style={
+            hasArt
+              ? { left: 771.5, top: 216.5, transform: `translateY(${groundedDy}px)` }
+              : { left: 784, top: 253 }
+          }
         >
           <SymbolVisual
             slug={activeSlug}

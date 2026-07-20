@@ -124,6 +124,28 @@
   color: transparent;
 }
 
+/* BlurTypeText digits carry per-glyph filters — parent background-clip:text
+   skips filtered subtrees, so the gradient moves onto the chars (one
+   continuous ramp, re-sliced by the component). */
+.hy-year:has(.btt) {
+  background: none;
+  color: #ffffff;
+}
+
+.hy-year .btt-char {
+  background-image: linear-gradient(
+    109.896deg,
+    #ffffff 6.3%,
+    #ffe26e 25.29%,
+    #ffdb4d 44.64%,
+    #fff1ba 63.26%,
+    #ffe26e 82.25%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
 /* Flag area (795:4302) — a fixed box that ANY year's flag image FILLS
    (object-fit: cover), vertically locked to the measured digit ink band
    of the 164.3px year numeral (ink top 74.5, height 123 hero-relative;

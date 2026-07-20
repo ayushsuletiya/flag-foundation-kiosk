@@ -31,6 +31,7 @@ import {
   setLastSelectedState,
 } from './monumentalGeo.ts'
 import { MONUMENTAL, installationPhoto } from '../../assets/paths.ts'
+import { useFlagObjectPosition } from '../../assets/imageFocus.ts'
 import './monumental.css'
 
 const INDIA_LOOP_VIDEO = `${MONUMENTAL.mapBackground}/bg.mp4`
@@ -144,6 +145,12 @@ function InstallationTile({
   useEffect(() => {
     setPhotoFailed(false)
   }, [row.id])
+  // Keep the flag inside the 345x250 cover-crop (portrait photos would
+  // otherwise behead the pole — the flag is almost always in the top half).
+  const photoPosition = useFlagObjectPosition(
+    expanded && !photoFailed ? installationPhoto(row.id) : null,
+    345 / 250.27,
+  )
 
   return (
     // Shadow lives on this outer box; a child with `overflow: hidden` clips
@@ -259,7 +266,12 @@ function InstallationTile({
                 alt=""
                 draggable={false}
                 onError={() => setPhotoFailed(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: photoPosition,
+                }}
               />
             ) : (
               <div
@@ -527,7 +539,6 @@ export function MapExplorerScreen() {
         <SelectStateOverlay
           currentState={selectedState}
           countByState={countByState}
-          totalInstallations={content?.installations.length ?? 0}
           onContinue={(state) => {
             applyState(state)
             setOverlayOpen(false)

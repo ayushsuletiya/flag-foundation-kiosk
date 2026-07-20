@@ -45,3 +45,22 @@ button {
   background: none;
   border: none;
 }
+
+/* ---- Page-level route transition (App.tsx AnimatedRoutes) ---------- */
+/* The arriving screen fades + rises in; the stage behind is always dark,
+   so a one-sided fade reads as a smooth crossfade without keeping two
+   screen trees alive (kiosk iGPU guard). */
+.route-enter {
+  animation: route-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes route-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

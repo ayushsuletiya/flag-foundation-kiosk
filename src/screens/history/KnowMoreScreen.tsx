@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
+import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { BackButton } from '../../components/BackButton.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
@@ -143,7 +144,9 @@ export function KnowMoreScreen() {
 
       {/* Left column — heading, intro, facts box */}
       <div className="hk-left" key={`left-${row.year}`}>
-        <h1 className="hk-heading">{heading}</h1>
+        <h1 className="hk-heading">
+          <BlurTypeText text={heading} delay={80} stagger={22} budget={560} />
+        </h1>
         <p className="hk-intro">{intro}</p>
       </div>
       <div className="hk-facts">
@@ -169,7 +172,7 @@ export function KnowMoreScreen() {
             src={largeImage}
             alt=""
             className={
-              largeImage.endsWith('/flag.png')
+              largeImage.includes('/flag/')
                 ? 'hk-gallery-large-img hk-gallery-large-img--flag'
                 : 'hk-gallery-large-img'
             }
@@ -186,7 +189,13 @@ export function KnowMoreScreen() {
             className={i === selected ? 'hk-thumb hk-thumb-selected' : 'hk-thumb'}
             onClick={() => setSelected(i)}
           >
-            <img src={src} alt="" className="hk-thumb-img" />
+            <img
+              src={src}
+              alt=""
+              className={
+                src.includes('/flag/') ? 'hk-thumb-img hk-thumb-img--flag' : 'hk-thumb-img'
+              }
+            />
             {i === selected && <span className="hk-thumb-scrim" />}
           </button>
         ))}

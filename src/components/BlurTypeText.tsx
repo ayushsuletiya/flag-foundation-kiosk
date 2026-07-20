@@ -34,6 +34,18 @@ export function BlurTypeText({
   const rootRef = useRef<HTMLSpanElement>(null)
   const chars = Array.from(text)
   const step = chars.length > 1 ? Math.min(stagger, budget / (chars.length - 1)) : stagger
+  // Chars are inline-blocks, which would happily wrap MID-word on multi-line
+  // headings — group them into nowrap word spans so line breaks only happen
+  // at real spaces (each word tracks its chars' global indices for the
+  // stagger timing).
+  const words: { char: string; index: number }[][] = [[]]
+  chars.forEach((ch, i) => {
+    if (ch === ' ') {
+      if (words[words.length - 1]!.length > 0) words.push([])
+    } else {
+      words[words.length - 1]!.push({ char: ch, index: i })
+    }
+  })
 
   useLayoutEffect(() => {
     const root = rootRef.current
@@ -43,7 +55,7 @@ export function BlurTypeText({
       const w = root.offsetWidth
       if (w > fitWidth) root.style.fontSize = `${Math.floor((fitWidth / w) * 1000) / 10}%`
     }
-    const spans = Array.from(root.children) as HTMLElement[]
+    const spans = Array.from(root.querySelectorAll<HTMLElement>('.btt-char'))
     const first = spans[0]
     if (!first || getComputedStyle(first).backgroundImage === 'none') return
     // Chars have a gradient: give every span the WHOLE text's gradient,
@@ -58,14 +70,21 @@ export function BlurTypeText({
 
   return (
     <span ref={rootRef} className="btt" aria-label={text}>
-      {chars.map((ch, i) => (
-        <span
-          key={i}
-          className="btt-char"
-          aria-hidden="true"
-          style={{ animationDelay: `${delay + i * step}ms` }}
-        >
-          {ch === ' ' ? ' ' : ch}
+      {words.map((word, w) => (
+        // Space lives BETWEEN word spans (wrap point + no line-start indent).
+        <span key={w} style={{ display: 'contents' }} aria-hidden="true">
+          {w > 0 && ' '}
+          <span className="btt-word">
+            {word.map(({ char, index }) => (
+              <span
+                key={index}
+                className="btt-char"
+                style={{ animationDelay: `${delay + index * step}ms` }}
+              >
+                {char}
+              </span>
+            ))}
+          </span>
         </span>
       ))}
     </span>

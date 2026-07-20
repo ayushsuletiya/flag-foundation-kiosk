@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
+import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { useHistoryYearAssets } from './historyAssets.ts'
@@ -102,7 +103,9 @@ export function YearMainScreen() {
           no subtitle line, no body copy on Main; copy lives on Know More) */}
       <div className="hy-hero" key={`hero-${row.year}`}>
         <div className="hy-year-row">
-          <span className="hy-year">{row.year}</span>
+          <span className="hy-year">
+            <BlurTypeText text={row.year} delay={60} stagger={70} budget={300} />
+          </span>
           {assets.yearFlag !== null ? (
             <img className="hy-year-flag" src={assets.yearFlag} alt="" />
           ) : assets.ready ? (
@@ -112,7 +115,9 @@ export function YearMainScreen() {
           ) : null}
         </div>
         <div className="hy-text-stack">
-          <p className="hy-title">{row.slideTitle}</p>
+          <p className="hy-title">
+            <BlurTypeText text={row.slideTitle} delay={300} stagger={24} budget={520} />
+          </p>
           <button
             type="button"
             className="hy-read-more"

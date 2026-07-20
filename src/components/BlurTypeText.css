@@ -2,6 +2,13 @@
   display: inline-block;
 }
 
+/* Words are atomic — chars are inline-blocks, which would otherwise accept
+   a line break between ANY two glyphs on wrapping headings. */
+.btt-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 /* inline-block so transform/filter apply per glyph */
 .btt-char {
   display: inline-block;

@@ -58,17 +58,22 @@ Rights categories: **FFOI property** (the foundation's own book, website and pho
 | `2-history-of-tiranga/1941/flag/flag.png` | Flag artwork for 1941 from the FFOI book | FFOI book 'Know Your National Flag' (Lt Cdr KV Singh, Flag Foundation of India, 2013), p. 43 (scan, page background removed, enhanced) | (c) Flag Foundation of India — client's own publication | Book p. 43 |
 ## History era background
 
-| Asset | Depicts | Source | Rights | Proof |
-|---|---|---|---|---|
-| `2-history-of-tiranga/1906/background/bg-1.png` | Era scene for 1906 (representative art, not an archival photograph) | Client design handoff (Freepik Mystic 4K render; flags composited via Nano Banana Pro) | Commissioned AI scene art — no third-party rights | Design handoff bundle |
-| `2-history-of-tiranga/1907/background/bg-1.png` | Era scene for 1907 (representative art, not an archival photograph) | Client design handoff (Freepik Mystic 4K render; flags composited via Nano Banana Pro) | Commissioned AI scene art — no third-party rights | Design handoff bundle |
-| `2-history-of-tiranga/1917/background/bg-1.png` | Era scene for 1917 (representative art, not an archival photograph) | Client design handoff (Freepik Mystic 4K render; flags composited via Nano Banana Pro) | Commissioned AI scene art — no third-party rights | Design handoff bundle |
-| `2-history-of-tiranga/1921/background/bg-1.png` | Era scene for 1921 (representative art, not an archival photograph) | Client design handoff (Freepik Mystic 4K render; flags composited via Nano Banana Pro) | Commissioned AI scene art — no third-party rights | Design handoff bundle |
-| `2-history-of-tiranga/1931/background/bg-1.png` | Era scene for 1931 (representative art, not an archival photograph) | Client design handoff (Freepik Mystic 4K render; flags composited via Nano Banana Pro) | Commissioned AI scene art — no third-party rights | Design handoff bundle |
-| `2-history-of-tiranga/1947/background/bg-1.png` | Era scene for 1947 (representative art, not an archival photograph) | Client design handoff (Freepik Mystic 4K render; flags composited via Nano Banana Pro) | Commissioned AI scene art — no third-party rights | Design handoff bundle |
-| `2-history-of-tiranga/1857/background/bg-1.png` | Era scene for 1857 (representative art, not an archival photograph) | Generated 2026-07-19 via Magnific (Nano Banana) to match the handoff set | Commissioned AI scene art — no third-party rights | Sources tab, row 'Era backgrounds' |
-| `2-history-of-tiranga/1905/background/bg-1.png` | Era scene for 1905 (representative art, not an archival photograph) | Generated 2026-07-19 via Magnific (Nano Banana) to match the handoff set | Commissioned AI scene art — no third-party rights | Sources tab, row 'Era backgrounds' |
-| `2-history-of-tiranga/1941/background/bg-1.png` | Era scene for 1941 (representative art, not an archival photograph) | Generated 2026-07-19 via Magnific (Nano Banana) to match the handoff set | Commissioned AI scene art — no third-party rights | Sources tab, row 'Era backgrounds' |
+All nine backgrounds are REAL archival images (user directive 2026-07-20: no
+AI-generated backgrounds). Each is a crop/upscale (Lanczos) + warm archival
+grade of a provenance-verified image from the SAME year's gallery folder —
+rights and proof are inherited from the matching gallery row above.
+
+| Asset | Derived from | Depicts | Rights |
+|---|---|---|---|
+| `2-history-of-tiranga/1857/background/bg-1.png` | `1857/gallery/gallery-4.png` | Battle of Delhi 1857 lithograph | Public domain (see gallery row) |
+| `2-history-of-tiranga/1905/background/bg-1.png` | `1905/gallery/gallery-2.png` | Sister Nivedita walking with Sara Bull & Josephine MacLeod | Public domain (see gallery row) |
+| `2-history-of-tiranga/1906/background/bg-1.png` | `1906/gallery/gallery-2.png` | Bande Mataram Weekly Edition masthead | Public domain (see gallery row) |
+| `2-history-of-tiranga/1907/background/bg-1.png` | `1907/gallery/gallery-4.png` | Delegates, Intl. Socialist Congress Stuttgart 1907 | Public domain (see gallery row) |
+| `2-history-of-tiranga/1917/background/bg-1.png` | `1917/gallery/gallery-3.png` | Home Rule era procession crowd | Public domain (see gallery row) |
+| `2-history-of-tiranga/1921/background/bg-1.png` | `1921/gallery/gallery-2.png` | Gandhi 1921 portrait, self-blur fill composite (same photo only) | Public domain (see gallery row) |
+| `2-history-of-tiranga/1931/background/bg-1.png` | `1931/gallery/gallery-1.png` | Karachi Congress 1931 panorama with flag mast | Public domain (see gallery row) |
+| `2-history-of-tiranga/1941/background/bg-1.png` | `1941/gallery/gallery-2.png` | Subhas Chandra Bose reviewing INA troops | Public domain (see gallery row) |
+| `2-history-of-tiranga/1947/background/bg-1.png` | `1947/gallery/gallery-6.png` | Constituent Assembly, 14-15 August 1947 | Public domain (see gallery row) |
 ## Home
 
 | Asset | Depicts | Source | Rights | Proof |

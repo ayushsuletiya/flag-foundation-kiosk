@@ -9,12 +9,17 @@
  */
 export function MonumentalHeader() {
   return (
+    // Parisienne swashes overflow the line box; background-clip:text only
+    // paints inside the border box, so grow the paint box with padding and
+    // pull it back with equal negative margins (same trick as .hy-header) —
+    // otherwise the script 'g' descender renders transparent (clipped).
     <h1
       style={{
         position: 'absolute',
         left: 79,
         top: 65,
-        width: 726,
+        padding: '45px 60px',
+        margin: '-45px -60px',
         fontFamily: 'var(--font-ui)',
         fontWeight: 600,
         fontSize: 65.889,

@@ -39,6 +39,10 @@
   top: 65px;
   line-height: 1.226;
   white-space: nowrap;
+  /* Parisienne swash ink outside the border box loses its background-clip:text
+     paint (clipped look) — grow the paint box, pull back with equal margins. */
+  padding: 45px 60px;
+  margin: -45px -60px;
   background: var(--title-gradient);
   -webkit-background-clip: text;
   background-clip: text;
@@ -59,6 +63,31 @@
 /* Gold 5-stop gradient text (headlines, '24' numeral, active row label) */
 .ck-gold-text {
   background: linear-gradient(
+    122deg,
+    #ffffff 6.3%,
+    #ffe26e 25.29%,
+    #ffdb4d 44.64%,
+    #fff1ba 63.26%,
+    #ffe26e 82.25%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* BlurTypeText headlines: chars carry per-glyph blur/transform, which makes
+   the PARENT's background-clip:text skip the filtered subtree (invisible
+   text) — so the gradient moves onto the chars and the parent stops
+   clipping. BlurTypeText re-slices the ramp continuously across the word. */
+.ck-gold-text:has(.btt) {
+  background: none;
+  -webkit-text-fill-color: currentcolor;
+  color: #ffffff;
+}
+
+.ck-gold-text .btt-char {
+  background-image: linear-gradient(
     122deg,
     #ffffff 6.3%,
     #ffe26e 25.29%,
@@ -564,16 +593,19 @@
   color: #ffffff;
 }
 
-/* Live Chakra3D flag scene in the old flag-pole.png footprint (the box runs
-   past the 1080 stage bottom exactly like the image did — the pole exits the
-   screen). pointer-events none: flag mode has no interactions, and the tab
-   pills overlap this box's top-left corner. */
+/* Live Chakra3D flag scene (the box runs past the 1080 stage bottom exactly
+   like the old flag-pole.png did — the pole exits the screen). Scaled up
+   1.2x from the original 801x1197 footprint — SAME aspect (0.669), so the
+   camera framing derived for that slot is untouched — and dropped so the
+   pole tip clears the "Chakra in Flag" tab pill instead of touching it
+   (user fix 2026-07-20). pointer-events none: flag mode has no
+   interactions. */
 .ck-flag-hero {
   position: absolute;
-  left: 497px;
-  top: 183px;
-  width: 801px;
-  height: 1197px;
+  left: 449px;
+  top: 355px;
+  width: 961px;
+  height: 1436px;
   pointer-events: none;
 }
 

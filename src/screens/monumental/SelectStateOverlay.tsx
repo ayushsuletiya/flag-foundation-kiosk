@@ -26,7 +26,6 @@ export interface SelectStateOverlayProps {
   currentState: string
   /** Installation count per state (0 ⇒ disabled chip). */
   countByState: ReadonlyMap<string, number>
-  totalInstallations: number
   onContinue: (state: string) => void
   onClose: () => void
 }
@@ -34,7 +33,6 @@ export interface SelectStateOverlayProps {
 export function SelectStateOverlay({
   currentState,
   countByState,
-  totalInstallations,
   onContinue,
   onClose,
 }: SelectStateOverlayProps) {
@@ -92,21 +90,6 @@ export function SelectStateOverlay({
         >
           Select State
         </h2>
-        <p
-          style={{
-            position: 'absolute',
-            left: 56,
-            top: 116,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 400,
-            fontSize: 20,
-            color: 'rgba(255, 255, 255, 0.55)',
-          }}
-        >
-          {CANONICAL_STATES.length} States &amp; Union Territories · {totalInstallations} monumental
-          flags
-        </p>
-
         {/* Close */}
         <button
           type="button"
@@ -192,30 +175,31 @@ export function SelectStateOverlay({
           )
         })}
 
-        {/* CONTINUE — confirm step carried over from 795:8343 */}
+        {/* Continue — Figma 795:8985/8986/8987: cream 309x101 r50 pill at
+            stage (806,948), i.e. straddling the panel's bottom edge, 2px
+            #BA8601 border, Poppins SemiBold 29.091 #572F16. */}
         <button
           type="button"
           className="mon-pressable"
           onClick={() => onContinue(picked)}
           style={{
             position: 'absolute',
-            left: 830 - 130,
-            top: 846,
-            width: 260,
-            height: 60,
-            borderRadius: 30,
-            background: 'var(--gold-gradient)',
-            border: '1px solid var(--cream-border)',
-            boxShadow: 'var(--gold-glow)',
+            left: 806 - 130,
+            top: 948 - 80,
+            width: 309,
+            height: 101,
+            borderRadius: 50,
+            background: 'linear-gradient(105.83deg, #FFFFFF 3.02%, #FFEAC1 103.17%)',
+            border: '2px solid #BA8601',
+            boxShadow: '0 10px 34px rgba(0, 0, 0, 0.35)',
             fontFamily: 'var(--font-ui)',
             fontWeight: 600,
-            fontSize: 24,
-            letterSpacing: 2,
-            color: '#211405',
+            fontSize: 29.091,
+            color: '#572F16',
             cursor: 'pointer',
           }}
         >
-          CONTINUE
+          Continue
         </button>
       </div>
     </div>

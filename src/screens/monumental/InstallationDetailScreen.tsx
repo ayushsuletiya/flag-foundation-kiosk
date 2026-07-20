@@ -25,7 +25,30 @@ import {
   installationPhoto,
 } from '../../assets/paths.ts'
 import { probeImageCached } from '../../assets/probe.ts'
+import { useFlagObjectPosition } from '../../assets/imageFocus.ts'
 import './monumental.css'
+
+/** One crossfade layer — owns its flag-focus crop so the pole never clips. */
+function CarouselPhoto({ src, visible }: { src: string; visible: boolean }) {
+  const position = useFlagObjectPosition(src, 930.097 / 686.555)
+  return (
+    <img
+      src={src}
+      alt=""
+      draggable={false}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        objectPosition: position,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 700ms ease',
+      }}
+    />
+  )
+}
 
 /** Contiguous installations/<id>/1.jpg, 2.jpg… (any count, carousel-ready). */
 function useInstallationPhotos(id: number | null): { ready: boolean; photos: string[] } {
@@ -177,21 +200,7 @@ export function InstallationDetailScreen() {
           <>
             {/* Stacked crossfade — any photo count; single photo = plain still */}
             {photos.map((src, i) => (
-              <img
-                key={src}
-                src={src}
-                alt=""
-                draggable={false}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  opacity: i === photoIndex ? 1 : 0,
-                  transition: 'opacity 700ms ease',
-                }}
-              />
+              <CarouselPhoto key={src} src={src} visible={i === photoIndex} />
             ))}
             {photos.length >= 2 && (
               <div

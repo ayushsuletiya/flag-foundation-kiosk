@@ -5,6 +5,40 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-20 polish pass (/goal — verified live in preview)
+- **History backgrounds are now REAL archival images** (user directive: NO
+  AI-generated backgrounds, ever — upscale/expand real photos only). All 9
+  `background/bg-1.png` rebuilt from that year's provenance-verified gallery
+  image (Lanczos + warm grade + grain; 1921 = self-blur-fill composite of
+  the Gandhi photo; scratchpad `real-bgs.py`). Provenance doc + Excel
+  credits tab rows updated to the derived-from-gallery sources.
+- **Symbols podium grounding**: tiger/peacock/elephant/banyan/flag stand ON
+  the podium (visible alpha-bbox bottom pinned to y=725.5 via
+  `useGroundedOffset` in `symbolsMedia.ts`); dolphin/ganga/lotus/etc keep
+  floating (user decision).
+- **Know More gallery**: year flag artwork always leads the gallery
+  (`historyAssets.ts`); large image NEVER cropped — dynamic framed box hugs
+  the image's own aspect (contain, max 728×485); thumbs stay uniform, flag
+  thumb contained on a dark plate.
+- **Monumental**: "Flags" script descender un-clipped (padding+negative
+  margin — background-clip:text only paints ink inside the border box; same
+  fix applied to the chakra title); installation card + detail photos keep
+  the FLAG in frame via tricolor-detection crop focus
+  (`src/assets/imageFocus.ts` — anchors on the topmost dense tricolor rows,
+  so balloon garlands lower in frame can't win).
+- **Select State overlay**: subtitle count line removed; Continue is the
+  Figma cream pill (309×101 r50 at stage 806,948, straddling the panel's
+  bottom edge).
+- **Chakra in Flag**: hero slot scaled 1.2x (same 0.669 aspect → same camera
+  framing) and moved down — pole tip clears the tab pill.
+- **Global polish**: 320ms route fade/rise (`AnimatedRoutes` in App.tsx;
+  history year-pill swaps collapse to one key so they DON'T remount;
+  `/symbols` stays inert per the no-transition user decision); Quick Access
+  panel backdrop-blur (panel-sized, not full-screen — perf guard intact);
+  BlurTypeText word-grouping (no mid-word wraps) + rolled out to symbol
+  detail titles, history year/title, Know More heading, chakra headlines
+  (gradient moves onto chars — parent bg-clip:text skips filtered subtrees).
+
 Milestone commits, in order:
 - `30b9123` fix: monumental expanded-card glow clipping (single glow source
   when the first-row patch is active) + KnowMore portrait crop bias.

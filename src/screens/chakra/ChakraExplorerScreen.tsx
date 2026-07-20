@@ -26,6 +26,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
+import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { TabPills } from '../../components/TabPills.tsx'
@@ -177,10 +178,11 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
       ) : (
         <>
           <div
+            key={selected.virtue}
             className="ck-virtue-headline ck-gold-text"
             style={{ fontSize: fitHeadline(selected.virtue, 88.5, 440) }}
           >
-            {selected.virtue}
+            <BlurTypeText text={selected.virtue} stagger={36} budget={420} />
           </div>
           <div className="ck-underline" style={{ left: 109, top: 465, width: 332 }} />
           <p className="ck-virtue-desc">{virtueDescription(selected.virtue)}</p>
@@ -249,9 +251,9 @@ function DesignTab({ colorCode, spokeCount, meaning }: DesignTabProps) {
   return (
     <>
       <div className="ck-design-headline ck-gold-text">
-        Ashok
+        <BlurTypeText text="Ashok" stagger={36} budget={220} />
         <br />
-        Chakra
+        <BlurTypeText text="Chakra" delay={220} stagger={36} budget={260} />
       </div>
       <div className="ck-underline" style={{ left: 109, top: 533, width: 332 }} />
       <p className="ck-design-subtitle">{DESIGN_SUBTITLE}</p>
@@ -317,16 +319,19 @@ function FlagTab({ headline, facts }: FlagTabProps) {
 
   return (
     <>
-      <div className="ck-flag-headline ck-gold-text">{headline}</div>
+      <div key={headline} className="ck-flag-headline ck-gold-text">
+        <BlurTypeText text={headline} stagger={34} budget={480} />
+      </div>
       <div className="ck-underline" style={{ left: 109, top: 461, width: 332 }} />
       <p className="ck-flag-intro">{TIRANGA_INTRO}</p>
 
       {/* Live hero — the source build's "See chakra in flag" scene: the wheel
           shrinks, docks into the white band of the Tiranga (⌀185 = 92.5% of
           the band) and the flag waves on. Remounts on every tab entry, so the
-          docking animation replays each visit. */}
+          docking animation replays each visit. 961x1436 = the original
+          801x1197 slot scaled 1.2x (same aspect → same camera framing). */}
       <div className="ck-flag-hero">
-        <LazyChakra3D mode="flag" width={801} height={1197} spin={false} interactive={false} />
+        <LazyChakra3D mode="flag" width={961} height={1436} spin={false} interactive={false} />
       </div>
 
       <div className="ck-card ck-card--symbolism">

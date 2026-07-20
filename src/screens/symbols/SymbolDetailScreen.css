@@ -77,6 +77,21 @@
   color: transparent;
 }
 
+/* BlurTypeText chars carry per-glyph filters — the parent's
+   background-clip:text skips filtered subtrees, so the gradient moves onto
+   the chars (BlurTypeText re-slices one continuous ramp across the word). */
+.syd-title:has(.btt) {
+  background: none;
+  color: #ffffff;
+}
+
+.syd-title .btt-char {
+  background-image: var(--title-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
 /* ---- Gold symbolism headline ------------------------------------ */
 /* Width 600 reproduces the mock's wrap ("Symbol of Grace," /
    "Strength, Agility & Power"): measured Poppins Bold 45.232 runs are
@@ -91,6 +106,18 @@
   font-weight: 700;
   font-size: 45.232px;
   background: var(--gold-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.syd-headline:has(.btt) {
+  background: none;
+  color: #ffffff;
+}
+
+.syd-headline .btt-char {
+  background-image: var(--gold-gradient);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;

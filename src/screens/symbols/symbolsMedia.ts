@@ -112,6 +112,130 @@ function discoverCached(slug: string): Promise<Discovered> {
   return hit
 }
 
+/* ------------------------------------------------------------------ */
+/* Podium grounding                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Symbols that physically STAND — they sit on the podium (visible bottom
+ * pinned to the podium top). Everything else (dolphin, river, lotus, rupee,
+ * anthem, song, calendar, lion capital) keeps floating (user decision
+ * 2026-07-20: "animals and tree and flag on podium, rest can float"). */
+const GROUNDED_SLUGS = new Set([
+  'tiger',
+  'peacock',
+  'indian-elephant',
+  'indian-banyan',
+  'flag',
+])
+
+export function isGroundedSymbol(slug: string): boolean {
+  return GROUNDED_SLUGS.has(slug)
+}
+
+interface AlphaBounds {
+  naturalWidth: number
+  naturalHeight: number
+  /** Fraction of natural height where visible ink starts / ends (0..1). */
+  topFrac: number
+  bottomFrac: number
+}
+
+const boundsCache = new Map<string, Promise<AlphaBounds | null>>()
+
+/** Alpha bounding box of the artwork PNG (downscaled scan — one per slug). */
+function measureAlphaBounds(url: string): Promise<AlphaBounds | null> {
+  const pending = boundsCache.get(url)
+  if (pending !== undefined) return pending
+  const job = new Promise<AlphaBounds | null>((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const w = Math.min(128, img.naturalWidth)
+      const h = Math.max(1, Math.round((img.naturalHeight / img.naturalWidth) * w))
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (ctx === null) {
+        resolve(null)
+        return
+      }
+      ctx.drawImage(img, 0, 0, w, h)
+      let data: Uint8ClampedArray
+      try {
+        data = ctx.getImageData(0, 0, w, h).data
+      } catch {
+        resolve(null)
+        return
+      }
+      let minY = -1
+      let maxY = -1
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3]! > 16) {
+            if (minY === -1) minY = y
+            maxY = y
+            break
+          }
+        }
+      }
+      if (minY === -1) {
+        resolve(null) // fully transparent?
+        return
+      }
+      resolve({
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        topFrac: minY / h,
+        bottomFrac: (maxY + 1) / h,
+      })
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+  boundsCache.set(url, job)
+  return job
+}
+
+/**
+ * Vertical offset (px) that drops a grounded symbol's VISIBLE bottom edge
+ * onto the podium top. The artwork renders `object-fit: contain` inside a
+ * box at `boxTop` with size `boxW`x`boxH`; transparent padding differs per
+ * artwork, so the alpha bbox of static.png decides where the feet really
+ * are. Returns 0 while measuring, for floating symbols, and for slugs
+ * without art.
+ */
+export function useGroundedOffset(
+  slug: string,
+  enabled: boolean,
+  boxTop: number,
+  boxW: number,
+  boxH: number,
+  podiumY: number,
+): number {
+  const [offset, setOffset] = useState(0)
+
+  useEffect(() => {
+    setOffset(0)
+    if (!enabled || !GROUNDED_SLUGS.has(slug)) return
+    let alive = true
+    void measureAlphaBounds(staticUrlFor(slug)).then((bounds) => {
+      if (!alive || bounds === null) return
+      const scale = Math.min(boxW / bounds.naturalWidth, boxH / bounds.naturalHeight)
+      const renderedH = bounds.naturalHeight * scale
+      const offsetY = (boxH - renderedH) / 2 // contain letterbox
+      const visibleBottom = boxTop + offsetY + bounds.bottomFrac * renderedH
+      const dy = podiumY - visibleBottom
+      // Sanity clamp — a wild bbox (bad art) must never fling the subject.
+      setOffset(Math.max(-120, Math.min(160, dy)))
+    })
+    return () => {
+      alive = false
+    }
+  }, [slug, enabled, boxTop, boxW, boxH, podiumY])
+
+  return offset
+}
+
 /** Live media facts for one symbol slug. */
 export function useSymbolMedia(slug: string): SymbolMedia {
   const [state, setState] = useState<({ slug: string } & Discovered) | null>(null)
