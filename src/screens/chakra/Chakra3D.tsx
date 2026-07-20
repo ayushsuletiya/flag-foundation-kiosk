@@ -673,6 +673,16 @@ function createChakraScene(
   liveCatcher.receiveShadow = true
   scene.add(liveCatcher)
 
+  // NO ground shadows while the chakra is forming (user 2026-07-20): the
+  // in-flight spokes cast a jagged blob onto the water that reads as a
+  // glitch. Both shadow layers hold at 0 whenever an assembly timeline is
+  // running (buildP < 1) and ease back in over SHADOW_FADE_MS once the
+  // wheel settles. Values/Flag never run an assembly, so they keep their
+  // shadows from the first frame.
+  const LIVE_SHADOW_OPACITY = 0.26
+  const SHADOW_FADE_MS = 600
+  let shadowFadeStart = -1e9 // "settled long ago" — fully visible by default
+
   /* ------------------------- volumetric light (true object occlusion) -- */
   // The way 3D packages do it, shadow-map accelerated: for every pixel a
   // ray marches through the AIR in front of the camera and asks at each
@@ -1546,6 +1556,14 @@ function createChakraScene(
       buildP = clamp01((now - buildT0) / ASSEMBLY_MS)
       applyAssemblyTimeline(buildP, assemblyRefs)
     }
+
+    // Ground shadows: invisible while forming, 600ms ease-in once settled.
+    if (buildP < 1) shadowFadeStart = now
+    const shadowRamp = clamp01((now - shadowFadeStart) / SHADOW_FADE_MS)
+    liveCatcher.material.opacity = LIVE_SHADOW_OPACITY * shadowRamp
+    liveCatcher.visible = shadowRamp > 0
+    contactShadow.material.opacity = shadowRamp
+    contactShadow.visible = shadowRamp > 0
     if (modeState === 'wheel' && flagAnim === null && !dragging) {
       // Rest pose: selected spoke at 12 o'clock beats dims-upright beats idle.
       if (buildP >= 1) {
