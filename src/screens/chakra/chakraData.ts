@@ -210,6 +210,23 @@ export function fitHeadline(text: string, base: number, avail: number): number {
   return Math.min(base, Math.max(28, fitted))
 }
 
+let measureCtx: CanvasRenderingContext2D | null = null
+
+/**
+ * Measured shrink-to-fit: the 0.62em/char heuristic above overestimates
+ * narrow-lettered words ("Faithfulness" is mostly i/t/f/l), shrinking them
+ * far more than needed (user 2026-07-20: "faithfulness text is too small").
+ * Real canvas metrics keep every headline as large as actually fits.
+ */
+export function fitHeadlineMeasured(text: string, base: number, avail: number): number {
+  measureCtx ??= document.createElement('canvas').getContext('2d')
+  if (measureCtx === null) return fitHeadline(text, base, avail)
+  measureCtx.font = `600 ${base}px Poppins, sans-serif`
+  const width = measureCtx.measureText(text).width
+  if (width <= avail) return base
+  return Math.max(40, (base * avail) / width)
+}
+
 /**
  * Split a multi-word name into at most TWO lines, balanced by length
  * ("Spiritual Knowledge" → ["Spiritual", "Knowledge"]). Headlines keep one

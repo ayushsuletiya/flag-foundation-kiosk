@@ -43,7 +43,7 @@ import {
   DESIGN_SPEC_ROWS,
   DESIGN_SUBTITLE,
   FIGMA_ICON_SLUGS,
-  fitHeadline,
+  fitHeadlineMeasured,
   splitTwoLines,
   TIRANGA_INTRO,
   VALUES_INTRO,
@@ -190,7 +190,9 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
           // description slide down to clear a second line.
           const lines = splitTwoLines(selected.virtue)
           const longest = lines.reduce((a, b) => (b.length > a.length ? b : a), '')
-          const headlineSize = fitHeadline(longest, 88.5, 440)
+          // Measured fit (not the char-count heuristic) + room up to the
+          // wheel's ink edge — long words stay near the 88.5px target.
+          const headlineSize = fitHeadlineMeasured(longest, 88.5, 500)
           const headlineBottom = 330 + lines.length * headlineSize * 1.226
           const underlineTop = Math.max(465, headlineBottom + 27)
           return (
