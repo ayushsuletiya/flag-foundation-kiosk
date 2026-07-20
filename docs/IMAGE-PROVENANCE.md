@@ -73,7 +73,7 @@ rights and proof are inherited from the matching gallery row above.
 | `2-history-of-tiranga/1921/background/bg-1.png` | `1921/gallery/gallery-2.png` | Gandhi 1921 portrait; surroundings generatively extended to widescreen (Google Nano Banana Pro via Magnific, user-approved 2026-07-20) — the archival portrait itself is unchanged | Archival core: public domain (see gallery row); extended margins: commissioned gen-fill, no third-party rights |
 | `2-history-of-tiranga/1931/background/bg-1.png` | `1931/gallery/gallery-1.png` | Karachi Congress 1931 panorama with flag mast | Public domain (see gallery row) |
 | `2-history-of-tiranga/1941/background/bg-1.png` | `1941/gallery/gallery-2.png` | Bose reviewing INA troops — scene re-rendered to widescreen by GPT 2 from the archival reference (user-approved 2026-07-20; Bose's likeness verified against the original, which the plain upscale had left too soft and a Nano Banana attempt distorted). The true archival photo is in the 1941 gallery. | Gen-render from a public-domain reference — no third-party rights |
-| `2-history-of-tiranga/1947/background/bg-1.png` | `1947/gallery/gallery-6.png` | Constituent Assembly, 14-15 August 1947 | Public domain (see gallery row) |
+| `2-history-of-tiranga/1947/background/bg-1.png` | `1947/gallery/gallery-6.png` | Constituent Assembly, 14-15 August 1947 — MIRRORED horizontally (user decision 2026-07-20, so Nehru at the rostrum is visible beside the left text column; note the small AIR mic-box lettering reads reversed) | Public domain (see gallery row) |
 ## Home
 
 | Asset | Depicts | Source | Rights | Proof |
