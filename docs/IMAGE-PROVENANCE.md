@@ -66,11 +66,11 @@ rights and proof are inherited from the matching gallery row above.
 | Asset | Derived from | Depicts | Rights |
 |---|---|---|---|
 | `2-history-of-tiranga/1857/background/bg-1.png` | `1857/gallery/gallery-4.png` | Battle of Delhi 1857 lithograph | Public domain (see gallery row) |
-| `2-history-of-tiranga/1905/background/bg-1.png` | `1905/gallery/gallery-2.png` | Nivedita group photo, self-blur fill composite (photo placed right of the year-flag slot) | Public domain (see gallery row) |
+| `2-history-of-tiranga/1905/background/bg-1.png` | `1905/gallery/gallery-2.png` | Nivedita group photo; surroundings generatively extended to widescreen (Google Nano Banana Pro via Magnific, user-approved 2026-07-20) — the archival photo itself is unchanged | Archival core: public domain (see gallery row); extended margins: commissioned gen-fill, no third-party rights |
 | `2-history-of-tiranga/1906/background/bg-1.png` | `1906/gallery/gallery-2.png` | Bande Mataram masthead as a paper-artifact card over its own blurred page | Public domain (see gallery row) |
 | `2-history-of-tiranga/1907/background/bg-1.png` | `1907/gallery/gallery-4.png` | Delegates, Intl. Socialist Congress Stuttgart 1907 | Public domain (see gallery row) |
-| `2-history-of-tiranga/1917/background/bg-1.png` | `1917/gallery/gallery-2.png` | Bal Gangadhar Tilak 1917 portrait, self-blur fill composite (the 500px crowd photo was too soft full-bleed) | Public domain (see gallery row) |
-| `2-history-of-tiranga/1921/background/bg-1.png` | `1921/gallery/gallery-2.png` | Gandhi 1921 portrait, self-blur fill composite (same photo only) | Public domain (see gallery row) |
+| `2-history-of-tiranga/1917/background/bg-1.png` | `1917/gallery/gallery-2.png` | Bal Gangadhar Tilak 1917 portrait; surroundings generatively extended to widescreen (Google Nano Banana Pro via Magnific, user-approved 2026-07-20) — the archival portrait itself is unchanged | Archival core: public domain (see gallery row); extended margins: commissioned gen-fill, no third-party rights |
+| `2-history-of-tiranga/1921/background/bg-1.png` | `1921/gallery/gallery-2.png` | Gandhi 1921 portrait; surroundings generatively extended to widescreen (Google Nano Banana Pro via Magnific, user-approved 2026-07-20) — the archival portrait itself is unchanged | Archival core: public domain (see gallery row); extended margins: commissioned gen-fill, no third-party rights |
 | `2-history-of-tiranga/1931/background/bg-1.png` | `1931/gallery/gallery-1.png` | Karachi Congress 1931 panorama with flag mast | Public domain (see gallery row) |
 | `2-history-of-tiranga/1941/background/bg-1.png` | `1941/gallery/gallery-2.png` | Subhas Chandra Bose reviewing INA troops | Public domain (see gallery row) |
 | `2-history-of-tiranga/1947/background/bg-1.png` | `1947/gallery/gallery-6.png` | Constituent Assembly, 14-15 August 1947 | Public domain (see gallery row) |
