@@ -44,6 +44,7 @@ import {
   DESIGN_SUBTITLE,
   FIGMA_ICON_SLUGS,
   fitHeadline,
+  splitTwoLines,
   TIRANGA_INTRO,
   VALUES_INTRO,
   virtueDescription,
@@ -182,17 +183,36 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
           </button>
         </>
       ) : (
-        <>
-          <div
-            key={selected.virtue}
-            className="ck-virtue-headline ck-gold-text"
-            style={{ fontSize: fitHeadline(selected.virtue, 88.5, 440) }}
-          >
-            <BlurTypeText text={selected.virtue} stagger={36} budget={420} />
-          </div>
-          <div className="ck-underline" style={{ left: 109, top: 465, width: 332 }} />
-          <p className="ck-virtue-desc">{virtueDescription(selected.virtue)}</p>
-        </>
+        (() => {
+          // One CONSISTENT headline size: multi-word virtues stack as two
+          // lines ("Spiritual" / "Knowledge") instead of shrinking to a
+          // sliver — only the longest LINE drives the fit. The underline and
+          // description slide down to clear a second line.
+          const lines = splitTwoLines(selected.virtue)
+          const longest = lines.reduce((a, b) => (b.length > a.length ? b : a), '')
+          const headlineSize = fitHeadline(longest, 88.5, 440)
+          const headlineBottom = 330 + lines.length * headlineSize * 1.226
+          const underlineTop = Math.max(465, headlineBottom + 27)
+          return (
+            <>
+              <div
+                key={selected.virtue}
+                className="ck-virtue-headline ck-gold-text"
+                style={{ fontSize: headlineSize }}
+              >
+                {lines.map((line, i) => (
+                  <span key={line} style={{ display: 'block' }}>
+                    <BlurTypeText text={line} delay={i * 200} stagger={36} budget={300} />
+                  </span>
+                ))}
+              </div>
+              <div className="ck-underline" style={{ left: 109, top: underlineTop, width: 332 }} />
+              <p className="ck-virtue-desc" style={{ top: underlineTop + 27 }}>
+                {virtueDescription(selected.virtue)}
+              </p>
+            </>
+          )
+        })()
       )}
 
       {/* Center — interactive 3D wheel over its ground shadow */}
@@ -217,6 +237,12 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
         >
           {virtues.map((v) => {
             const active = v.spoke === spoke
+            // Long multi-word names ("Spiritual Knowledge") overflow the
+            // 381px pill at 30px nowrap — stack them as two lines at the
+            // SAME size instead of clipping. Long single words fit-shrink.
+            const lines = v.virtue.length > 12 ? splitTwoLines(v.virtue) : [v.virtue]
+            const stacked = lines.length > 1
+            const single = !stacked && v.virtue.length > 13
             return (
               <button
                 key={v.spoke}
@@ -228,7 +254,22 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
                 <span className="ck-virtue-ring">
                   <VirtueIcon virtue={v.virtue} />
                 </span>
-                <span className="ck-virtue-label">{v.virtue}</span>
+                <span
+                  className={stacked ? 'ck-virtue-label ck-virtue-label--stacked' : 'ck-virtue-label'}
+                  style={
+                    single
+                      ? { fontSize: Math.max(22, 240 / (0.62 * v.virtue.length)) }
+                      : undefined
+                  }
+                >
+                  {stacked
+                    ? lines.map((line) => (
+                        <span key={line} style={{ display: 'block' }}>
+                          {line}
+                        </span>
+                      ))
+                    : v.virtue}
+                </span>
               </button>
             )
           })}

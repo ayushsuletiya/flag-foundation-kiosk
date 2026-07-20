@@ -369,6 +369,13 @@
   white-space: nowrap;
 }
 
+/* Two-line variant for long multi-word virtues ("Spiritual Knowledge") —
+   SAME 30px size, stacked words, re-centered in the 101px pill. */
+.ck-virtue-label--stacked {
+  top: 16px;
+  line-height: 34px;
+}
+
 .ck-virtue-row.is-active .ck-virtue-label {
   font-weight: 700;
   background: linear-gradient(

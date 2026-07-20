@@ -209,3 +209,27 @@ export function fitHeadline(text: string, base: number, avail: number): number {
   const fitted = avail / (0.62 * Math.max(1, text.length))
   return Math.min(base, Math.max(28, fitted))
 }
+
+/**
+ * Split a multi-word name into at most TWO lines, balanced by length
+ * ("Spiritual Knowledge" → ["Spiritual", "Knowledge"]). Headlines keep one
+ * consistent size and stack instead of shrinking to a sliver (user
+ * 2026-07-20: "texts consistent in size; if too long break in two parts").
+ * Single words return as one line — the caller fit-shrinks those.
+ */
+export function splitTwoLines(text: string): string[] {
+  const words = text.trim().split(/\s+/)
+  if (words.length < 2) return [text.trim()]
+  let best: [string, string] = [words[0]!, words.slice(1).join(' ')]
+  let bestDiff = Number.POSITIVE_INFINITY
+  for (let i = 1; i < words.length; i++) {
+    const a = words.slice(0, i).join(' ')
+    const b = words.slice(i).join(' ')
+    const diff = Math.abs(a.length - b.length)
+    if (diff < bestDiff) {
+      bestDiff = diff
+      best = [a, b]
+    }
+  }
+  return best
+}
