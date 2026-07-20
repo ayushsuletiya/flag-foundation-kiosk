@@ -8,6 +8,27 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  /* Warm base under the (async) golden-sunset bg — the pre-decode frame
+     must not be pure black, or the screen reads as a black flash before
+     abruptly appearing (user report 2026-07-20). */
+  background: linear-gradient(180deg, #241205 0%, #1a0e04 55%, #120a03 100%);
+}
+
+/* The three.js wheel/flag mounts whenever its lazy chunk (and on tab
+   switches, its remount) is ready — always ease it in instead of popping. */
+.ck-3d-enter {
+  width: 100%;
+  height: 100%;
+  animation: ck-3d-enter 500ms ease both;
+}
+
+@keyframes ck-3d-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ---- shared chrome ------------------------------------------------ */

@@ -6,8 +6,10 @@
  * Electron build can navigate under file://. Routes render Phase 1 placeholder
  * screens that prove the Excel wiring; real screens replace them in Phases 2-6.
  */
+import { useEffect } from 'react'
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { Stage } from './app/Stage.tsx'
+import { CHAKRA } from './assets/paths.ts'
 import { useIdleReset } from './app/useIdleReset.ts'
 import { DevContentScreen } from './app/DevContentScreen.tsx'
 import { QuickAccessProvider } from './components/QuickAccessOverlay.tsx'
@@ -24,6 +26,25 @@ import { SymbolDetailScreen } from './screens/symbols/SymbolDetailScreen.tsx'
 /** Mounts the idle timer inside the router context. */
 function IdleReset() {
   useIdleReset() // default 120s → back to home (attract-loop hook point)
+  return null
+}
+
+/**
+ * Warm the heavy chakra assets shortly after first paint: the ~575kB
+ * three.js chunk (still ITS OWN chunk — only fetched early, perf guard
+ * intact) and the 1.8MB sunset still. Without this, a cold visit to
+ * /chakra shows a dark frame until chunk + decode land (user report:
+ * "page comes black, then abruptly appears").
+ */
+function WarmChakra() {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void import('./screens/chakra/Chakra3D.tsx')
+      const img = new Image()
+      img.src = `${CHAKRA.background}/bg.png`
+    }, 2500)
+    return () => clearTimeout(timer)
+  }, [])
   return null
 }
 
@@ -71,6 +92,7 @@ function App() {
     <Stage>
       <HashRouter>
         <IdleReset />
+        <WarmChakra />
         <QuickAccessProvider>
           <AnimatedRoutes />
         </QuickAccessProvider>

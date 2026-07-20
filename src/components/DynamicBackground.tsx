@@ -131,30 +131,39 @@ export function DynamicBackground({
 
   if (!sources.ready) return null
 
+  // Whatever resolves, ease it in: probing + (on cold visits) media decode
+  // land AFTER the route transition has finished, so an unfaded mount reads
+  // as the screen "popping" out of black (user report: chakra page).
+  const enter = (media: ReactNode) => (
+    <div className="dbg-enter" style={{ position: 'absolute', inset: 0 }}>
+      {media}
+    </div>
+  )
+
   if (sources.video !== null) {
-    return (
+    return enter(
       <VideoLoop
         src={sources.video}
         poster={sources.poster ?? sources.images[0]}
         objectFit={objectFit}
         className={className}
         style={style}
-      />
+      />,
     )
   }
   if (sources.images.length >= 2) {
-    return <CrossfadeLoop images={sources.images} objectFit={objectFit} />
+    return enter(<CrossfadeLoop images={sources.images} objectFit={objectFit} />)
   }
   const only = sources.images[0]
   if (only !== undefined) {
-    return (
+    return enter(
       <img
         src={only}
         alt=""
         draggable={false}
         className={className}
         style={{ width: '100%', height: '100%', objectFit, ...style }}
-      />
+      />,
     )
   }
   return <>{fallback}</>

@@ -114,7 +114,13 @@ function LazyChakra3D(props: Chakra3DProps) {
   }, [comp])
   if (comp === null) return null
   const Comp = comp
-  return <Comp {...props} />
+  // Fade the canvas in — on cold entries the chunk lands well after the
+  // route transition, and even warm tab switches remount the scene.
+  return (
+    <div className="ck-3d-enter">
+      <Comp {...props} />
+    </div>
+  )
 }
 
 /* ------------------------------------------------------------------ */

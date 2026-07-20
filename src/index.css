@@ -64,3 +64,19 @@ button {
     transform: none;
   }
 }
+
+/* ---- DynamicBackground media entrance (DynamicBackground.tsx) ------ */
+/* Backgrounds resolve (probe + decode) after the route fade has already
+   finished — ease them in so screens never pop out of black. */
+.dbg-enter {
+  animation: dbg-enter 600ms ease both;
+}
+
+@keyframes dbg-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
