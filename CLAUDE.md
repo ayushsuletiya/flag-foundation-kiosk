@@ -65,6 +65,9 @@ screens never hardcode them.
   drives the .ck-wheel box translateX AND the axle spin from one remaining-travel number, so it
   never slips), settles with a small rock-back → chrome rises in staggered. Any touch skips;
   in-section tab hops never replay it (gated on navTrace previousPathname, like History).
+  Entrance dressing: the screen dips through BLACK (not the warm-brown base), the sunset shows
+  BARE while the wheel travels (no blur, no scrim, brightness 1.14), and the 3.5px blur + scrim
+  ease back in at reveal; the roll waits for the background to be ready (useDynamicBackground).
 - Home → Symbols: **NO transition animation** (user decision 2026-07-19, after two iterations —
   a full home-exit + arrive cinematic was built and then removed entirely; do not reintroduce).
   All 4 home tiles navigate instantly. The symbols screen has no intro either (trail sweep also

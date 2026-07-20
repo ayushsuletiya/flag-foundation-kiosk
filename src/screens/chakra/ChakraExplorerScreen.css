@@ -41,9 +41,12 @@
   object-fit: cover;
   /* Figma's scrim carries backdrop-blur 13px; blur the static plate instead
      (one-off raster, compositor-cached) — full-screen backdrop-filter is
-     banned by the perf guard. Slight scale hides the blur's edge bleed. */
-  filter: blur(3.5px);
+     banned by the perf guard. Slight scale hides the blur's edge bleed.
+     The function list matches the intro's bare state exactly (blur/
+     brightness/saturate) — mismatched filter lists don't interpolate. */
+  filter: blur(3.5px) brightness(1) saturate(1);
   transform: scale(1.01);
+  transition: filter 750ms ease;
 }
 
 /* Figma scrim layer 795:5834 (flipped vertically → dark band at top).
@@ -52,6 +55,7 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(43, 19, 6, 0.44) 0%, rgba(204, 102, 0, 0.05) 100%);
+  transition: opacity 750ms ease;
 }
 
 .ck-title {
@@ -138,6 +142,23 @@
 .ck-screen.ck-intro-hold > *:not(.ck-bg):not(.ck-scrim):not(.ck-wheel):not(.ck-intro-touch) {
   opacity: 0;
   pointer-events: none;
+}
+
+/* While the entrance runs, the screen arrives as a BLACK dip (no warm-brown
+   base flash — user 2026-07-20) and the sunset shows BARE: crisp, no scrim,
+   lifted a touch. The 3.5px blur and the scrim only dress the frame for the
+   chrome — they ease back in (750ms transitions above) at reveal, together
+   with the rising UI. */
+.ck-screen.ck-intro-hold {
+  background: #070402;
+}
+
+.ck-screen.ck-intro-hold .ck-bg {
+  filter: blur(0px) brightness(1.14) saturate(1.06);
+}
+
+.ck-screen.ck-intro-hold .ck-scrim {
+  opacity: 0;
 }
 
 .ck-screen.ck-intro-reveal > *:not(.ck-bg):not(.ck-scrim):not(.ck-wheel) {
