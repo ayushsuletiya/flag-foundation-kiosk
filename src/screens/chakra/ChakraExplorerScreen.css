@@ -230,12 +230,59 @@
 .ck-tab-body {
   position: absolute;
   inset: 0;
-  animation: ck-tab-in 300ms ease both;
+  /* Short: after a to-flag glide the arriving scene's wheel already sits in
+     the leaving wheel's exact pose — the faster this fade, the less the
+     "same chakra" dips during the swap. */
+  animation: ck-tab-in 200ms ease both;
 }
 
 .ck-tab-body--leave {
   animation: ck-tab-out 240ms ease both;
   pointer-events: none;
+}
+
+/* Into Chakra in Flag the wheel must NOT leave (user 2026-07-20): the rest
+   of the content gets out of the way fast while the wheel box GLIDES to the
+   flag scene's opening pose — measured live via __chakraWheelScreen():
+     values wheel  stage (964.4, 626.4) r 360.4
+     design wheel  stage (957.3, 627.9) r 313.4
+     flag opening  stage (962.6, 702.0) r 339.8
+   Meanwhile the scene squares the wheel up (handoff prop: lean → 0, nearest
+   spoke to 12 o'clock), so the one-frame swap lands on an identical wheel. */
+.ck-tab-body--to-flag {
+  pointer-events: none;
+}
+
+.ck-tab-body--to-flag > *:not(.ck-wheel) {
+  animation: ck-tab-content-out 180ms ease both;
+}
+
+.ck-tab-body--to-flag .ck-wheel {
+  transform-origin: 509px 443px;
+  animation: ck-wheel-to-flag-values 340ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.ck-tab-body--to-flag.ck-from-design .ck-wheel {
+  transform-origin: 502px 445px;
+  animation-name: ck-wheel-to-flag-design;
+}
+
+@keyframes ck-tab-content-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ck-wheel-to-flag-values {
+  to {
+    transform: translate(-1.8px, 75.6px) scale(0.9428);
+  }
+}
+
+@keyframes ck-wheel-to-flag-design {
+  to {
+    transform: translate(5.3px, 74.1px) scale(1.0843);
+  }
 }
 
 @keyframes ck-tab-in {

@@ -100,6 +100,12 @@ export interface Chakra3DProps {
   onRollFrame?: (xPx: number) => void
   /** Rolling entrance settled (or was skipped) — reveal the chrome. */
   onRollDone?: () => void
+  /**
+   * True while the parent is switching to the Chakra-in-Flag tab: the wheel
+   * stands upright and squares to a spoke (HANDOFF_MS) so the flag scene's
+   * opening pose matches at the swap. Wheel-mode scenes only.
+   */
+  handoff?: boolean
   onSpokeTap?: (spoke: number) => void
   onBackgroundTap?: () => void
   className?: string
@@ -596,6 +602,7 @@ interface SceneHandle {
   setMode(mode: 'wheel' | 'flag'): void
   startRoll(): void
   finishRoll(): void
+  startDockHandoff(): void
   dispose(): void
 }
 
@@ -1197,6 +1204,30 @@ function createChakraScene(
     lean.rotation.set(LEAN_X, LEAN_Y, 0)
   }
 
+  /* ------------------------------------------------- dock handoff -- */
+  // Switching to the Chakra-in-Flag tab must read as the SAME wheel
+  // carrying over (user 2026-07-20): while the parent glides the wheel box
+  // toward the flag scene's opening spot, this stands the wheel upright
+  // (the flag scene opens world-aligned) and squares it to the nearest
+  // spoke (24-fold symmetry ⇒ rotation 0 is indistinguishable), so the
+  // 1-frame scene swap lands on an identical pose.
+  const HANDOFF_MS = 320
+  let handoffT0 = -1
+  let handoffLean = { x: LEAN_X, y: LEAN_Y }
+  let handoffRot = { from: 0, to: 0 }
+
+  function startDockHandoff(): void {
+    if (handoffT0 >= 0 || modeState !== 'wheel') return
+    handoffT0 = performance.now()
+    handoffLean = { x: lean.rotation.x, y: lean.rotation.y }
+    handoffRot = {
+      from: chakra.rotation.z,
+      to: Math.round(chakra.rotation.z / SPOKE_STEP) * SPOKE_STEP,
+    }
+    spinVel = 0
+    if (dimGroup !== null) dimGroup.visible = false // callouts sit out the glide
+  }
+
   /* ------------------------------------------------- flag-mode state -- */
   let modeState: 'wheel' | 'flag' = 'wheel'
   let flagGroup: THREE.Group | null = null
@@ -1706,6 +1737,15 @@ function createChakraScene(
       lean.rotation.x = LEAN_X * e
       if (k >= 1) roll.leanDone = true
     }
+    // Dock handoff: stand upright + square to a spoke so the flag scene's
+    // opening pose matches this wheel exactly at the swap.
+    if (handoffT0 >= 0) {
+      const k = clamp01((now - handoffT0) / HANDOFF_MS)
+      const e = easeInOutCubic(k)
+      lean.rotation.y = handoffLean.y * (1 - e)
+      lean.rotation.x = handoffLean.x * (1 - e)
+      chakra.rotation.z = handoffRot.from + (handoffRot.to - handoffRot.from) * e
+    }
 
     // Ground shadows: invisible while forming, 600ms ease-in once settled.
     if (buildP < 1) shadowFadeStart = now
@@ -1714,7 +1754,7 @@ function createChakraScene(
     liveCatcher.visible = shadowRamp > 0
     contactShadow.material.opacity = shadowRamp
     contactShadow.visible = shadowRamp > 0
-    if (modeState === 'wheel' && flagAnim === null && !dragging && !rolling) {
+    if (modeState === 'wheel' && flagAnim === null && !dragging && !rolling && handoffT0 < 0) {
       // Rest pose: selected spoke at 12 o'clock beats dims-upright beats idle.
       if (buildP >= 1) {
         const goal = selectedIdx !== null ? selectedIdx * SPOKE_STEP : dimsOn ? 0 : null
@@ -1828,11 +1868,13 @@ function createChakraScene(
         __chakraPlay?: () => void
         __chakraRollScrub?: (v: number) => void
         __chakraFlagScrub?: (v: number) => void
+        __chakraWheelScreen?: () => { cx: number; cy: number; r: number }
       }
       delete dbg.__chakraScrub
       delete dbg.__chakraPlay
       delete dbg.__chakraRollScrub
       delete dbg.__chakraFlagScrub
+      delete dbg.__chakraWheelScreen
     }
   }
 
@@ -1882,6 +1924,7 @@ function createChakraScene(
       __chakraPlay?: () => void
       __chakraRollScrub?: (v: number) => void
       __chakraFlagScrub?: (v: number) => void
+      __chakraWheelScreen?: () => { cx: number; cy: number; r: number }
     }
     dbg.__chakraScrub = (v) => {
       assemblyRefs ??= makeAssemblyRefs()
@@ -1892,6 +1935,20 @@ function createChakraScene(
     dbg.__chakraPlay = () => {
       buildPaused = false
       buildT0 = performance.now() - buildP * ASSEMBLY_MS
+    }
+    // Project the wheel's centre + apparent radius to canvas px — used to
+    // measure the tab-handoff glide endpoints exactly (no screenshot guessing).
+    dbg.__chakraWheelScreen = () => {
+      const c = new THREE.Vector3()
+      lean.getWorldPosition(c)
+      const top = c.clone().add(new THREE.Vector3(0, SPEC.outerR, 0))
+      const pc = c.project(camera)
+      const pt = top.project(camera)
+      return {
+        cx: ((pc.x + 1) / 2) * width,
+        cy: ((1 - pc.y) / 2) * height,
+        r: (Math.abs(pc.y - pt.y) / 2) * height,
+      }
     }
     // Freeze the flag docking timeline at progress v and render one frame —
     // camera reproduced from the same HOME→DOCK lerp the live loop drives.
@@ -1930,6 +1987,7 @@ function createChakraScene(
     setMode,
     startRoll,
     finishRoll,
+    startDockHandoff,
     dispose,
   }
 }
@@ -1948,6 +2006,7 @@ export default function Chakra3D({
   entrance = 'none',
   onRollFrame,
   onRollDone,
+  handoff = false,
   onSpokeTap,
   onBackgroundTap,
   className,
@@ -1959,8 +2018,8 @@ export default function Chakra3D({
   const h = height ?? size
 
   // Live prop mirrors so the imperative scene always sees current values.
-  const liveRef = useRef({ mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, onSpokeTap, onBackgroundTap })
-  liveRef.current = { mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, onSpokeTap, onBackgroundTap }
+  const liveRef = useRef({ mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, handoff, onSpokeTap, onBackgroundTap })
+  liveRef.current = { mode, selectedSpoke, spin, dims, interactive, entrance, onRollFrame, onRollDone, handoff, onSpokeTap, onBackgroundTap }
 
   useEffect(() => {
     const host = hostRef.current
@@ -2022,6 +2081,11 @@ export default function Chakra3D({
     if (entrance === 'roll') sceneRef.current?.startRoll()
     else if (entrance === 'none') sceneRef.current?.finishRoll()
   }, [entrance])
+
+  // Parent is gliding this wheel toward the Chakra-in-Flag opening pose.
+  useEffect(() => {
+    if (handoff) sceneRef.current?.startDockHandoff()
+  }, [handoff])
 
   return (
     <div

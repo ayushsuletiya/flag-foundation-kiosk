@@ -134,9 +134,11 @@ interface ValuesTabProps {
   /** Section entrance: 'hold' = wheel waits off-stage, 'roll' = rolling in. */
   entrance: 'hold' | 'roll' | 'none'
   onRollDone: () => void
+  /** Switching to Chakra in Flag: the wheel squares up for the pose match. */
+  handoff: boolean
 }
 
-function ValuesTab({ virtues, spoke, onSelect, entrance, onRollDone }: ValuesTabProps) {
+function ValuesTab({ virtues, spoke, onSelect, entrance, onRollDone, handoff }: ValuesTabProps) {
   const panelRef = useRef<HTMLDivElement | null>(null)
   // The scene drives this box during the rolling entrance (onRollFrame) —
   // translating the BOX keeps its edge-feather mask travelling with the wheel.
@@ -244,6 +246,7 @@ function ValuesTab({ virtues, spoke, onSelect, entrance, onRollDone }: ValuesTab
             wheelRef.current?.style.setProperty('transform', `translateX(${x.toFixed(2)}px)`)
           }}
           onRollDone={onRollDone}
+          handoff={handoff}
           onSpokeTap={(s) => onSelect(s)}
           onBackgroundTap={() => onSelect(null)}
         />
@@ -313,9 +316,11 @@ interface DesignTabProps {
   colorCode: string
   spokeCount: string
   meaning: string
+  /** Switching to Chakra in Flag: the wheel squares up for the pose match. */
+  handoff: boolean
 }
 
-function DesignTab({ colorCode, spokeCount, meaning }: DesignTabProps) {
+function DesignTab({ colorCode, spokeCount, meaning, handoff }: DesignTabProps) {
   return (
     <>
       <div className="ck-design-headline ck-gold-text">
@@ -334,7 +339,7 @@ function DesignTab({ colorCode, spokeCount, meaning }: DesignTabProps) {
           Starts upright, turntable off — like the source build's dims view. */}
       <div className="ck-ground-shadow ck-ground-shadow--dims" />
       <div className="ck-wheel">
-        <LazyChakra3D size={910} spin={false} interactive={false} dims />
+        <LazyChakra3D size={910} spin={false} interactive={false} dims handoff={handoff} />
       </div>
 
       {/* Right — stats card (Color code / Spokes) */}
@@ -453,6 +458,9 @@ export function ChakraExplorerScreen() {
   // immediately. Scenes stay sequential (old disposes before new mounts).
   const [leaveTo, setLeaveTo] = useState<TabId | null>(null)
   const leaveTimer = useRef<number | undefined>(undefined)
+  // Into Chakra in Flag the wheel doesn't leave at all: the box GLIDES to
+  // the flag scene's opening spot (CSS ck-wheel-to-flag-*) while the scene
+  // squares the wheel up (handoff prop) — the swap lands on the same pose.
   const switchTab = (next: TabId) => {
     if (next === tab || leaveTo !== null) return
     setSpoke(null)
@@ -460,7 +468,7 @@ export function ChakraExplorerScreen() {
     leaveTimer.current = window.setTimeout(() => {
       setLeaveTo(null)
       setTab(next)
-    }, 240)
+    }, next === 'flag' ? 340 : 240)
   }
   useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
 
@@ -572,7 +580,13 @@ export function ChakraExplorerScreen() {
 
       <div
         key={tab}
-        className={leaveTo !== null ? 'ck-tab-body ck-tab-body--leave' : 'ck-tab-body'}
+        className={
+          leaveTo === 'flag'
+            ? `ck-tab-body ck-tab-body--to-flag${tab === 'design' ? ' ck-from-design' : ''}`
+            : leaveTo !== null
+              ? 'ck-tab-body ck-tab-body--leave'
+              : 'ck-tab-body'
+        }
       >
         {tab === 'values' && (
           <ValuesTab
@@ -581,10 +595,16 @@ export function ChakraExplorerScreen() {
             onSelect={setSpoke}
             entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
             onRollDone={reveal}
+            handoff={leaveTo === 'flag'}
           />
         )}
         {tab === 'design' && (
-          <DesignTab colorCode={colorCode} spokeCount={spokeCount} meaning={meaning} />
+          <DesignTab
+            colorCode={colorCode}
+            spokeCount={spokeCount}
+            meaning={meaning}
+            handoff={leaveTo === 'flag'}
+          />
         )}
         {tab === 'flag' && <FlagTab headline={flagHeadline} facts={facts} />}
       </div>
