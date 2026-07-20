@@ -1,18 +1,23 @@
 # Onsite Kiosk Testing — Windows Build
 
-Built from `feat/chakra-assembly` (latest, includes the Design tab rework and the
-8 s assembly animation). Cross-built from macOS; all runtime deps are pure JS
-(`three`, `xlsx`, `react`, `chokidar`), so nothing needed native rebuilding.
+**v0.2.0, built 2026-07-20 from `feat/chakra-assembly`.** On top of the 07-18
+build this adds the full content pass (real provenance-verified history
+backgrounds + galleries, 135/219 installation photos), grounded symbols on the
+podium, the no-crop flag-first gallery, Figma-matched Select State overlay,
+bigger Chakra-in-Flag hero, page transitions + text animations, Quick Access
+blur, and the shadow-free chakra assembly. Cross-built from macOS; all runtime
+deps are pure JS (`three`, `xlsx`, `react`, `chokidar`), so nothing needed
+native rebuilding.
 
 ## What to take
 
 Artifacts are in `release/`:
 
-| File | Size | Use |
-|---|---|---|
-| `Flag Foundation Kiosk Setup 0.1.0.exe` | 353 MB | **Installer.** One-click, runs after finish. Use this. |
-| `Flag Foundation Kiosk-0.1.0-win.zip` | 401 MB | Portable. Unzip and run the `.exe` inside — no install, no admin rights. Good fallback. |
-| `win-unpacked/` | 666 MB | Already-extracted form of the zip. Copy the whole folder if you prefer. |
+| File | Use |
+|---|---|
+| `Flag Foundation Kiosk Setup 0.2.0.exe` | **Installer.** One-click, runs after finish. Use this. |
+| `Flag Foundation Kiosk-0.2.0-win.zip` | Portable. Unzip and run the `.exe` inside — no install, no admin rights. Good fallback. |
+| `win-unpacked/` | Already-extracted form of the zip. Copy the whole folder if you prefer. |
 
 Copy to a USB stick. Target: ASUS NUC 14 Pro Plus, Windows 11 x64.
 
