@@ -489,8 +489,17 @@ const WHEEL_TGT = new THREE.Vector3(0, 0, 0)
    wheel and its callouts together — the drawing keeps its proportions and
    gains ~50px of margin on every side. Values/Flag keep WHEEL_CAM. */
 const DIMS_CAM = new THREE.Vector3(0, 4, 370)
-const FLAG_CAM_HOME = new THREE.Vector3(-8, -30, 430)
-const FLAG_TGT_HOME = new THREE.Vector3(-8, -30, 0)
+/* HOME framing derived so the flag tab OPENS with the wheel close to the
+   Values wheel's apparent size — switching pills must not jump-cut to a
+   bigger, lower wheel (user 2026-07-20). Hard constraint: the hero slot's
+   visible band is stage y 355..1080 (725px), so a full Values-size wheel
+   (⌀718 at centre y 591) cannot fit without clipping the top rim. Chosen:
+   radius ≈340px (95% of Values) centred at stage ≈(964,700) — top rim 5px
+   inside the slot, and the immediate shrink-to-dock makes the slightly
+   smaller start read as the animation already breathing in. Slot 961×1436
+   at (449,355), z=537 → 3.67 px/unit. */
+const FLAG_CAM_HOME = new THREE.Vector3(-9, -101, 537)
+const FLAG_TGT_HOME = new THREE.Vector3(-9, -101, 0)
 const FLAG_CAM_DOCK = new THREE.Vector3(30, -120, 715)
 const FLAG_TGT_DOCK = new THREE.Vector3(-30, -148, 0)
 const CHAKRA_HOME_POS = new THREE.Vector3(0, 0, 0)
@@ -1194,7 +1203,8 @@ function createChakraScene(
   let clothMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshStandardMaterial> | null = null
   let clothPos: THREE.Vector3[] = []
   let clothOld: THREE.Vector3[] = []
-  let clothCon: [number, number, number][] = []
+  /** [a, b, rest, weight] — weight <1 = soft constraint (bend resistance). */
+  let clothCon: [number, number, number, number][] = []
   let bakedCloth: THREE.Vector3[] | null = null // calm mid-wave reference pose
   let flash: THREE.Sprite | null = null // gold flash masking the stamp moment
   /* Master timeline: flagP 0 = chakra mode … 1 = in-flag. All transition state
@@ -1325,12 +1335,12 @@ function createChakraScene(
       p.set(nx, ny, nz)
     }
     for (let k = 0; k < 3; k++) {
-      for (const [a, b, rest] of clothCon) {
+      for (const [a, b, rest, w] of clothCon) {
         const pa = clothPos[a]
         const pb = clothPos[b]
         _d.subVectors(pb, pa)
         const len = _d.length() || 1e-6
-        const diff = ((len - rest) / len) * 0.5
+        const diff = ((len - rest) / len) * 0.5 * w
         const pinA = a % (CLOTH.sx + 1) === 0
         const pinB = b % (CLOTH.sx + 1) === 0
         if (!pinA) pa.addScaledVector(_d, diff * (pinB ? 2 : 1))
@@ -1377,20 +1387,27 @@ function createChakraScene(
       clothPos.push(v)
       clothOld.push(v.clone())
     }
-    // constraints: structural + shear
+    // constraints: structural + shear + soft BEND (skip-one) resistance.
+    // Without bend constraints a gust can fold the free corner back through
+    // itself — self-intersecting polygons render as a torn patch (user
+    // 2026-07-20 screenshot, saffron fly corner). The skip-one constraints
+    // resist sharp creases at 35% strength so the cloth still billows.
     clothCon = []
     const idx = (r: number, c2: number) => r * (CLOTH.sx + 1) + c2
     const rx = CLOTH.w / CLOTH.sx
     const ry = CLOTH.h / CLOTH.sy
     const rd = Math.hypot(rx, ry)
+    const BEND = 0.35
     for (let r = 0; r <= CLOTH.sy; r++) {
       for (let c2 = 0; c2 <= CLOTH.sx; c2++) {
-        if (c2 < CLOTH.sx) clothCon.push([idx(r, c2), idx(r, c2 + 1), rx])
-        if (r < CLOTH.sy) clothCon.push([idx(r, c2), idx(r + 1, c2), ry])
+        if (c2 < CLOTH.sx) clothCon.push([idx(r, c2), idx(r, c2 + 1), rx, 1])
+        if (r < CLOTH.sy) clothCon.push([idx(r, c2), idx(r + 1, c2), ry, 1])
         if (c2 < CLOTH.sx && r < CLOTH.sy) {
-          clothCon.push([idx(r, c2), idx(r + 1, c2 + 1), rd])
-          clothCon.push([idx(r, c2 + 1), idx(r + 1, c2), rd])
+          clothCon.push([idx(r, c2), idx(r + 1, c2 + 1), rd, 1])
+          clothCon.push([idx(r, c2 + 1), idx(r + 1, c2), rd, 1])
         }
+        if (c2 < CLOTH.sx - 1) clothCon.push([idx(r, c2), idx(r, c2 + 2), rx * 2, BEND])
+        if (r < CLOTH.sy - 1) clothCon.push([idx(r, c2), idx(r + 2, c2), ry * 2, BEND])
       }
     }
     // pre-warm the sim into a natural mid-wave pose: the flag is shown frozen
@@ -1524,11 +1541,18 @@ function createChakraScene(
       // land exactly where the printed chakra sits in the frozen pose
       const ci = Math.round(CLOTH.sy / 2) * (CLOTH.sx + 1) + Math.round(CLOTH.sx / 2)
       chakraDock.pos.set(clothPos[ci].x, clothPos[ci].y + 22, clothPos[ci].z + 4)
-      // travel plane: clear of the deepest forward billow of the whole cloth,
-      // so the wheel can never cut through the fabric while visible
+      // travel plane: clear of the cloth's billow ONLY around the landing
+      // zone (docked wheel radius 18.5 + margin). Clearing the WHOLE cloth's
+      // deepest billow — often a far corner — parked the wheel well in front
+      // of the print, and the off-axis dock camera turned that depth gap
+      // into a visible x-offset at the merge (user 2026-07-20).
+      const centre = clothPos[ci]!
       let maxZ = Number.NEGATIVE_INFINITY
-      for (const vp of clothPos) if (vp.z > maxZ) maxZ = vp.z
-      dockZSafe = maxZ + 7
+      for (const vp of clothPos) {
+        if (Math.abs(vp.x - centre.x) <= 28 && Math.abs(vp.y - centre.y) <= 28 && vp.z > maxZ)
+          maxZ = vp.z
+      }
+      dockZSafe = maxZ + 6
       windFactor = 0 // hold the flag still during the docking animation
       // normalize spin to the shortest rotation back to upright
       chakra.rotation.z = chakra.rotation.z % (Math.PI * 2)
@@ -1803,10 +1827,12 @@ function createChakraScene(
         __chakraScrub?: (v: number) => void
         __chakraPlay?: () => void
         __chakraRollScrub?: (v: number) => void
+        __chakraFlagScrub?: (v: number) => void
       }
       delete dbg.__chakraScrub
       delete dbg.__chakraPlay
       delete dbg.__chakraRollScrub
+      delete dbg.__chakraFlagScrub
     }
   }
 
@@ -1855,6 +1881,7 @@ function createChakraScene(
       __chakraScrub?: (v: number) => void
       __chakraPlay?: () => void
       __chakraRollScrub?: (v: number) => void
+      __chakraFlagScrub?: (v: number) => void
     }
     dbg.__chakraScrub = (v) => {
       assemblyRefs ??= makeAssemblyRefs()
@@ -1865,6 +1892,19 @@ function createChakraScene(
     dbg.__chakraPlay = () => {
       buildPaused = false
       buildT0 = performance.now() - buildP * ASSEMBLY_MS
+    }
+    // Freeze the flag docking timeline at progress v and render one frame —
+    // camera reproduced from the same HOME→DOCK lerp the live loop drives.
+    dbg.__chakraFlagScrub = (v) => {
+      if (flagGroup === null) return
+      flagAnim = null
+      flagP = clamp01(v)
+      applyFlagTimeline(flagP)
+      const ck = easeInOutCubic(S((flagP - 0.05) / 0.45))
+      camera.position.lerpVectors(FLAG_CAM_HOME, FLAG_CAM_DOCK, ck)
+      camTarget.lerpVectors(FLAG_TGT_HOME, FLAG_TGT_DOCK, ck)
+      camera.lookAt(camTarget)
+      renderer.render(scene, camera)
     }
     // Freeze the rolling entrance at progress v and render one frame — works
     // even where rAF is suspended (headless preview panes). Travel frames are

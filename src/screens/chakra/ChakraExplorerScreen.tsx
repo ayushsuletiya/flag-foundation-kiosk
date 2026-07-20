@@ -447,6 +447,23 @@ export function ChakraExplorerScreen() {
   const [tab, setTab] = useState<TabId>('values')
   const [spoke, setSpoke] = useState<number | null>(null)
 
+  // Pill switch: the leaving tab plays a fast shrink+fade (240ms) before the
+  // next one mounts — never a hard cut (user 2026-07-20). The old tab keeps
+  // rendering inside .ck-tab-body--leave; the pill highlights the destination
+  // immediately. Scenes stay sequential (old disposes before new mounts).
+  const [leaveTo, setLeaveTo] = useState<TabId | null>(null)
+  const leaveTimer = useRef<number | undefined>(undefined)
+  const switchTab = (next: TabId) => {
+    if (next === tab || leaveTo !== null) return
+    setSpoke(null)
+    setLeaveTo(next)
+    leaveTimer.current = window.setTimeout(() => {
+      setLeaveTo(null)
+      setTab(next)
+    }, 240)
+  }
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+
   // Section entrance (user 2026-07-20): arriving from OUTSIDE /chakra, the
   // sunset background gets a beat alone, the finished wheel ROLLS in from
   // stage left, and only then does the chrome rise in. In-section activity
@@ -548,27 +565,29 @@ export function ChakraExplorerScreen() {
       <TabPills
         className="ck-tabs"
         tabs={TABS}
-        activeId={tab}
-        onChange={(id) => {
-          setTab(id as TabId)
-          setSpoke(null)
-        }}
+        activeId={leaveTo ?? tab}
+        onChange={(id) => switchTab(id as TabId)}
         style={{ position: 'absolute', left: 95, top: 180 }}
       />
 
-      {tab === 'values' && (
-        <ValuesTab
-          virtues={virtues}
-          spoke={spoke}
-          onSelect={setSpoke}
-          entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
-          onRollDone={reveal}
-        />
-      )}
-      {tab === 'design' && (
-        <DesignTab colorCode={colorCode} spokeCount={spokeCount} meaning={meaning} />
-      )}
-      {tab === 'flag' && <FlagTab headline={flagHeadline} facts={facts} />}
+      <div
+        key={tab}
+        className={leaveTo !== null ? 'ck-tab-body ck-tab-body--leave' : 'ck-tab-body'}
+      >
+        {tab === 'values' && (
+          <ValuesTab
+            virtues={virtues}
+            spoke={spoke}
+            onSelect={setSpoke}
+            entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
+            onRollDone={reveal}
+          />
+        )}
+        {tab === 'design' && (
+          <DesignTab colorCode={colorCode} spokeCount={spokeCount} meaning={meaning} />
+        )}
+        {tab === 'flag' && <FlagTab headline={flagHeadline} facts={facts} />}
+      </div>
 
       {/* Any touch skips the entrance — museum visitors never wait twice. */}
       {(intro === 'wait' || intro === 'roll') && (
