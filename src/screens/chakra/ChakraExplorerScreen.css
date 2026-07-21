@@ -231,10 +231,12 @@
 .ck-tab-body {
   position: absolute;
   inset: 0;
-  /* Short: after a to-flag glide the arriving scene's wheel already sits in
-     the leaving wheel's exact pose — the faster this fade, the less the
-     "same chakra" dips during the swap. */
-  animation: ck-tab-in 200ms ease both;
+  /* fill-mode BACKWARDS, not both: a filled opacity animation keeps a
+     stacking context forever, which traps the children's z-indexes UNDER
+     the full-stage canvas (z1) — the wheel would eat every card/dot tap.
+     With backwards the context dissolves when the 200ms fade ends and the
+     z2 interactive islands rise back above the light. */
+  animation: ck-tab-in 200ms ease backwards;
 }
 
 .ck-tab-body--leave {

@@ -809,7 +809,8 @@ function createChakraScene(
       uniform vec2 edgeFade;
       // march segment = ray ∩ sphere around the wheel's air volume
       const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
-      const float VOL_R = 320.0; // reaches the full-stage corners (~1250px)
+      const float VOL_R = 460.0; // covers the stage corners in EVERY framing
+                                 // (the pulled-back dock camera included)
       const int STEPS = 20;
       // three.js RGBA depth packing (shadow + depth maps are RGBA-packed)
       const float UnpackDownscale = 255.0 / 256.0;
@@ -956,13 +957,17 @@ function createChakraScene(
   function renderGodRays(): void {
     const sm = rimSun.shadow.map
     if (sm === null) return // first frame: shadow map not rendered yet
-    // depth pre-pass: solid wheel only (ground planes are see-through fx)
+    // depth pre-pass: solid geometry only (ground planes are see-through fx;
+    // the dock's gold flash is LIGHT, not an occluder — with rays now live in
+    // flag mode it must not stamp its quad into the depth buffer)
     const prevContact = contactShadow.visible
     const prevCatcher = liveCatcher.visible
     const prevDims = dimGroup?.visible ?? false
+    const prevFlash = flash?.visible ?? false
     contactShadow.visible = false
     liveCatcher.visible = false
     if (dimGroup) dimGroup.visible = false
+    if (flash) flash.visible = false
     const prevShadowAuto = renderer.shadowMap.autoUpdate
     renderer.shadowMap.autoUpdate = false
     renderer.setRenderTarget(depthRT)
@@ -979,6 +984,7 @@ function createChakraScene(
     contactShadow.visible = prevContact
     liveCatcher.visible = prevCatcher
     if (dimGroup) dimGroup.visible = prevDims
+    if (flash) flash.visible = prevFlash
     rayMat.uniforms['shadowMap']!.value = sm.texture
     ;(rayMat.uniforms['shadowMatrix']!.value as THREE.Matrix4).copy(rimSun.shadow.matrix)
     ;(rayMat.uniforms['invProj']!.value as THREE.Matrix4).copy(
@@ -1862,12 +1868,12 @@ function createChakraScene(
     }
     bootDone = true
     renderer.render(scene, camera)
-    // sun shafts through the spokes — wheel framing only (flag mode has
-    // its own choreography and no visible sun). Held OFF while the rolling
-    // entrance displaces the box (the shafts' sun would sit off the plate's
-    // real sun — and skipping the pre-pass keeps the roll itself smooth),
-    // then reignited over ROLL_RAY_MS once the wheel is home.
-    if (modeState === 'wheel' && buildP >= BEAT.standUp[0] && !rolling) {
+    // Sun shafts on EVERY tab (user 2026-07-20: the light fills the screen
+    // in all three sections) — in flag mode the depth pre-pass stops rays at
+    // the cloth, so the Tiranga reads backlit by the same sun. Held OFF only
+    // while the rolling entrance displaces the box (the shafts' sun would
+    // sit off the plate's real sun), then reignited over ROLL_RAY_MS.
+    if (buildP >= BEAT.standUp[0] && !rolling) {
       // Rays bloom through the spokes as the wheel rises into the light.
       const ramp = easeInOutCubic(beatP(buildP, [BEAT.standUp[0], 1] as const))
       const rollLight = roll === null ? 1 : S((now - roll.doneAt) / ROLL_RAY_MS)
