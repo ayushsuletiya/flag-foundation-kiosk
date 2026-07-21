@@ -886,8 +886,12 @@ function createChakraScene(
   const rayFieldW = rayAspect >= 1 ? rayFieldMax : Math.round(rayFieldMax * rayAspect)
   const rayFieldH = rayAspect >= 1 ? Math.round(rayFieldMax / rayAspect) : rayFieldMax
   const rayRT = new THREE.WebGLRenderTarget(rayFieldW, rayFieldH)
-  const sunWorld = new THREE.Vector3(78, 37, -286) // measured plate sun
-  const sunNdc = new THREE.Vector3()
+  /* The beam origin is PINNED to the background plate's baked sun. The
+     plate is a fixed image — it never moves with the 3D camera — so a real
+     sun must not either (user 2026-07-21: the source was sliding around on
+     tab switches because it was re-projected through each tab's camera).
+     World (78,37,-286) seen from the values framing = stage (1105, 514). */
+  const SUN_UV = new THREE.Vector2(1105 / 1920, 1 - 514 / 1080)
   const streakScene = new THREE.Scene()
   const streakMat = new THREE.ShaderMaterial({
     uniforms: {
@@ -1004,12 +1008,10 @@ function createChakraScene(
     renderer.clear()
     renderer.render(rayScene, rayCam)
     renderer.setRenderTarget(null)
-    // stage 2: radial beam stretch, composited over the frame
-    sunNdc.copy(sunWorld).project(camera)
-    ;(streakMat.uniforms['sunUv']!.value as THREE.Vector2).set(
-      (sunNdc.x + 1) / 2,
-      (sunNdc.y + 1) / 2,
-    )
+    // stage 2: radial beam stretch, composited over the frame. The origin
+    // is the plate's sun — constant on every tab and through every camera
+    // move, exactly like the real sun in the fixed background.
+    ;(streakMat.uniforms['sunUv']!.value as THREE.Vector2).copy(SUN_UV)
     renderer.autoClear = false
     renderer.render(streakScene, rayCam)
     renderer.autoClear = true
