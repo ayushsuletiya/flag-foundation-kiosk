@@ -852,16 +852,13 @@ function createChakraScene(
           acc += lit;
         }
         acc /= float(STEPS);
-        // Glow scales with the AIR THICKNESS actually marched — but with a
-        // generous FLOOR: v1 of this cut the wheel's glow ~57% and killed
-        // the radiant aura hugging the rim (user: the old look was better).
-        // Now surfaces keep ~80% of their glow: aura stays, milk stays off.
-        float pathScale = 0.55 + 0.45 * clamp((t1 - t0) / (VOL_R * 1.6), 0.0, 1.0);
         // forward scattering: shafts bloom when looking toward the sun
         float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
         // No edge dissolve: the canvas IS the screen — light runs to the
         // very edge (a fade printed a visible border frame; user 2026-07-21).
-        vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength * pathScale;
+        // No path/occlusion attenuation either — the user's approved frame
+        // (2026-07-21) is the plain field: soft glow wrapping the wheel.
+        vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength;
         gl_FragColor = vec4(col, 0.0);
       }
     `,
@@ -933,16 +930,11 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // NO procedural ray fan — the user rejected the harsh angular beams
-        // (2026-07-21: "there are no harsh rays" in the approved look). All
-        // structure in the light comes from REAL geometry only: the wheel's
-        // spokes and the waving cloth carving the volumetric field.
-        // Beams dim (never die) across the occluder: a soft floor keeps the
-        // luminous wrap around the wheel/flag while taking the worst of the
-        // milky veil off the face.
-        float local = dot(texture2D(tRay, vUv).rgb, vec3(1.0));
-        float occl = 0.55 + 0.45 * smoothstep(0.0, 0.12, local);
-        gl_FragColor = vec4(base * 0.55 + streak * boost * occl, 0.0);
+        // NO procedural ray fan and NO occlusion damping — the user's
+        // approved frame (2026-07-21) is the plain organic composite: soft
+        // streaks from real geometry only (spokes, waving cloth), the glow
+        // wrapping the wheel freely.
+        gl_FragColor = vec4(base * 0.55 + streak * boost, 0.0);
       }
     `,
     depthTest: false,

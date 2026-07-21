@@ -454,12 +454,7 @@
   height: 759px;
   border-radius: 45px;
   background-color: var(--glass-warm-panel-tint);
-  /* Chakra runs a full-screen light BEHIND the UI; the stock glass tint is
-     too sheer here — the glow bled through the panel body as green-gold
-     patches (user 2026-07-21: "elements on top, not lights"). An extra
-     cream veil keeps the glass look but holds the light behind the panel. */
-  background-image: linear-gradient(rgba(255, 240, 216, 0.52), rgba(255, 240, 216, 0.52)),
-    var(--glass-falloff);
+  background-image: var(--glass-falloff);
   border: 2px solid var(--cream-border);
   backdrop-filter: var(--glass-filter);
   -webkit-backdrop-filter: var(--glass-filter);
