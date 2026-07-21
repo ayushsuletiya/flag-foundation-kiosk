@@ -898,7 +898,7 @@ function createChakraScene(
       tRay: { value: rayRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
-      boost: { value: 1.45 }, // raised for the ray fan (mean ~0.62 — peaks pop, average holds)
+      boost: { value: 1.05 }, // soft organic streaks — no procedural fan
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -933,22 +933,16 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // Angular RAY FAN around the sun (film trick): the volumetric field
-        // is featureless open air wherever nothing occludes — on the flag
-        // tab that meant no readable rays at all (user 2026-07-20). Static
-        // pseudo-random spokes of light modulate the streak term so beams
-        // visibly fan from the sun on EVERY tab; real occluder shadows
-        // (wheel spokes, waving cloth) compose on top of the same geometry.
-        vec2 rd = vUv - sunUv;
-        rd.x *= 1.778; // aspect-correct so the fan is angularly even
-        float ang = atan(rd.y, rd.x);
-        float fan = 0.62 + 0.38 * (0.55 * sin(ang * 9.0 + 1.7) + 0.45 * sin(ang * 23.0 + 5.1));
+        // NO procedural ray fan — the user rejected the harsh angular beams
+        // (2026-07-21: "there are no harsh rays" in the approved look). All
+        // structure in the light comes from REAL geometry only: the wheel's
+        // spokes and the waving cloth carving the volumetric field.
         // Beams dim (never die) across the occluder: a soft floor keeps the
-        // luminous wrap around the wheel/flag (user preferred the radiant
-        // look) while still taking the worst of the milky veil off the face.
+        // luminous wrap around the wheel/flag while taking the worst of the
+        // milky veil off the face.
         float local = dot(texture2D(tRay, vUv).rgb, vec3(1.0));
         float occl = 0.55 + 0.45 * smoothstep(0.0, 0.12, local);
-        gl_FragColor = vec4(base * 0.55 + streak * boost * fan * occl, 0.0);
+        gl_FragColor = vec4(base * 0.55 + streak * boost * occl, 0.0);
       }
     `,
     depthTest: false,
