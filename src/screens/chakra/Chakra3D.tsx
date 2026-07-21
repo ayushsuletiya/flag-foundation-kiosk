@@ -897,7 +897,7 @@ function createChakraScene(
       tRay: { value: rayRT.texture },
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
-      boost: { value: 1.05 }, // trimmed with strength for the full-stage field
+      boost: { value: 1.45 }, // raised for the ray fan (mean ~0.62 — peaks pop, average holds)
       edgeFade: { value: new THREE.Vector2(0.02, 0.02) },
     },
     vertexShader: /* glsl */ `
@@ -939,7 +939,17 @@ function createChakraScene(
         // setDims) for the same reason as the ray pass.
         float edge = smoothstep(0.0, edgeFade.x, vUv.x) * smoothstep(1.0, 1.0 - edgeFade.x, vUv.x) *
           smoothstep(0.0, edgeFade.y, vUv.y) * smoothstep(1.0, 1.0 - edgeFade.y, vUv.y);
-        gl_FragColor = vec4((base * 0.55 + streak * boost) * edge, 0.0);
+        // Angular RAY FAN around the sun (film trick): the volumetric field
+        // is featureless open air wherever nothing occludes — on the flag
+        // tab that meant no readable rays at all (user 2026-07-20). Static
+        // pseudo-random spokes of light modulate the streak term so beams
+        // visibly fan from the sun on EVERY tab; real occluder shadows
+        // (wheel spokes, waving cloth) compose on top of the same geometry.
+        vec2 rd = vUv - sunUv;
+        rd.x *= 1.778; // aspect-correct so the fan is angularly even
+        float ang = atan(rd.y, rd.x);
+        float fan = 0.62 + 0.38 * (0.55 * sin(ang * 9.0 + 1.7) + 0.45 * sin(ang * 23.0 + 5.1));
+        gl_FragColor = vec4((base * 0.55 + streak * boost * fan) * edge, 0.0);
       }
     `,
     depthTest: false,

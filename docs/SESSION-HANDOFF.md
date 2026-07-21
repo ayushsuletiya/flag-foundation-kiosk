@@ -5,6 +5,36 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-20/21 night — chakra section: persistent scene + full-screen light
+Iterative user-driven rework of /chakra, commits in order:
+- `aafb1b8` roll entrance v2: wheel rolls UPRIGHT (lean returns after landing),
+  constant-friction ease, roll waits for the background (useDynamicBackground
+  gate + 'wait' intro phase); WarmChakra prefetch 2.5s→1.2s.
+- `5fc2e65` entrance dressing: BLACK dip in (no brown base flash), sunset
+  shows BARE (no blur/scrim, brightness 1.14) while the wheel travels.
+- `a7d2e9c` progressive background blur: sharp plate + blur(7px) copy
+  gradient-masked to die by the ground (.ck-bg-blur).
+- `0ecc660` tab exits + flag scene: 240ms shrink+fade pill switches, flag
+  HOME framing fixed, dock plane measured locally (parallax fix), cloth
+  BEND constraints (skip-one, 0.35) kill the fold-through tear.
+- `5e0babd` (superseded) one-frame pose-matched scene handoff into flag.
+- `ae17305` **ONE PERSISTENT Chakra3D scene for all three tabs** — the wheel
+  never remounts: camera TWEENS values↔design, dims callouts FADE (assembly
+  entrance retired on switches), dock plays forward AND reverse. All cameras
+  re-derived; `__chakraWheelScreen()` dev hook projects exact framings.
+- `f250fa3` + `5ca8769` + `23c2c1c` + (this) **FULL-SCREEN LIGHT, ALL TABS**:
+  canvas = the whole 1920×1080 stage (no mask/edge dissolve — light runs off
+  the screen edge naturally), rays ungated in flag mode, flag cloth/pole cast
+  into the volumetrics (backlit Tiranga), VOL_R 460, strength 0.33, dpr≤1.5,
+  angular RAY FAN in the streak pass (film-style beams from the sun on every
+  tab — open air alone is featureless; boost 1.45, fan 0.62±0.38 @ sin 9θ/23θ).
+  Gotcha fixed en route: a FILLED opacity animation on .ck-tab-body kept a
+  permanent stacking context that trapped card z-indexes under the full-stage
+  canvas (taps eaten) — fill-mode 'backwards' releases it.
+  PERF NOTE for Phase-7 soak: full-stage canvas + per-frame rays ≈ 2.07Mpx
+  ×2 passes at kiosk dpr 1 — watch the Arc iGPU headroom; the ray recompute
+  can be paused while idle if needed (CLAUDE.md perf guard note).
+
 ### 2026-07-20 late — Ashok Chakra rolling entrance (category intro #2)
 - `350f0b8` **/chakra section intro**: arriving from OUTSIDE (navTrace-gated,
   same rule as the History rewind) → sunset background alone for 750ms → the
