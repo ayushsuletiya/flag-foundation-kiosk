@@ -1417,10 +1417,16 @@ function createChakraScene(
     const poleGeo = new THREE.CylinderGeometry(1.7, 2.2, POLE_LEN, 24)
     const pole = new THREE.Mesh(poleGeo, steel)
     pole.position.set(POLE_X, POLE_TOP - POLE_LEN / 2, 0)
+    // The flag must CAST shadows: the volumetric pass only shows visible
+    // shafts where something blocks the sun — without casters the flag tab's
+    // light is a featureless haze that vanishes against the bright plate
+    // (user 2026-07-20). With these, beams fan around the Tiranga.
+    pole.castShadow = true
     const finialGeo = new THREE.SphereGeometry(4, 24, 16)
     const finialMat = new THREE.MeshStandardMaterial({ color: 0xd8b043, metalness: 0.9, roughness: 0.3 })
     const finial = new THREE.Mesh(finialGeo, finialMat)
     finial.position.set(POLE_X, 88, 0)
+    finial.castShadow = true
     const baseGeo = new THREE.CylinderGeometry(7, 9, 5, 24)
     const base = new THREE.Mesh(baseGeo, steel)
     base.position.set(POLE_X, POLE_TOP - POLE_LEN + 2.5, 0)
@@ -1436,6 +1442,7 @@ function createChakraScene(
     clothMesh = new THREE.Mesh(geo, clothMat)
     clothMesh.position.y = 22 // hang just below the finial
     clothMesh.name = 'Flag cloth'
+    clothMesh.castShadow = true // the waving cloth carves the sun into beams
 
     const p = geo.attributes.position as THREE.BufferAttribute
     clothPos = []
