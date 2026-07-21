@@ -854,10 +854,9 @@ function createChakraScene(
         acc /= float(STEPS);
         // forward scattering: shafts bloom when looking toward the sun
         float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
-        // No edge dissolve: the canvas IS the screen — light runs to the
-        // very edge (a fade printed a visible border frame; user 2026-07-21).
-        // No path/occlusion attenuation either — the user's approved frame
-        // (2026-07-21) is the plain field: soft glow wrapping the wheel.
+        // No edge dissolve (the canvas IS the screen) and no surface
+        // attenuation hacks — the light renders UNDER the wheel/flag now
+        // (see the render loop), so it can never wash the subject.
         vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength;
         gl_FragColor = vec4(col, 0.0);
       }
@@ -930,10 +929,9 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // NO procedural ray fan and NO occlusion damping — the user's
-        // approved frame (2026-07-21) is the plain organic composite: soft
-        // streaks from real geometry only (spokes, waving cloth), the glow
-        // wrapping the wheel freely.
+        // NO procedural ray fan and no occlusion tricks — the light is a
+        // BACKGROUND layer (drawn under the wheel/flag by the render loop),
+        // so soft organic streaks from real geometry are all it needs.
         gl_FragColor = vec4(base * 0.55 + streak * boost, 0.0);
       }
     `,
@@ -949,9 +947,12 @@ function createChakraScene(
   streakScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), streakMat))
 
   const _invProj = new THREE.Matrix4()
-  function renderGodRays(): void {
+  /** Writes the light UNDER-layer onto the cleared canvas. Returns false on
+   * the very first frame (shadow map not rendered yet) — the caller then
+   * does a plain self-clearing beauty render instead. */
+  function renderGodRays(): boolean {
     const sm = rimSun.shadow.map
-    if (sm === null) return // first frame: shadow map not rendered yet
+    if (sm === null) return false // first frame: shadow map not rendered yet
     // depth pre-pass: solid geometry only (ground planes are see-through fx;
     // the dock's gold flash is LIGHT, not an occluder — with rays now live in
     // flag mode it must not stamp its quad into the depth buffer)
@@ -993,13 +994,14 @@ function createChakraScene(
     renderer.clear()
     renderer.render(rayScene, rayCam)
     renderer.setRenderTarget(null)
-    // stage 2: radial beam stretch, composited over the frame. The origin
-    // is the plate's sun — constant on every tab and through every camera
-    // move, exactly like the real sun in the fixed background.
+    // stage 2: radial beam stretch, written FIRST onto the cleared canvas —
+    // the beauty pass then draws the wheel/flag OVER the light (user
+    // 2026-07-21: the light sits below the chakra and every element). The
+    // origin is the plate's sun — constant on every tab, like the real sun.
     ;(streakMat.uniforms['sunUv']!.value as THREE.Vector2).copy(SUN_UV)
-    renderer.autoClear = false
+    renderer.clear()
     renderer.render(streakScene, rayCam)
-    renderer.autoClear = true
+    return true
   }
 
   // Swap the studio env for one built from the ACTUAL sunset plate — the
@@ -1866,20 +1868,28 @@ function createChakraScene(
         halo.rotation.copy(selected.rotation)
       }
     }
-    bootDone = true
-    renderer.render(scene, camera)
-    // Sun shafts on EVERY tab (user 2026-07-20: the light fills the screen
-    // in all three sections) — in flag mode the depth pre-pass stops rays at
-    // the cloth, so the Tiranga reads backlit by the same sun. Held OFF only
-    // while the rolling entrance displaces the box (the shafts' sun would
-    // sit off the plate's real sun), then reignited over ROLL_RAY_MS.
+    // THE LIGHT IS A BACKGROUND LAYER (user 2026-07-21: it must sit BELOW
+    // the chakra and every element). The ray passes write the glow onto the
+    // cleared canvas FIRST; the beauty pass then draws the wheel/flag OVER
+    // it — the subject can structurally never be washed by its own light.
+    // Sun shafts run on EVERY tab; held OFF only while the rolling entrance
+    // displaces the box, then reignited over ROLL_RAY_MS.
+    let lightDrawn = false
     if (buildP >= BEAT.standUp[0] && !rolling) {
-      // Rays bloom through the spokes as the wheel rises into the light.
       const ramp = easeInOutCubic(beatP(buildP, [BEAT.standUp[0], 1] as const))
       const rollLight = roll === null ? 1 : S((now - roll.doneAt) / ROLL_RAY_MS)
       rayMat.uniforms['strength']!.value = RAY_STRENGTH_BASE * ramp * rollLight
-      renderGodRays()
+      lightDrawn = renderGodRays()
     }
+    if (lightDrawn) {
+      renderer.autoClear = false // keep the light; depth still resets
+      renderer.clearDepth()
+      renderer.render(scene, camera)
+      renderer.autoClear = true
+    } else {
+      renderer.render(scene, camera)
+    }
+    bootDone = true
   })
 
   function dispose() {
