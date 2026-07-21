@@ -852,11 +852,11 @@ function createChakraScene(
           acc += lit;
         }
         acc /= float(STEPS);
-        // Glow scales with the AIR THICKNESS actually marched: pixels on the
-        // wheel/flag stop at the surface after a short path and must not
-        // collect a full sky's worth of haze (user: light washing the chakra
-        // pale). Open-sky chords clamp to 1 — the sky keeps its glow.
-        float pathScale = clamp((t1 - t0) / (VOL_R * 1.6), 0.0, 1.0);
+        // Glow scales with the AIR THICKNESS actually marched — but with a
+        // generous FLOOR: v1 of this cut the wheel's glow ~57% and killed
+        // the radiant aura hugging the rim (user: the old look was better).
+        // Now surfaces keep ~80% of their glow: aura stays, milk stays off.
+        float pathScale = 0.55 + 0.45 * clamp((t1 - t0) / (VOL_R * 1.6), 0.0, 1.0);
         // forward scattering: shafts bloom when looking toward the sun
         float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
         // No edge dissolve: the canvas IS the screen — light runs to the
@@ -943,12 +943,11 @@ function createChakraScene(
         rd.x *= 1.778; // aspect-correct so the fan is angularly even
         float ang = atan(rd.y, rd.x);
         float fan = 0.62 + 0.38 * (0.55 * sin(ang * 9.0 + 1.7) + 0.45 * sin(ang * 23.0 + 5.1));
-        // Beams must not smear ACROSS the occluder (radial blur has no depth
-        // sense): where the local field is dark — something solid blocks the
-        // sun-air there — the added streak dims, so the wheel/flag stay a
-        // deep silhouette against the light instead of going milky.
+        // Beams dim (never die) across the occluder: a soft floor keeps the
+        // luminous wrap around the wheel/flag (user preferred the radiant
+        // look) while still taking the worst of the milky veil off the face.
         float local = dot(texture2D(tRay, vUv).rgb, vec3(1.0));
-        float occl = 0.22 + 0.78 * smoothstep(0.0, 0.12, local);
+        float occl = 0.55 + 0.45 * smoothstep(0.0, 0.12, local);
         gl_FragColor = vec4(base * 0.55 + streak * boost * fan * occl, 0.0);
       }
     `,
