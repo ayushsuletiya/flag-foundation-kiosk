@@ -558,6 +558,10 @@ export function ChakraExplorerScreen() {
         />
       </div>
 
+      {/* Vignette OVER the light, UNDER all content (z2). During the intro
+          it hides with the chrome, so the bare sunset stays unframed. */}
+      <div className="ck-vignette" />
+
       <h1 className="ck-title">
         <span className="ck-title-main">Ashok </span>
         <span className="ck-title-script">Chakra</span>

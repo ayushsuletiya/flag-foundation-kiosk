@@ -788,9 +788,6 @@ function createChakraScene(
       // Trimmed from 0.4 when the canvas went full-stage: the same strength
       // over 2.5× the area over-exposed the frame (virtue panel washed out).
       strength: { value: 0.33 },
-      // Near-zero: the canvas IS the screen now, so light running off the
-      // edge is natural — no seam to hide (user: no clipping anywhere).
-      edgeFade: { value: new THREE.Vector2(0.02, 0.02) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -806,7 +803,6 @@ function createChakraScene(
       uniform vec3 camPos;
       uniform vec3 sunDir;
       uniform float strength;
-      uniform vec2 edgeFade;
       // march segment = ray ∩ sphere around the wheel's air volume
       const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
       const float VOL_R = 460.0; // covers the stage corners in EVERY framing
@@ -858,13 +854,9 @@ function createChakraScene(
         acc /= float(STEPS);
         // forward scattering: shafts bloom when looking toward the sun
         float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
-        // fade before the canvas edge — no rectangular seam on the plate.
-        // Width is per-framing (see setDims): Design's pulled-back camera can
-        // afford a wide dissolve, Values sits closer and needs a narrow one or
-        // the fade eats the sun shafts hugging the rim.
-        float edge = smoothstep(0.0, edgeFade.x, vUv.x) * smoothstep(1.0, 1.0 - edgeFade.x, vUv.x) *
-          smoothstep(0.0, edgeFade.y, vUv.y) * smoothstep(1.0, 1.0 - edgeFade.y, vUv.y);
-        vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength * edge;
+        // No edge dissolve: the canvas IS the screen — light runs to the
+        // very edge (a fade printed a visible border frame; user 2026-07-21).
+        vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength;
         gl_FragColor = vec4(col, 0.0);
       }
     `,
@@ -898,7 +890,6 @@ function createChakraScene(
       sunUv: { value: new THREE.Vector2(0.5, 0.5) },
       texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
       boost: { value: 1.45 }, // raised for the ray fan (mean ~0.62 — peaks pop, average holds)
-      edgeFade: { value: new THREE.Vector2(0.02, 0.02) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -910,7 +901,6 @@ function createChakraScene(
       uniform vec2 sunUv;
       uniform vec2 texel;
       uniform float boost;
-      uniform vec2 edgeFade;
       void main() {
         const int SAMPLES = 48;
         vec2 delta = (vUv - sunUv) * (0.95 / float(SAMPLES));
@@ -934,11 +924,6 @@ function createChakraScene(
           + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
           + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // dissolve: light must die inside the canvas so the render box can
-        // never print its rectangle on the plate. Width is per-framing (see
-        // setDims) for the same reason as the ray pass.
-        float edge = smoothstep(0.0, edgeFade.x, vUv.x) * smoothstep(1.0, 1.0 - edgeFade.x, vUv.x) *
-          smoothstep(0.0, edgeFade.y, vUv.y) * smoothstep(1.0, 1.0 - edgeFade.y, vUv.y);
         // Angular RAY FAN around the sun (film trick): the volumetric field
         // is featureless open air wherever nothing occludes — on the flag
         // tab that meant no readable rays at all (user 2026-07-20). Static
@@ -949,7 +934,7 @@ function createChakraScene(
         rd.x *= 1.778; // aspect-correct so the fan is angularly even
         float ang = atan(rd.y, rd.x);
         float fan = 0.62 + 0.38 * (0.55 * sin(ang * 9.0 + 1.7) + 0.45 * sin(ang * 23.0 + 5.1));
-        gl_FragColor = vec4((base * 0.55 + streak * boost * fan) * edge, 0.0);
+        gl_FragColor = vec4(base * 0.55 + streak * boost * fan, 0.0);
       }
     `,
     depthTest: false,
