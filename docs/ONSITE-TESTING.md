@@ -1,13 +1,22 @@
 # Onsite Kiosk Testing — Windows Build
 
-**v0.2.0, built 2026-07-20 from `feat/chakra-assembly`.** On top of the 07-18
-build this adds the full content pass (real provenance-verified history
-backgrounds + galleries, 135/219 installation photos), grounded symbols on the
-podium, the no-crop flag-first gallery, Figma-matched Select State overlay,
-bigger Chakra-in-Flag hero, page transitions + text animations, Quick Access
-blur, and the shadow-free chakra assembly. Cross-built from macOS; all runtime
-deps are pure JS (`three`, `xlsx`, `react`, `chokidar`), so nothing needed
-native rebuilding.
+**v0.3.0, built 2026-07-21 from `feat/chakra-assembly`.** On top of the
+v0.2.0 build (history rewind intro, real archival backgrounds, v3 content)
+this adds the reworked **Ashok Chakra section**: the rolling entrance
+(background beat → the wheel rolls in upright from stage left → leans into
+its hero pose → chrome rises), ONE persistent 3D scene across all three
+pills (tab switches glide the camera / fade the callouts / play the
+flag-dock forward and in reverse — the wheel never blinks), the full-screen
+volumetric sunlight on every tab rendered UNDER the wheel and UI (sun pinned
+to the plate, edge-to-edge, vignette over it), progressive background blur
+(sky soft, shore crisp), black-dip entrance, cloth bend-constraints (no more
+fold-through tearing), and flag/pole shadow casting. Cross-built from macOS;
+all runtime deps are pure JS, so nothing needed native rebuilding.
+
+**Watch onsite in particular:** the chakra section now renders full-screen
+volumetrics every frame on the Arc iGPU — check it stays smooth on the NUC
+through a few minutes of idling on each chakra tab (Values / Design /
+Chakra in Flag) and through several tab round-trips.
 
 ## What to take
 
@@ -15,8 +24,8 @@ Artifacts are in `release/`:
 
 | File | Use |
 |---|---|
-| `Flag Foundation Kiosk Setup 0.2.0.exe` | **Installer.** One-click, runs after finish. Use this. |
-| `Flag Foundation Kiosk-0.2.0-win.zip` | Portable. Unzip and run the `.exe` inside — no install, no admin rights. Good fallback. |
+| `Flag Foundation Kiosk Setup 0.3.0.exe` | **Installer.** One-click, runs after finish. Use this. |
+| `Flag Foundation Kiosk-0.3.0-win.zip` | Portable. Unzip and run the `.exe` inside — no install, no admin rights. Good fallback. |
 | `win-unpacked/` | Already-extracted form of the zip. Copy the whole folder if you prefer. |
 
 Copy to a USB stick. Target: ASUS NUC 14 Pro Plus, Windows 11 x64.
