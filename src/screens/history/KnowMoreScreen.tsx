@@ -189,6 +189,14 @@ export function KnowMoreScreen() {
             className={i === selected ? 'hk-thumb hk-thumb-selected' : 'hk-thumb'}
             onClick={() => setSelected(i)}
           >
+            {/* Blur-fill: the same photo, cover-cropped and blurred, fills
+                the tile behind the un-cropped one so a portrait's matting
+                reads as depth instead of empty plate. Flags are RGBA
+                cutouts on their own dark plate — blurring transparency
+                just haloes, so they keep the plate. */}
+            {!src.includes('/flag/') && (
+              <img src={src} alt="" aria-hidden="true" className="hk-thumb-fill" />
+            )}
             <img
               src={src}
               alt=""

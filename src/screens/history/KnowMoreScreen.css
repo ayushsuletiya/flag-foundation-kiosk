@@ -283,11 +283,29 @@
   border-radius: 32.131px;
 }
 
+/* Blur-fill layer — the same photo cropped to fill, heavily blurred and
+   dimmed, sitting UNDER the sharp one so the tile never shows bare plate
+   (user 2026-07-23). Scaled up so the blur's soft edge never reaches the
+   tile border. */
+.hk-thumb-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(16px) saturate(1.15);
+  transform: scale(1.25);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 /* NEVER crop a gallery thumbnail: these are archival photographs of
    historical figures and a `cover` fit beheaded portraits in the landscape
    tile (user 2026-07-23). `contain` matches the large image's no-crop rule
-   — the whole photograph is always visible, matted on the tile's plate. */
+   — the whole photograph is always visible, over its own blur-fill. */
 .hk-thumb-img {
+  position: relative; /* above the absolutely-positioned blur-fill */
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -306,6 +324,7 @@
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
+  z-index: 2; /* over the sharp image (z1) and its blur-fill */
 }
 
 /* Placeholder tile — used for the large slot and to pad thumbs to 3 */
