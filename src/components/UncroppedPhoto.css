@@ -1,0 +1,31 @@
+/* UncroppedPhoto — see UncroppedPhoto.tsx. The wrapper fills its (positioned)
+   parent; the blurred fill sits under the sharp, never-cropped photo. */
+
+.ucp {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+}
+
+/* Blur-fill: cropped to fill, scaled up so the blur's soft edge can never
+   reach the slot border. */
+.ucp-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.25);
+  pointer-events: none;
+}
+
+/* The photograph itself — WHOLE, always. */
+.ucp-img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

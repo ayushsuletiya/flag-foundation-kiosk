@@ -167,16 +167,29 @@ export function KnowMoreScreen() {
       <h2 className="hk-gallery-heading">Gallery</h2>
       <div className="hk-gallery-large">
         {largeImage !== null ? (
-          <img
-            key={largeImage}
-            src={largeImage}
-            alt=""
-            className={
-              largeImage.includes('/flag/')
-                ? 'hk-gallery-large-img hk-gallery-large-img--flag'
-                : 'hk-gallery-large-img'
-            }
-          />
+          <>
+            {/* Blur-fill the slot around a portrait, same rule as the
+                thumbnails. Flags keep clean transparency. */}
+            {!largeImage.includes('/flag/') && (
+              <img
+                key={`${largeImage}-fill`}
+                src={largeImage}
+                alt=""
+                aria-hidden="true"
+                className="hk-gallery-large-fill"
+              />
+            )}
+            <img
+              key={largeImage}
+              src={largeImage}
+              alt=""
+              className={
+                largeImage.includes('/flag/')
+                  ? 'hk-gallery-large-img hk-gallery-large-img--flag'
+                  : 'hk-gallery-large-img'
+              }
+            />
+          </>
         ) : (
           <PlaceholderTile chakraSize={260} />
         )}

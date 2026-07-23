@@ -20,6 +20,7 @@ import { BackButton } from '../../components/BackButton.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
+import { UncroppedPhoto } from '../../components/UncroppedPhoto.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
 import { useGroundedOffset, useSymbolMedia } from './symbolsMedia.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
@@ -236,7 +237,7 @@ export function SymbolDetailScreen() {
               <p className="syd-dyk-heading">Did You Know?</p>
               <div className="syd-dyk-photo">
                 {cardImage !== null ? (
-                  <img src={cardImage} alt="" />
+                  <UncroppedPhoto src={cardImage} />
                 ) : (
                   <SymbolVisual
                     slug={activeSlug}

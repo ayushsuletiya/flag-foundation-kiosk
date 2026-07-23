@@ -25,27 +25,18 @@ import {
   installationPhoto,
 } from '../../assets/paths.ts'
 import { probeImageCached } from '../../assets/probe.ts'
-import { useFlagObjectPosition } from '../../assets/imageFocus.ts'
+import { UncroppedPhoto } from '../../components/UncroppedPhoto.tsx'
 import './monumental.css'
 
 /** One crossfade layer — owns its flag-focus crop so the pole never clips. */
+/** One carousel frame. The installation is NEVER cropped (a tall flagpole
+ * shot lost its flag to the landscape `cover` fit); the slot is filled with
+ * a blurred copy of the same photo. */
 function CarouselPhoto({ src, visible }: { src: string; visible: boolean }) {
-  const position = useFlagObjectPosition(src, 930.097 / 686.555)
   return (
-    <img
+    <UncroppedPhoto
       src={src}
-      alt=""
-      draggable={false}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        objectPosition: position,
-        opacity: visible ? 1 : 0,
-        transition: 'opacity 700ms ease',
-      }}
+      style={{ opacity: visible ? 1 : 0, transition: 'opacity 700ms ease' }}
     />
   )
 }
