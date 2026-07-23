@@ -946,6 +946,44 @@ function createChakraScene(
   })
   streakScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), streakMat))
 
+  /* ---- cached light layer (perf) --------------------------------------
+     The volumetric march (depth pre-pass + 512² field + 48-tap streak) is
+     far too heavy for the Arc iGPU to run EVERY frame on a full-stage canvas
+     — it saturated the GPU and starved touch input (user 2026-07-21: kiosk
+     lag + delayed buttons). The streak now renders into this persistent RT
+     instead of straight to the canvas; the loop RECOMPUTES it only when the
+     scene actually moves (throttled to 1-in-LIGHT_EVERY frames for the slow
+     idle spin / cloth breeze), and cheaply blits the cache UNDER the wheel
+     every frame. Recompute frames are pixel-identical to the old path.
+     Stored linear (NoColorSpace) so the one sRGB encode still happens once,
+     at the blit → canvas write, exactly as the direct render did. */
+  const lightDpr = Math.min(window.devicePixelRatio, 1)
+  const lightRT = new THREE.WebGLRenderTarget(
+    Math.max(2, Math.floor(width * lightDpr)),
+    Math.max(2, Math.floor(height * lightDpr)),
+  )
+  lightRT.texture.colorSpace = THREE.NoColorSpace
+  lightRT.texture.minFilter = THREE.LinearFilter
+  lightRT.texture.magFilter = THREE.LinearFilter
+  const blitScene = new THREE.Scene()
+  const blitMat = new THREE.MeshBasicMaterial({
+    map: lightRT.texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    // The streak shader was a raw pass (no tone mapping); MeshBasicMaterial
+    // would ACES-map the cached light a second time and blow it out.
+    toneMapped: false,
+    // same premultiplied-additive compositing the direct streak used, so the
+    // cache reproduces the exact glow-over-CSS-plate look.
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneFactor,
+    blendSrcAlpha: THREE.ZeroFactor,
+    blendDstAlpha: THREE.OneFactor,
+  })
+  blitScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blitMat))
+
   const _invProj = new THREE.Matrix4()
   /** Writes the light UNDER-layer onto the cleared canvas. Returns false on
    * the very first frame (shadow map not rendered yet) — the caller then
@@ -994,13 +1032,13 @@ function createChakraScene(
     renderer.clear()
     renderer.render(rayScene, rayCam)
     renderer.setRenderTarget(null)
-    // stage 2: radial beam stretch, written FIRST onto the cleared canvas —
-    // the beauty pass then draws the wheel/flag OVER the light (user
-    // 2026-07-21: the light sits below the chakra and every element). The
-    // origin is the plate's sun — constant on every tab, like the real sun.
+    // stage 2: radial beam stretch → the CACHED light RT (blitted under the
+    // wheel each frame by the loop). Origin pinned to the plate's sun.
     ;(streakMat.uniforms['sunUv']!.value as THREE.Vector2).copy(SUN_UV)
+    renderer.setRenderTarget(lightRT)
     renderer.clear()
     renderer.render(streakScene, rayCam)
+    renderer.setRenderTarget(null)
     return true
   }
 
@@ -1759,8 +1797,16 @@ function createChakraScene(
   renderer.domElement.addEventListener('pointercancel', onPointerCancel)
 
   /* ----------------------------------------------------- main loop -- */
+  // Light-cache perf state (see lightRT): recompute the volumetric only when
+  // the field-driving pose actually changes, and never more than 1-in-N
+  // frames for the slow steady motions.
+  let frameCount = 0
+  let lastLightKey = Number.NaN
+  let lightValid = false
+  const LIGHT_EVERY = 3
   renderer.setAnimationLoop(() => {
     const now = performance.now()
+    frameCount++
     if (modeState === 'wheel' && buildP < 1 && !buildPaused && assemblyRefs !== null) {
       buildP = clamp01((now - buildT0) / ASSEMBLY_MS)
       applyAssemblyTimeline(buildP, assemblyRefs)
@@ -1868,23 +1914,46 @@ function createChakraScene(
         halo.rotation.copy(selected.rotation)
       }
     }
-    // THE LIGHT IS A BACKGROUND LAYER (user 2026-07-21: it must sit BELOW
-    // the chakra and every element). The ray passes write the glow onto the
-    // cleared canvas FIRST; the beauty pass then draws the wheel/flag OVER
-    // it — the subject can structurally never be washed by its own light.
-    // Sun shafts run on EVERY tab; held OFF only while the rolling entrance
-    // displaces the box, then reignited over ROLL_RAY_MS.
-    let lightDrawn = false
-    if (buildP >= BEAT.standUp[0] && !rolling) {
+    // THE LIGHT IS A CACHED BACKGROUND LAYER (user 2026-07-21: it sits BELOW
+    // the chakra + every element, and the kiosk must stay responsive). The
+    // volumetric (lightRT) is recomputed only when the field-driving pose
+    // moves — throttled to 1-in-LIGHT_EVERY for the slow idle spin / cloth
+    // breeze, every frame during fast transitions — then blitted under the
+    // wheel each frame. Sun shafts run on EVERY tab; held OFF only while the
+    // rolling entrance displaces the box, then reignited over ROLL_RAY_MS.
+    const lightEligible = buildP >= BEAT.standUp[0] && !rolling
+    if (lightEligible) {
       const ramp = easeInOutCubic(beatP(buildP, [BEAT.standUp[0], 1] as const))
       const rollLight = roll === null ? 1 : S((now - roll.doneAt) / ROLL_RAY_MS)
       rayMat.uniforms['strength']!.value = RAY_STRENGTH_BASE * ramp * rollLight
-      lightDrawn = renderGodRays()
+
+      // Pose signature — any change means the light field is stale.
+      const key =
+        chakra.rotation.z * 97.13 +
+        camera.position.x * 3.1 + camera.position.y * 5.7 + camera.position.z * 11.3 +
+        flagP * 31.7 + dimsFade * 17.3 + rayMat.uniforms['strength']!.value * 101.0
+      const moved = !(Math.abs(key - lastLightKey) < 1e-4)
+      lastLightKey = key
+      const clothWaving =
+        flagGroup !== null && flagGroup.visible && modeState === 'flag' && flagAnim === null
+      // Fast transitions need a per-frame light; steady slow motion is fine
+      // at 1-in-LIGHT_EVERY (idle spin ~0.2°/frame — imperceptible).
+      const fastAnim =
+        dragging || camTween !== null || flagAnim !== null || buildP < 1 ||
+        (roll !== null && roll.doneAt >= 0 && now - roll.doneAt < ROLL_RAY_MS)
+      const recompute =
+        !lightValid || fastAnim || ((moved || clothWaving) && frameCount % LIGHT_EVERY === 0)
+      if (recompute && renderGodRays()) lightValid = true
+    } else {
+      lightValid = false // off-screen during the roll — force a fresh field on return
     }
-    if (lightDrawn) {
-      renderer.autoClear = false // keep the light; depth still resets
+
+    if (lightValid) {
+      renderer.autoClear = false
+      renderer.clear() // transparent canvas
+      renderer.render(blitScene, rayCam) // cached light, additive under
       renderer.clearDepth()
-      renderer.render(scene, camera)
+      renderer.render(scene, camera) // wheel/flag over
       renderer.autoClear = true
     } else {
       renderer.render(scene, camera)
@@ -1916,6 +1985,8 @@ function createChakraScene(
     depthMat.dispose()
     rayRT.dispose()
     streakMat.dispose()
+    lightRT.dispose()
+    blitMat.dispose()
     // flag resources (only allocated if flag mode was ever entered)
     if (flagGroup !== null) {
       scene.remove(flagGroup)

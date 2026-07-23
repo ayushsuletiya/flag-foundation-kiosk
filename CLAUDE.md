@@ -24,8 +24,12 @@ chakra scene + god-ray volumetrics run comfortably at 1080p when dual-channel.
   Figma pixels — do not make things responsive.
 - **Perf guards (integrated GPU):** no full-screen `backdrop-filter`, never nest backdrop-filters,
   three.js only via lazy import (stays in its own chunk), PNG sequences via `PngSequencePlayer`.
-  Chakra god-rays recompute every frame (depth pre-pass + shadow map + 512px ray-march) — fine on
-  the Arc iGPU, but pause the recompute while the wheel is idle if headroom is ever needed.
+  Chakra god-rays (depth pre-pass + shadow map + 512px ray-march + 48-tap streak) are CACHED in
+  an offscreen RT and recomputed only when the pose moves — throttled to 1-in-3 frames for the
+  slow idle spin / cloth breeze, 0 frames at rest, every frame only during fast transitions —
+  then blitted under the wheel each frame (Chakra3D lightRT/blitScene). Running the full-screen
+  volumetric every frame saturated the Arc iGPU and delayed touch (fixed 2026-07-21). Keep the
+  blit `toneMapped:false` + lightRT `NoColorSpace` or the cached glow shifts/blows out.
 - **Glass system** lives in `src/styles/tokens.css` (extracted from Figma's native GLASS effect via
   plugin API — the REST export drops it). Use the `.glass` classes / `--glass-*` vars, don't invent fills.
 - Pixel changes are verified against Figma screenshots (`../figma-refs/` has references).
