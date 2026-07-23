@@ -167,29 +167,19 @@ export function KnowMoreScreen() {
       <h2 className="hk-gallery-heading">Gallery</h2>
       <div className="hk-gallery-large">
         {largeImage !== null ? (
-          <>
-            {/* Blur-fill the slot around a portrait, same rule as the
-                thumbnails. Flags keep clean transparency. */}
-            {!largeImage.includes('/flag/') && (
-              <img
-                key={`${largeImage}-fill`}
-                src={largeImage}
-                alt=""
-                aria-hidden="true"
-                className="hk-gallery-large-fill"
-              />
-            )}
-            <img
-              key={largeImage}
-              src={largeImage}
-              alt=""
-              className={
-                largeImage.includes('/flag/')
-                  ? 'hk-gallery-large-img hk-gallery-large-img--flag'
-                  : 'hk-gallery-large-img'
-              }
-            />
-          </>
+          // NO blur-fill here on purpose: the large frame is DYNAMIC — it
+          // hugs whatever size the photo resolves to (user 2026-07-23). A
+          // fill would force it to the full slot and draw a fixed box.
+          <img
+            key={largeImage}
+            src={largeImage}
+            alt=""
+            className={
+              largeImage.includes('/flag/')
+                ? 'hk-gallery-large-img hk-gallery-large-img--flag'
+                : 'hk-gallery-large-img'
+            }
+          />
         ) : (
           <PlaceholderTile chakraSize={260} />
         )}
