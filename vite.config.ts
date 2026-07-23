@@ -71,9 +71,32 @@ function copyAssetsDir(): Plugin {
   }
 }
 
+/**
+ * Ship the client-editable workbook inside dist/ as well.
+ *
+ * Electron doesn't need this (ContentContext reads the file over the IPC
+ * bridge, and electron-builder ships data/ as an extraResource), but a
+ * WEB deploy has no bridge: the browser transport GETs `data/content.xlsx`
+ * relative to index.html and polls it every 5s. Copying it here is what
+ * makes `dist/` a self-contained static site — and keeps the client's
+ * "swap the workbook, screens update" workflow working when hosted
+ * (replace dist/data/content.xlsx on the server; live within 5s).
+ */
+function copyDataDir(): Plugin {
+  return {
+    name: 'kiosk-copy-data-dir',
+    apply: 'build',
+    async closeBundle() {
+      await cp(path.join(dirname, 'data'), path.join(dirname, 'dist', 'data'), {
+        recursive: true,
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), serveDataDir(), copyAssetsDir()],
+  plugins: [react(), serveDataDir(), copyAssetsDir(), copyDataDir()],
   // Relative base so the Electron production build can load dist/ via file://
   base: './',
   server: {
