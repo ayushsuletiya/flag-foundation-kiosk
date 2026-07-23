@@ -1,7 +1,7 @@
 {
   "name": "flag-foundation-kiosk",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Flag Foundation of India museum kiosk - fixed 1920x1080 touchscreen app",
   "type": "module",
   "main": "dist-electron/main.js",

@@ -1,6 +1,6 @@
 # Onsite Kiosk Testing — Windows Build
 
-**v0.3.0, built 2026-07-21 from `feat/chakra-assembly`.** On top of the
+**v0.3.1, built 2026-07-21 from `feat/chakra-assembly`.** On top of the
 v0.2.0 build (history rewind intro, real archival backgrounds, v3 content)
 this adds the reworked **Ashok Chakra section**: the rolling entrance
 (background beat → the wheel rolls in upright from stage left → leans into
@@ -13,10 +13,12 @@ to the plate, edge-to-edge, vignette over it), progressive background blur
 fold-through tearing), and flag/pole shadow casting. Cross-built from macOS;
 all runtime deps are pure JS, so nothing needed native rebuilding.
 
-**Watch onsite in particular:** the chakra section now renders full-screen
-volumetrics every frame on the Arc iGPU — check it stays smooth on the NUC
-through a few minutes of idling on each chakra tab (Values / Design /
-Chakra in Flag) and through several tab round-trips.
+**0.3.1 is a PERF build** — the chakra god-ray light is now cached and
+recomputed only when the scene moves (was running the full-screen volumetric
+every frame, which lagged the kiosk and delayed touches on 0.3.0). Do NOT
+ship 0.3.0. Still worth a quick onsite check: idle a couple minutes on each
+chakra tab and run several tab round-trips, and confirm buttons respond
+promptly across the app.
 
 ## What to take
 
@@ -24,8 +26,8 @@ Artifacts are in `release/`:
 
 | File | Use |
 |---|---|
-| `Flag Foundation Kiosk Setup 0.3.0.exe` | **Installer.** One-click, runs after finish. Use this. |
-| `Flag Foundation Kiosk-0.3.0-win.zip` | Portable. Unzip and run the `.exe` inside — no install, no admin rights. Good fallback. |
+| `Flag Foundation Kiosk Setup 0.3.1.exe` | **Installer.** One-click, runs after finish. Use this. |
+| `Flag Foundation Kiosk-0.3.1-win.zip` | Portable. Unzip and run the `.exe` inside — no install, no admin rights. Good fallback. |
 | `win-unpacked/` | Already-extracted form of the zip. Copy the whole folder if you prefer. |
 
 Copy to a USB stick. Target: ASUS NUC 14 Pro Plus, Windows 11 x64.
