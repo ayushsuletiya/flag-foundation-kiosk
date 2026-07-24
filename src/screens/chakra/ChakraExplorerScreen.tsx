@@ -414,7 +414,12 @@ export function ChakraExplorerScreen() {
   // transition (camera glide / dock / undock) the moment the pill is tapped
   // (visTab), while only the DOM content fades between tab bodies.
   const switchTab = (next: TabId) => {
-    if (next === tab || leaveTo !== null) return
+    // Re-targetable: a tap during the 240ms leave window used to be DROPPED
+    // (early return on leaveTo), so a quick second pill press did nothing
+    // and the kiosk felt stuck. Now it retargets — the scene follows via
+    // visTab and the timer restarts for the new destination.
+    if (next === (leaveTo ?? tab)) return
+    window.clearTimeout(leaveTimer.current)
     setSpoke(null)
     setLeaveTo(next)
     leaveTimer.current = window.setTimeout(() => {

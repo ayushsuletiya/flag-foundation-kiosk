@@ -466,7 +466,11 @@ function disposeDimGroup(group: THREE.Group): void {
 const FLAG_COLORS = { saffron: '#FF671F', white: '#FFFFFF', green: '#046A38', navy: '#06038D' }
 const CLOTH = { w: 180, h: 120, sx: 40, sy: 26 } as const
 const WIND_STRENGTH = 1.0 // source params.wind
-const FLAG_ANIM_MS = 3200 // full-timeline duration, scaled by remaining distance
+const FLAG_ANIM_MS = 3200 // dock IN — the hero beat, scaled by remaining distance
+/* Undock is the same choreography in reverse, but the visitor has already
+   seen it and is waiting to USE the tab they tapped — at 3.2s the wheel
+   read as stuck while the destination's text was already on screen. */
+const FLAG_BACK_MS = 1900
 /* Pole: source used length 202 (base on a visible floor). The kiosk hero slot
    crops like the static flag-pole.png — pole runs off the bottom edge, base
    never visible — so the pole is lengthened downward. */
@@ -1393,7 +1397,7 @@ function createChakraScene(
       from: flagP,
       to: v ? 1 : 0,
       t0: performance.now(),
-      dur: Math.max(1, FLAG_ANIM_MS * Math.abs((v ? 1 : 0) - flagP)),
+      dur: Math.max(1, (v ? FLAG_ANIM_MS : FLAG_BACK_MS) * Math.abs((v ? 1 : 0) - flagP)),
       // camera endpoints keyed to the timeline (P0 = chakra side, P1 = flag
       // side) so the camera finishes moving BEFORE the drift/merge begins.
       // Reverse returns straight to the CURRENT tab's wheel framing — the
@@ -1410,9 +1414,13 @@ function createChakraScene(
   function restoreWheelPose(): void {
     lean.position.set(14, 3, 0)
     lean.rotation.set(LEAN_X, LEAN_Y, 0)
-    camera.position.copy(dimsOn ? DIMS_CAM : WHEEL_CAM)
-    camTarget.copy(dimsOn ? DIMS_TGT : WHEEL_TGT)
-    camera.lookAt(camTarget)
+    // TWEEN, never snap. The reverse lerp aims at whichever framing was
+    // current when setMode('wheel') ran, but the destination tab's `dims`
+    // may flip in the same render — leaving flag for DESIGN used to end
+    // with a one-frame camera jump (WHEEL_CAM → DIMS_CAM, 57 units of
+    // depth). Tweening absorbs any mismatch; when there is none this is a
+    // no-op tween to the pose the camera already holds.
+    tweenCamera(dimsOn ? DIMS_CAM : WHEEL_CAM, dimsOn ? DIMS_TGT : WHEEL_TGT, 420)
     if (dimGroup !== null) dimGroup.visible = dimsOn
   }
 
