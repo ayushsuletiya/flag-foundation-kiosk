@@ -1028,6 +1028,11 @@ function createChakraScene(
   /* The mast and the cloth fade on SEPARATE schedules — see applyFlagTimeline. */
   let mastMats: THREE.Material[] = []
   let clothMat: THREE.Material | null = null
+  /** +1 = docking in, -1 = undocking. The hoist is a ONE-WAY move: going out
+   * the Tiranga is never lowered, it just fades where it flies (user
+   * 2026-07-24). This also means an interrupted dock fades from wherever the
+   * cloth had climbed to, instead of snapping back down the mast. */
+  let flagDir: 1 | -1 = 1
   /* Master timeline: flagP 0 = chakra mode … 1 = in-flag. All transition state
      derives deterministically from flagP — time-based, frame-rate independent. */
   let flagAnim: {
@@ -1330,10 +1335,11 @@ function createChakraScene(
     flagGroup.visible = p > 0.38
     for (const m of mastMats) setMatOpacity(m, sub(0.38, 0.5))
     if (clothMat !== null) setMatOpacity(clothMat, sub(0.47, 0.6))
-    if (clothMesh !== null) {
+    if (clothMesh !== null && flagDir === 1) {
       // …and it RUNS UP the mast into place, easing out like a real hoist.
       // Settled well before the merge at p 0.85, so chakraDock (computed from
-      // the resting cloth) is still the exact landing point.
+      // the resting cloth) is still the exact landing point. ONE WAY ONLY —
+      // on the way out the cloth holds its height and simply fades.
       clothMesh.position.y = 22 - FLAG_HOIST_DROP * (1 - easeOutCubic(sub(0.46, 0.74)))
     }
     const fs = easeInOutCubic(sub(0.12, 0.5)) // shrink first…
@@ -1369,6 +1375,7 @@ function createChakraScene(
     if (mode === modeState) return
     modeState = mode
     const v = mode === 'flag'
+    flagDir = v ? 1 : -1
     // flag mode gates drag/picking (like the source) — kill any live gesture
     activePointer = null
     dragging = false
