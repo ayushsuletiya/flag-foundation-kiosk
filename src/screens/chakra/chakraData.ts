@@ -37,46 +37,57 @@ export function virtueIconSlug(virtue: string): string {
 // Per-virtue descriptions (NOT in the Excel — see header note).
 // Keyed by the exact virtue strings of sheet "06 · Ashok Chakra".
 // ---------------------------------------------------------------------------
+// Client's authoritative per-virtue descriptions (Ashok Chakra Data.xlsx,
+// "Values" sheet, 2026-07-24). Two sentences each; the ValuesTab flows them as
+// one wrapped paragraph.
 export const VIRTUE_DESCRIPTIONS: Record<string, string> = {
-  Love: 'Love is the warmth that binds people together. It turns strangers into neighbours and a nation into one family.',
+  Love: 'Love inspires compassion, unity, and care for all. It reminds us to build a society rooted in kindness.',
   Courage:
-    'Courage is the strength to stand for what is right, even when it is hard or frightening.',
+    'Courage is the strength to stand for what is right. It empowers us to face challenges without fear.',
   Patience:
-    'Patience is calm endurance. It waits, works quietly, and never gives up on what truly matters.',
+    'Patience teaches calmness in difficult times. It helps us persevere with wisdom and resilience.',
   Peacefulness:
-    'Peacefulness is harmony within and around us — settling differences with dialogue, never with anger.',
+    'Peacefulness encourages harmony within ourselves and with others. It is the foundation of a just and stable society.',
   Magnanimity:
-    'Magnanimity is greatness of heart — being generous in victory and gracious in defeat.',
-  Goodness: 'Goodness is choosing kindness in every small act, expecting nothing in return.',
+    'Magnanimity means being generous in victory and gracious in defeat. It reflects nobility of character and forgiveness.',
+  Goodness:
+    'Goodness is choosing kindness, honesty, and moral values. It inspires actions that benefit everyone around us.',
   Faithfulness:
-    'Faithfulness is loyalty that does not waver — to people, to promises, and to the nation.',
-  Gentleness: 'Gentleness is strength under control. It wins hearts where force never can.',
-  Selflessness: 'Selflessness puts others first. It finds joy in giving rather than receiving.',
+    'Faithfulness means staying true to your values and commitments. It builds trust, loyalty, and lasting relationships.',
+  Gentleness:
+    'Gentleness shows that true strength comes with kindness. It promotes respect, empathy, and understanding.',
+  Selflessness:
+    'Selflessness places the needs of others before personal gain. It reflects a spirit of service and compassion.',
   'Self-Control':
-    'Self-control is mastery over one’s impulses — the quiet discipline behind every achievement.',
+    'Self-control is the ability to master our thoughts and actions. It helps us make wise and responsible decisions.',
   'Self-Sacrifice':
-    'Self-sacrifice is giving up one’s own comfort, and even one’s life, for something greater.',
-  Truthfulness: 'Truthfulness is living without masks. Truth alone triumphs — Satyameva Jayate.',
+    'Self-sacrifice means giving for a greater purpose. It reflects dedication to family, community, and nation.',
+  Truthfulness:
+    'Truthfulness is the courage to be honest in every situation. It forms the basis of trust and integrity.',
   Righteousness:
-    'Righteousness is walking the path of dharma — doing right simply because it is right.',
+    'Righteousness means choosing the path of justice and virtue. It guides us to act with fairness and honor.',
   Justice:
-    'Justice means the same rule for everyone. It is the fairness that holds a society together and guides every honest decision.',
-  Mercy: 'Mercy is compassion for those who err. It tempers justice with a humane heart.',
-  Gracefulness: 'Gracefulness is dignity in conduct — acting with elegance, courtesy and poise.',
-  Humility: 'Humility is greatness without pride. The strongest are often the most humble.',
+    'Justice ensures fairness, equality, and respect for all. It is essential for a strong and united nation.',
+  Mercy:
+    'Mercy is showing compassion even when punishment is possible. It reflects humanity, kindness, and understanding.',
+  Gracefulness:
+    'Gracefulness combines dignity with humility in every action. It reflects elegance in both character and conduct.',
+  Humility:
+    'Humility reminds us to stay grounded despite success. It encourages lifelong learning and mutual respect.',
   Empathy:
-    'Empathy is feeling another’s joy and pain as your own — the first step to understanding.',
+    'Empathy is the ability to understand another person’s feelings. It strengthens compassion and meaningful human connections.',
   Sympathy:
-    'Sympathy is standing beside those who suffer, sharing their burden with an open heart.',
+    'Sympathy means offering care and support to those in need. It reminds us that no one should face hardship alone.',
   'Spiritual Knowledge':
-    'Spiritual knowledge is the wisdom of the inner self — knowing who we are beyond what we own.',
+    'Spiritual knowledge inspires inner wisdom and self-awareness. It encourages a life guided by truth and purpose.',
   Forgiveness:
-    'Forgiveness releases anger and resentment. It frees both the forgiven and the forgiver.',
-  Honesty: 'Honesty is being true in word and deed, in public and in private alike.',
+    'Forgiveness frees us from anger and resentment. It opens the way to healing, peace, and reconciliation.',
+  Honesty:
+    'Honesty means acting with truth and transparency. It builds confidence, trust, and strong character.',
   'Eternal Peace':
-    'Eternal peace is the lasting calm a life of dharma earns — peace within, and peace for all.',
+    'Eternal peace represents harmony that endures through time. It is achieved through justice, compassion, and understanding.',
   Benevolence:
-    'Benevolence is active goodwill — working for the well-being of every living being.',
+    'Benevolence is the desire to do good for others. It inspires generosity, service, and the welfare of all.',
 }
 
 export function virtueDescription(virtue: string): string {
