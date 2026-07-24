@@ -6,8 +6,12 @@
  * r70, bg rgba(53,33,17,0.46), 1.5px rgba(212,173,97,0.55) border. Title
  * Poppins 600 46 #F5D173 + subtitle, then the 4 category photo tiles
  * (280×384, r47.231, 3.736px #FFF8DB border — scaled instances of the home
- * category cards, so the home card assets/crops are reused) and a 56px gold
- * close circle at (1652,254).
+ * category cards) and a 56px gold close circle at (1652,254).
+ *
+ * The tiles ARE the home tiles: same order, same Excel-driven labels, same
+ * crops, laid out on the home rhythm at the panel's 0.952 scale (user
+ * 2026-07-24). Only the card box is smaller — everything else must match, or
+ * a category moves between screens.
  *
  * <QuickAccessProvider> mounts inside the router, renders the overlay above
  * everything, and exposes open() through context — QuickAccessPill falls
@@ -19,10 +23,20 @@ import {
   useContext,
   useMemo,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useContent } from '../data/ContentContext.tsx'
+import {
+  HOME_TILES,
+  HOME_LABEL_LINE,
+  HOME_LABEL_SIZE,
+  HOME_LABEL_TOP,
+  HOME_TILE_GAP,
+  HOME_TILE_H,
+  HOME_TILE_W,
+  designedLabel,
+} from '../screens/home/homeTiles.ts'
 import './QuickAccessOverlay.css'
 
 // ---------------------------------------------------------------------------
@@ -41,49 +55,19 @@ export function useQuickAccess(): QuickAccessContextValue {
 }
 
 // ---------------------------------------------------------------------------
-// Tiles — photos + crops shared with the home screen category cards
-// (audit: fractional 47.231 radius / 3.736 border prove a scaled instance)
+// Tile layout — the home cards at panel scale
 // ---------------------------------------------------------------------------
 
-interface QuickTile {
-  route: string
-  label: string
-  image: string
-  /** Figma image-fill crop, % of the card box (same values as HomeScreen). */
-  photo: CSSProperties
-  /** National Symbols card: scrim ends solid #5E3809 (masks baked text). */
-  solidScrim?: boolean
-}
-
-const TILES: readonly QuickTile[] = [
-  {
-    route: '/symbols',
-    label: 'National Symbols\nof India',
-    image: 'assets/0-home/cards/card-symbols.png',
-    photo: { left: '-7.6%', top: '-24.62%', width: '115.37%', height: '149.38%' },
-    solidScrim: true,
-  },
-  {
-    route: '/monumental',
-    label: 'Flag Foundation\nInstallations',
-    image: 'assets/0-home/cards/card-monumental.png',
-    photo: { left: '-1.2%', top: '-1.03%', width: '102.28%', height: '143.77%' },
-  },
-  {
-    route: '/history',
-    label: 'History\nof Tiranga',
-    image: 'assets/0-home/cards/card-history.png',
-    photo: { left: '0%', top: '0%', width: '100%', height: '138.07%' },
-  },
-  {
-    route: '/chakra',
-    label: 'Explore\nAshok Chakra',
-    image: 'assets/0-home/cards/card-chakra.png',
-    photo: { left: '-35.82%', top: '0%', width: '171.98%', height: '100%' },
-  },
-]
-
-const TILE_X = [267, 636, 1005, 1374] as const
+/* Figma's overlay card (r47.231 / 3.736px border) is a 0.952 instance of the
+   home card, so every home metric is reused through this one factor. */
+const QA_SCALE = 280 / HOME_TILE_W
+const QA_TILE_W = 280
+const QA_TILE_H = Math.round(HOME_TILE_H * QA_SCALE) // 384, the Figma value
+const QA_GAP = HOME_TILE_GAP * QA_SCALE
+/* Same rhythm as home (card + gap), centred in the 1600 panel — the tiles used
+   to sit on a wider, unrelated pitch. */
+const QA_ROW_W = 4 * QA_TILE_W + 3 * QA_GAP
+const QA_ROW_X = (1600 - QA_ROW_W) / 2
 
 // ---------------------------------------------------------------------------
 // Overlay
@@ -91,6 +75,8 @@ const TILE_X = [267, 636, 1005, 1374] as const
 
 function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
+  const { content } = useContent()
+  const homeTiles = content?.homeTiles ?? []
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 100 }}>
@@ -184,7 +170,7 @@ function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
         </button>
 
         {/* Category tiles */}
-        {TILES.map((tile, i) => (
+        {HOME_TILES.map((tile, i) => (
           <button
             key={tile.route}
             type="button"
@@ -195,10 +181,10 @@ function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
             }}
             style={{
               position: 'absolute',
-              left: (TILE_X[i] ?? 267) - 160,
+              left: QA_ROW_X + i * (QA_TILE_W + QA_GAP),
               top: 185,
-              width: 280,
-              height: 384,
+              width: QA_TILE_W,
+              height: QA_TILE_H,
               borderRadius: 47.231,
               border: '3.736px solid var(--cream-border)',
               overflow: 'hidden',
@@ -219,19 +205,22 @@ function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
             <span
               style={{
                 position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 37,
+                // Home anchors the label from its TOP so 1- and 2-line labels
+                // share a first baseline; the same must hold here.
+                top: HOME_LABEL_TOP * QA_SCALE,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: tile.labelWidth * QA_SCALE,
                 textAlign: 'center',
                 whiteSpace: 'pre-line',
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 600,
-                fontSize: 26,
-                lineHeight: 1.226,
+                fontSize: HOME_LABEL_SIZE * QA_SCALE,
+                lineHeight: HOME_LABEL_LINE,
                 color: '#FFFFFF',
               }}
             >
-              {tile.label}
+              {designedLabel(homeTiles[i]?.label, tile.fallbackLabel)}
             </span>
           </button>
         ))}
