@@ -502,8 +502,8 @@ const FLAG_TGT_HOME = new THREE.Vector3(-0.71, 44.1, 0)
    3.73 px/unit, so the 180-unit cloth grows 497px → ~671px wide. The whole
    view is then shifted so the flag centres in the free band between the
    text column (ends x 625) and the cards (start x 1348) — centre ≈ 986. */
-const FLAG_CAM_DOCK = new THREE.Vector3(36.11, 66.63, 412)
-const FLAG_TGT_DOCK = new THREE.Vector3(-9.85, 45.2, 0)
+const FLAG_CAM_DOCK = new THREE.Vector3(37.32, 58.72, 435)
+const FLAG_TGT_DOCK = new THREE.Vector3(-8.99, 37.6, 0)
 const CHAKRA_HOME_POS = new THREE.Vector3(0, 0, 0)
 const GLOW_COLOR = new THREE.Color(1.0, 0.82, 0.45)
 
