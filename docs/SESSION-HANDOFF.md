@@ -5,6 +5,76 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-23 — perf fix, photo rules, light REMOVED, flag framing, transitions
+
+**Read this first: two things were REVERSED late in the day.** The
+full-screen volumetric light (built 07-21) is GONE, and the map-list card
+photo is back to its original cover-crop. Do not "restore" either.
+
+- `8edb168` **PERF — the kiosk lag + delayed touch.** The full-screen
+  god-ray volumetric (depth pre-pass + 512² 20-step march + 48-tap streak
+  ≈ 18M samples) ran EVERY frame on the Arc iGPU, saturating it and
+  starving pointer input. Cached it into an offscreen RT, recomputed only
+  when the pose moves (1-in-3 frames for idle spin / cloth, 0 at rest).
+  → **superseded by `d2ef139`, which deletes the light entirely.** Keep
+  the diagnosis: per-frame full-screen volumetrics = kiosk lag.
+- `d0553e9` **v0.3.1 onsite build** in `release/` (Setup .exe 487MB + zip
+  529MB). 0.2.0/0.3.0 deleted — 0.3.0 shipped the slow light, do not use.
+- `d446057` + `f39c07c` history gallery thumbnails NEVER crop (19 of them
+  across the 9 years were beheading portraits — Sister Nivedita aspect
+  0.71 in a 1.55 tile), then blur-filled.
+- `7d07f90` **`src/components/UncroppedPhoto.tsx`** — one shared rule for
+  content photos: never crop, frame HUGS the photo (border/radius ride the
+  IMAGE via `imgClassName`, slot stays transparent). Optional `fill` prop
+  blur-fills instead, for UNIFORM tiles. Applied to symbol DYK + install
+  carousel. `imageFocus.ts` unwired from the detail carousel.
+- `9372990` large gallery image keeps its DYNAMIC hugging frame (a fill
+  there drew a fixed box — user rejected twice).
+- `10671d7` **map LIST card reverted to the original** `cover` +
+  `useFlagObjectPosition`. Letterboxing a 1.62 photo in a 1.38 box always
+  reads as a border, whatever fills the bands. Leave it alone.
+- `d2ef139` **volumetric light DELETED** (288 lines: depth pre-pass, ray
+  march, streak, cached RT + blit, pinned sun, strength ramp). The wheel
+  is lit by its own rig over the CSS plate; the loop is one scene render.
+  Recover from `10671d7^` if ever wanted.
+- `948b11f` chakra background stays blurred through the entrance (the
+  "bare sunset" beat is gone).
+- `84a53ee` + `4ec3b53` **flag framing**: dolly along the same view axis
+  (z 537.7 → 435) so the cloth is ~609px wide (~1.22×) and centred in the
+  band between the text column (ends x625) and cards (start x1348).
+  Tuned on numbers via the new DEV `__chakraFlagScreen()` hook (projects
+  the cloth bbox to canvas px — the dock camera is oblique so nothing
+  scales linearly). 48px clearance from the cards at peak billow.
+- `2461585` **tab transitions** — three real defects fixed: (1) leaving
+  flag for DESIGN ended with a one-frame camera SNAP (WHEEL_CAM→DIMS_CAM,
+  57 units) because the undock lerp aims at the framing current when
+  setMode ran while `dims` flips the same render → restoreWheelPose now
+  TWEENS (420ms); (2) undock reused the 3.2s dock duration and read as
+  stuck → new `FLAG_BACK_MS` 1900 (in stays 3200); (3) a second pill tap
+  inside the 240ms leave window was DROPPED → switchTab now retargets.
+
+**Verified:** 8 consecutive transitions over every pair, no console
+errors, each tab settling on its canonical framing (values r360.4
+@964,626 / design r313.4 @957,628 / flag→design included).
+
+**Also this session:** `a51e3ef` `dist/` is now a hostable static site
+(copyDataDir ships `data/content.xlsx`; renderer uses no Electron APIs,
+HashRouter, base './'). Plan + sizes in `docs/WEB-HOSTING-PLAN.md`
+(372MB, 185MB of it symbol turntable PNG sequences). NOT deployed —
+awaiting the user's host + access decision.
+
+**PANE LIMIT (recurring):** the preview pane suspends rAF, so animation
+MOTION cannot be measured here — only end states and forced frames. Dev
+hooks for that: `__chakraRollScrub(p)`, `__chakraFlagScrub(p)`,
+`__chakraWheelScreen()`, `__chakraFlagScreen()`, `__chakraScrub(p)`.
+Console buffer also persists across reloads and replays STALE HMR errors
+— re-check on a fresh load before believing them.
+
+**Open:** v0.3.1 does NOT contain anything after `d0553e9` (no-crop
+photos, light removal, flag framing, transition fixes) — cut **v0.3.2**
+before the next onsite test. Transition MOTION still wants the user's eye
+in a visible browser.
+
 ### 2026-07-20/21 night — chakra section: persistent scene + full-screen light
 Iterative user-driven rework of /chakra, commits in order:
 - `aafb1b8` roll entrance v2: wheel rolls UPRIGHT (lean returns after landing),
