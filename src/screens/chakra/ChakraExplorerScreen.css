@@ -175,9 +175,9 @@
   filter: brightness(1.14) saturate(1.06);
 }
 
-.ck-screen.ck-intro-hold .ck-bg-blur {
-  opacity: 0;
-}
+/* The blur stays on through the ENTRANCE too (user 2026-07-23: "keep the
+   background always blur") — the bare-sunset beat that used to hide it is
+   gone. Only the scrim still waits for the chrome. */
 
 .ck-screen.ck-intro-hold .ck-scrim {
   opacity: 0;
