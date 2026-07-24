@@ -5,6 +5,95 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-25 — audit fixes, home transition, client content, Did You Know photos
+
+**Everything below is COMMITTED + PUSHED** to `origin/feat/chakra-assembly`
+(commits `cac5db3`, `a9b28b5`, `9288fce`, `b0427f4`; git tree clean apart from
+untracked `.claude/`). Repo remote: github.com/ayushsuletiya/flag-foundation-kiosk.
+
+**1. Symbols Know More podium placement (`a9b28b5`).** Root cause was SCALE, not
+position. Turntable renders pad the subject very differently (elephant/banyan fill
+~40% of their frame, flag ~95%), so a plain `object-fit:contain` made on-podium
+sizes vary 2.3× — elephant/banyan looked like toys. New `useGroundedTransform`
+(symbolsMedia.ts) normalises each subject's VISIBLE height to the tiger reference
+(344px) and pins the visible feet to the podium contact line, scaling about the
+feet so grounding holds. The contact line **675 is now VERIFIED** (measured the
+baked stage art: lit top face spans stage-y 648→703, centre ≈675 — resolves the
+old "UNCONFIRMED" flag). Flag gets a taller target (450). SymbolDetailScreen.tsx
+applies `translateY(dy) scale(s)` with transform-origin at the feet.
+
+**2. Full-app audit — 24 verified findings fixed (`a9b28b5`, docs/AUDIT-2026-07-24.md).**
+Found by a background workflow (38 agents, adversarial verify). Batches:
+- Kiosk hardening: electron/main.ts renderer/GPU-crash auto-reload + `Menu(null)` +
+  `before-input-event` (block DevTools/quit) + single-instance lock; new
+  `src/components/ErrorBoundary.tsx` wraps AnimatedRoutes (self-heals to home).
+- Robustness: Quick Access closes on nav (useLocation effect); rewindGL +
+  Chakra3D `forceContextLoss()` + sunsetEnv/PMREM dispose + `sceneDisposed` guard;
+  Odisha cold-start fallback (MapExplorer); intro-video 8s hard timeout; QA tile
+  crop fixed via inset `::after` frame.
+- Content-loader (excelLoader.ts): duplicate-id → fallback id; `cellDates:true` +
+  Date coercion; milestone slot alignment (keep 4-length, screen skips blanks);
+  chakra spoke/virtue guard; home-tile order validation; rewind bg-1→bg.png
+  fallback; timeline pill `flex-shrink`.
+- Carousel/perf: PngSequencePlayer cross-mount `FRAME_CACHE` + `MAX_FRAMES` 240 +
+  poster-until-first-PAINT; IndiaMap marker frame discovery; chakra flag idle
+  pre-warm via requestIdleCallback; hold-to-orbit 260→460ms.
+
+**3. Home tile tap transition (`9288fce`).** 240ms fade + `scale(1.02)` out before
+navigate (HomeScreen.tsx `leaving` state + HomeScreen.css `.home-leaving`).
+**⚠️ CLAUDE.md still says "Home → Symbols: NO transition" — that decision is now
+SUPERSEDED by the user; update CLAUDE.md.**
+
+**4. Client content updates (`cac5db3`) — user chose "everything verbatim".**
+- **Monumental**: tab 04 REPLACED with the client's authoritative 133-installation
+  list (27 states/UTs — the 9 dropped were the old unconfirmed Tier-3 states; they
+  now render greyed/disabled in Select State). Photos rewired from the client's
+  `Flag Images` (OFFLINE — no live URLs), location-matched, downscaled 4800→1920px
+  (801MB→54MB): 116 wired, 17 without a local photo. 17 installations have no photo
+  (Silchar, Tezpur, Hanle, Udaipur, Bareilly, …). Old 219-photo set + the pre-change
+  content.xlsx are backed up in the session scratchpad only (not the repo).
+- **National Symbols** (tabs 03/03b) ← client Identity + Did-You-Know cards verbatim
+  (incl. dolphin count "< 5,000" per user; "Pingali Venkaiah" spelling).
+- **History** (05/05b) ← client's combined `Main I` split back into the two tabs;
+  kiosk-only fields (Subtitle, Know More Description, Book Ref) preserved where the
+  client left them blank.
+- **Chakra**: client's 24 virtue DESCRIPTIONS → chakraData.ts `VIRTUE_DESCRIPTIONS`
+  (names/design/flag copy already matched the kiosk verbatim; tab 06 untouched).
+
+**5. Did You Know card photos — ALL 55 slots filled (`b0427f4`).** Were empty except
+one. Internet-first (14-agent Wikimedia Commons research workflow) → AI for gaps:
+- **38 real Wikimedia PD/CC** images, downscaled ~800px, saved as
+  `symbols/<slug>/did-you-know/<n>.png` (contiguous; the player cycles them by
+  modulo). Deity/classical cards = authentic PD masterworks (Raja Ravi Varma's
+  Lakshmi & Murugan, Abanindranath Tagore's *Bharat Mata*, Durga lithograph,
+  British Museum Ganesha); archival = real photos (Nehru 1947 Red Fort, Tagore,
+  Bankim Chandra, Pashupati seal, Sher Shah rupee).
+- **12 Magnific (Google Nano Banana 2)** photographic scenes.
+- **3 Magnific (GPT-2)** ₹ graphics (hero / construction diagram / world-currency
+  row). NOTE: GPT-2 renders the ₹ glyph correctly — do NOT hand-draw with Pillow,
+  system fonts (Arial Unicode) tofu-box the ₹.
+- 2 text/logo cards (सत्यमेव जयते carving, All India Radio masthead) left cycling.
+- All 53 credited in **tab 10 · Image Credits** (38 Wikimedia w/ license+author+proof
+  URL; 15 AI disclosed). Zip of the DYK images at
+  `~/Downloads/national-symbols-did-you-know.zip`.
+
+Magnific account: Premium+, ~301k credits, "unlimited" NOT active this session
+(generations consume credits). Spent ~3k this session.
+
+**STILL OPEN / next:**
+- 2 DYK text/logo cards unfilled (Satyameva Jayate Devanagari carving; AIR/Gazette
+  masthead) — source a real one or GPT-2 them.
+- Update CLAUDE.md: the "no home transition" decision is superseded.
+- **Cut v0.3.2 onsite build** — `release/` still holds 0.3.1, which predates ALL of
+  this session's work (audit fixes, no-crop photos, placement, transitions, all the
+  client content + DYK photos).
+- Verify on the REAL kiosk (preview pane can't judge motion): symbols podium
+  placement, home tile transition, chakra flag/rewind motion.
+- The client's Chakra `Design`/`Chakra In Flag` sheets already matched the kiosk, so
+  nothing pulled from them. The 4 old paid Magnific DYK enhancements (lotus/peacock/
+  mango/ganga) are buried in an unrelated Krishna project in the Magnific library —
+  not retrieved; fresh sourcing used instead.
+
 ### 2026-07-24 — chakra transitions, Tiranga hoist, copy fits, podium grounding, Quick Access
 
 **⚠️ ONE THING IS UNCONFIRMED — read before touching the symbols detail screen.**
