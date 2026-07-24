@@ -14,12 +14,16 @@
  * order 1-4 map to routes in TILES order); Figma strings are the fallback
  * so the screen never renders empty while content loads.
  */
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
 import { HOME, SHARED } from '../../assets/paths.ts'
 import { HOME_TILES, designedLabel } from './homeTiles.ts'
 import './HomeScreen.css'
+
+/** The home eases out over this long before the route actually changes. */
+const HOME_LEAVE_MS = 240
 
 // Runtime asset URLs come from src/assets/paths.ts (relative so they resolve
 // served from the project root) and under file:// in the packaged build
@@ -32,9 +36,23 @@ export function HomeScreen() {
   const navigate = useNavigate()
   const { content } = useContent()
   const homeTiles = content?.homeTiles ?? []
+  const [leaving, setLeaving] = useState(false)
+  const leaveTimer = useRef<number | undefined>(undefined)
+
+  // Smooth the hand-off: the home fades out before the route changes, so the
+  // arriving screen's own entrance doesn't begin from a hard cut. The tile's
+  // :active press feedback fires instantly, so the tap still feels immediate
+  // through the short delay. (Only the home tree is alive during the fade — it
+  // unmounts before the destination mounts — so the kiosk iGPU guard holds.)
+  const goToSection = (route: string) => {
+    if (leaving) return
+    setLeaving(true)
+    leaveTimer.current = window.setTimeout(() => navigate(route), HOME_LEAVE_MS)
+  }
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
 
   return (
-    <div className="home-screen">
+    <div className={leaving ? 'home-screen home-leaving' : 'home-screen'}>
       {/* Full-bleed background video (poster until the mp4 is delivered) */}
       <div className="home-bg">
         <DynamicBackground base={HOME.background} />
@@ -56,7 +74,7 @@ export function HomeScreen() {
           type="button"
           className="home-tile"
           style={{ left: tile.left, width: tile.width }}
-          onClick={() => navigate(tile.route)}
+          onClick={() => goToSection(tile.route)}
         >
           <img
             className="home-tile-photo"

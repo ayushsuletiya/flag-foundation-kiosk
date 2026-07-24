@@ -12,6 +12,15 @@
      subpixel smoothing renders every glyph visibly bolder than the design. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+/* Tapping a tile eases the whole home out (fade + a slight push-in) before the
+   route changes, so the section's own entrance no longer starts from a snap. */
+.home-leaving {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
 }
 
 /* ---- Background video / poster + scrim ---------------------- */
