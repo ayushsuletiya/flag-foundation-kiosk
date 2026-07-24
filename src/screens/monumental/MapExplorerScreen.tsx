@@ -250,17 +250,14 @@ function InstallationTile({
               top: 108,
               width: 345,
               height: 250.27,
-              borderRadius: 19.795,
-              border: '1.414px solid #FFFFFF',
-              overflow: 'hidden',
-              background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
             }}
           >
             {!photoFailed ? (
-              // Never crop the installation: a tall flagpole shot lost its
-              // flag to a landscape `cover` fit. Whole photo, blur-filled.
+              // Never crop the installation, and let the frame hug the
+              // photo — the slot itself stays transparent.
               <UncroppedPhoto
                 src={installationPhoto(row.id)}
+                imgClassName="inst-thumb"
                 onError={() => setPhotoFailed(true)}
               />
             ) : (
@@ -271,6 +268,11 @@ function InstallationTile({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  // Slot is transparent now — the no-photo state keeps the plate.
+                  borderRadius: 19.795,
+                  border: '1.414px solid #FFFFFF',
+                  background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
+                  boxSizing: 'border-box',
                 }}
               >
                 <img

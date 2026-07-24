@@ -28,14 +28,14 @@ import { probeImageCached } from '../../assets/probe.ts'
 import { UncroppedPhoto } from '../../components/UncroppedPhoto.tsx'
 import './monumental.css'
 
-/** One crossfade layer — owns its flag-focus crop so the pole never clips. */
-/** One carousel frame. The installation is NEVER cropped (a tall flagpole
- * shot lost its flag to the landscape `cover` fit); the slot is filled with
- * a blurred copy of the same photo. */
+/** One crossfade layer. The installation is NEVER cropped (a tall flagpole
+ * shot lost its flag to the landscape `cover` fit) and the white frame HUGS
+ * the photo instead of boxing the slot. */
 function CarouselPhoto({ src, visible }: { src: string; visible: boolean }) {
   return (
     <UncroppedPhoto
       src={src}
+      imgClassName="inst-photo"
       style={{ opacity: visible ? 1 : 0, transition: 'opacity 700ms ease' }}
     />
   )
@@ -173,7 +173,9 @@ export function InstallationDetailScreen() {
         {row?.location ?? ''}
       </h1>
 
-      {/* Photo card */}
+      {/* Photo card — a transparent AREA, not a box: the white frame lives
+          on the photo (.inst-photo) so it hugs the real shape. The plate
+          returns only for the no-photo placeholder below. */}
       <div
         style={{
           position: 'absolute',
@@ -181,10 +183,6 @@ export function InstallationDetailScreen() {
           top: 245,
           width: 930.097,
           height: 686.555,
-          borderRadius: 41.75,
-          border: '2.319px solid #FFFFFF',
-          overflow: 'hidden',
-          background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
         }}
       >
         {photos.length > 0 ? (
@@ -234,6 +232,12 @@ export function InstallationDetailScreen() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              // The card is transparent now, so the no-photo state carries
+              // its own plate + frame.
+              borderRadius: 41.75,
+              border: '2.319px solid #FFFFFF',
+              background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
+              boxSizing: 'border-box',
             }}
           >
             <img

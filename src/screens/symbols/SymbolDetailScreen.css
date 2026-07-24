@@ -225,21 +225,28 @@
   color: transparent;
 }
 
+/* A transparent AREA, not a box: the photo keeps its own shape and the
+   rounded frame rides on the image (user 2026-07-23). The plate/overflow
+   that used to live here would draw a fixed box around a portrait. */
 .syd-dyk-photo {
   position: absolute;
   left: 28px;
   top: 99px;
   width: 454px;
   height: 285px;
-  border-radius: 32px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
 }
 
-.syd-dyk-photo > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* Frame on the image so it hugs the photo's shape (UncroppedPhoto sizes
+   and centres it). The SymbolVisual fallback keeps the old plate. */
+.syd-dyk-photo .ucp-img {
+  border-radius: 32px;
+}
+
+.syd-dyk-photo > svg,
+.syd-dyk-photo > canvas,
+.syd-dyk-photo > div {
+  border-radius: 32px;
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .syd-dyk-body {

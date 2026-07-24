@@ -116,3 +116,23 @@
 .mon-overlay-panel {
   animation: mon-pop-in 0.25s ease both;
 }
+
+/* ---- installation photos ------------------------------------------- *
+   The frame belongs to the PHOTO, not the slot, so it hugs the real shape
+   (a portrait flagpole shot gets a tall narrow frame) instead of drawing a
+   fixed box around empty space (user 2026-07-23). Sizing/centring comes
+   from UncroppedPhoto. */
+
+/* Detail-screen carousel (930x686 area). */
+.inst-photo {
+  border-radius: 41.75px;
+  border: 2.319px solid #ffffff;
+  box-sizing: border-box;
+}
+
+/* Map list card thumbnail (345x250 area). */
+.inst-thumb {
+  border-radius: 19.795px;
+  border: 1.414px solid #ffffff;
+  box-sizing: border-box;
+}
