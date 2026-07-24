@@ -481,6 +481,11 @@ const DIMS_SETTLE_MS = 260
 const POLE_X = -92
 const POLE_TOP = 84
 const POLE_LEN = 520
+/* The Tiranga is HOISTED, not dissolved (user 2026-07-24: "fix the tiranga in
+   out animation"). Cross-fading the whole flag at once put a solid bare mast
+   and a ghost chakra print floating in mid-air on screen for ~400ms. Now the
+   mast plants first, then the cloth runs up it — and lowers on the way out. */
+const FLAG_HOIST_DROP = 88
 /* ONE PERSISTENT FULL-STAGE CANVAS for all three tabs (user 2026-07-20:
    the chakra must never disappear across pill switches, and its light must
    fill the WHOLE screen — no clipping, no edge feathering). The canvas is
@@ -517,6 +522,7 @@ const GLOW_COLOR = new THREE.Color(1.0, 0.82, 0.45)
 
 const S = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t)) // smoothstep
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
 
 /** Draw the flat printed chakra (official contour) onto the flag canvas. */
 function drawChakra2D(ctx: CanvasRenderingContext2D, cx: number, cy: number, R: number): void {
@@ -1019,6 +1025,9 @@ function createChakraScene(
   let clothCon: [number, number, number, number][] = []
   let bakedCloth: THREE.Vector3[] | null = null // calm mid-wave reference pose
   let flash: THREE.Sprite | null = null // gold flash masking the stamp moment
+  /* The mast and the cloth fade on SEPARATE schedules — see applyFlagTimeline. */
+  let mastMats: THREE.Material[] = []
+  let clothMat: THREE.Material | null = null
   /* Master timeline: flagP 0 = chakra mode … 1 = in-flag. All transition state
      derives deterministically from flagP — time-based, frame-rate independent. */
   let flagAnim: {
@@ -1196,13 +1205,15 @@ function createChakraScene(
 
     const geo = new THREE.PlaneGeometry(CLOTH.w, CLOTH.h, CLOTH.sx, CLOTH.sy)
     const flagTex = makeFlagTexture()
-    const clothMat = new THREE.MeshStandardMaterial({
+    const cloth = new THREE.MeshStandardMaterial({
       map: flagTex,
       side: THREE.DoubleSide,
       roughness: 0.85,
       metalness: 0,
     })
-    clothMesh = new THREE.Mesh(geo, clothMat)
+    mastMats = [steel, finialMat] // pole + base share `steel`
+    clothMat = cloth
+    clothMesh = new THREE.Mesh(geo, cloth)
     clothMesh.position.y = 22 // hang just below the finial
     clothMesh.name = 'Flag cloth'
     clothMesh.castShadow = true // the waving cloth carves the sun into beams
@@ -1271,7 +1282,7 @@ function createChakraScene(
     flash.position.set(0, 22, 27)
     flash.renderOrder = 20
 
-    flagDisposables.push(poleGeo, finialGeo, baseGeo, geo, steel, finialMat, clothMat, flagTex, flashMat, flashTex)
+    flagDisposables.push(poleGeo, finialGeo, baseGeo, geo, steel, finialMat, cloth, flagTex, flashMat, flashTex)
     flagGroup.add(pole, finial, base, clothMesh, flash)
     flagGroup.visible = false
     scene.add(flagGroup)
@@ -1279,14 +1290,9 @@ function createChakraScene(
 
   /* --------------------------------------------- flag master timeline -- */
 
-  function setFlagOpacity(a: number): void {
-    if (flagGroup === null) return
-    flagGroup.traverse((o) => {
-      const m = (o as THREE.Mesh).material as THREE.Material | undefined
-      if (m === undefined || o === flash) return // flash drives its own opacity
-      m.opacity = a
-      m.transparent = a < 0.999
-    })
+  function setMatOpacity(m: THREE.Material, a: number): void {
+    m.opacity = a
+    m.transparent = a < 0.999
   }
 
   function setChakraGlow(g: number, alpha: number): void {
@@ -1315,11 +1321,21 @@ function createChakraScene(
     /* No-overlap choreography — the chakra and the full-size flag never share
        the stage:
          phase 1 (0.00–0.50)  chakra shrinks IN PLACE while the camera pulls back
-         phase 2 (0.48–0.62)  flag fades in behind the now-small chakra (locked pose)
+         phase 2a (0.38–0.50) the MAST plants itself behind the shrinking chakra
+         phase 2b (0.46–0.74) the cloth is HOISTED up it, fading as it climbs
          phase 3 (0.52–0.85)  small chakra glides onto the printed chakra
-         phase 4 (0.66–1.00)  glow builds, chakra melts in, light sinks into print */
-    flagGroup.visible = p > 0.48
-    setFlagOpacity(sub(0.48, 0.62))
+         phase 4 (0.66–1.00)  glow builds, chakra melts in, light sinks into print
+       The mast leads so the cloth never has to resolve out of empty sky — a
+       single uniform cross-fade left a ghost chakra print hanging in mid-air. */
+    flagGroup.visible = p > 0.38
+    for (const m of mastMats) setMatOpacity(m, sub(0.38, 0.5))
+    if (clothMat !== null) setMatOpacity(clothMat, sub(0.47, 0.6))
+    if (clothMesh !== null) {
+      // …and it RUNS UP the mast into place, easing out like a real hoist.
+      // Settled well before the merge at p 0.85, so chakraDock (computed from
+      // the resting cloth) is still the exact landing point.
+      clothMesh.position.y = 22 - FLAG_HOIST_DROP * (1 - easeOutCubic(sub(0.46, 0.74)))
+    }
     const fs = easeInOutCubic(sub(0.12, 0.5)) // shrink first…
     const f = easeInOutCubic(sub(0.52, 0.85)) // …then drift straight in
     // x/y head for the print; z stays on a plane IN FRONT of the whole cloth
@@ -1620,8 +1636,14 @@ function createChakraScene(
     // cloth is FROZEN during the chakra animation; after landing the breeze
     // ramps in gently and the flag starts to wave — for as long as the tab
     // is open (the sim stops with the rAF loop when the tab unmounts)
-    if (flagGroup !== null && flagGroup.visible && modeState === 'flag' && flagAnim === null) {
-      windFactor = Math.min(1, windFactor + 0.006)
+    // The wave also keeps running while the flag is being LOWERED — freezing
+    // the cloth the instant another pill was tapped stopped the Tiranga dead
+    // mid-gust. It stays frozen for the dock IN (the chakra has to land on a
+    // print that isn't moving) and for the last of the undock, until the
+    // chakra has peeled away.
+    const lowering = flagAnim !== null && modeState === 'wheel' && flagP < 0.9
+    if (flagGroup !== null && flagGroup.visible && ((modeState === 'flag' && flagAnim === null) || lowering)) {
+      if (!lowering) windFactor = Math.min(1, windFactor + 0.006)
       simulateCloth(now / 1000)
     }
     if (flagAnim !== null) {
@@ -1680,6 +1702,8 @@ function createChakraScene(
       scene.remove(flagGroup)
       flagGroup = null
       clothMesh = null
+      mastMats = []
+      clothMat = null
       flash = null
       bakedCloth = null
       clothPos = []
