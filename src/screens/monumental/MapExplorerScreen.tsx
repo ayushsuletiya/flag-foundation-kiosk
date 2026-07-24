@@ -31,7 +31,7 @@ import {
   setLastSelectedState,
 } from './monumentalGeo.ts'
 import { MONUMENTAL, installationPhoto } from '../../assets/paths.ts'
-import { UncroppedPhoto } from '../../components/UncroppedPhoto.tsx'
+import { useFlagObjectPosition } from '../../assets/imageFocus.ts'
 import './monumental.css'
 
 const INDIA_LOOP_VIDEO = `${MONUMENTAL.mapBackground}/bg.mp4`
@@ -145,8 +145,14 @@ function InstallationTile({
   useEffect(() => {
     setPhotoFailed(false)
   }, [row.id])
-  // (No crop-focus needed any more — UncroppedPhoto shows the whole
-  // photograph, so the pole can never be cut out of frame.)
+  // Keep the flag inside the 345x250 cover-crop (portrait photos would
+  // otherwise behead the pole — the flag is almost always in the top half).
+  // The card FILLS edge to edge like the original design: letterboxing it
+  // put visible bands around the photo (user 2026-07-23).
+  const photoPosition = useFlagObjectPosition(
+    expanded && !photoFailed ? installationPhoto(row.id) : null,
+    345 / 250.27,
+  )
 
   return (
     // Shadow lives on this outer box; a child with `overflow: hidden` clips
@@ -257,13 +263,17 @@ function InstallationTile({
             }}
           >
             {!photoFailed ? (
-              // These cards are a LIST — they keep a consistent box (user
-              // 2026-07-23), filled by a blurred copy of the photo so the
-              // tiranga is never cropped and no bare plate shows.
-              <UncroppedPhoto
+              <img
                 src={installationPhoto(row.id)}
-                fill
+                alt=""
+                draggable={false}
                 onError={() => setPhotoFailed(true)}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: photoPosition,
+                }}
               />
             ) : (
               <div
