@@ -467,10 +467,14 @@ const FLAG_COLORS = { saffron: '#FF671F', white: '#FFFFFF', green: '#046A38', na
 const CLOTH = { w: 180, h: 120, sx: 40, sy: 26 } as const
 const WIND_STRENGTH = 1.0 // source params.wind
 const FLAG_ANIM_MS = 3200 // dock IN — the hero beat, scaled by remaining distance
-/* Undock is the same choreography in reverse, but the visitor has already
-   seen it and is waiting to USE the tab they tapped — at 3.2s the wheel
-   read as stuck while the destination's text was already on screen. */
-const FLAG_BACK_MS = 1900
+/* Undock is the same choreography in reverse. Slightly quicker than the dock
+   (the visitor has already seen this beat) but NOT hurried — at 1.9s the wheel
+   snapped out of the flag (user 2026-07-24: "too fast"). */
+const FLAG_BACK_MS = 2700
+/* …and the Design callouts wait for the wheel to actually settle on its
+   pedestal before they draw themselves (user 2026-07-24: "dont show the
+   measurements until it sets its position"). */
+const DIMS_SETTLE_MS = 260
 /* Pole: source used length 202 (base on a visible floor). The kiosk hero slot
    crops like the static flag-pole.png — pole runs off the bottom edge, base
    never visible — so the pole is lengthened downward. */
@@ -881,6 +885,10 @@ function createChakraScene(
   let dimGroup: THREE.Group | null = null
   /** Callout fade 0..1 — live tab switches fade the dims in/out (300ms). */
   let dimsFade = 0
+  /** Earliest time the callouts may start drawing. Set when the undock
+   * timeline lands so the measurements never appear over a wheel that is
+   * still flying out of the flag. */
+  let dimsHoldUntil = 0
 
   /* ------------------------------------------------ camera tweening -- */
   // The scene is PERSISTENT across the section's tabs — pill switches move
@@ -1421,7 +1429,10 @@ function createChakraScene(
     // depth). Tweening absorbs any mismatch; when there is none this is a
     // no-op tween to the pose the camera already holds.
     tweenCamera(dimsOn ? DIMS_CAM : WHEEL_CAM, dimsOn ? DIMS_TGT : WHEEL_TGT, 420)
-    if (dimGroup !== null) dimGroup.visible = dimsOn
+    // Hold the callouts back a beat longer — the wheel has only just stopped
+    // moving; drawing the drawing over a still-settling wheel looked wrong.
+    dimsHoldUntil = performance.now() + DIMS_SETTLE_MS
+    if (dimGroup !== null) dimGroup.visible = dimsOn && dimsFade > 0
   }
 
   /* --------------------------------------------- picking + dragging -- */
@@ -1561,7 +1572,11 @@ function createChakraScene(
     // Dims callouts fade in/out on live switches (the build-from-nothing
     // assembly stays reserved for scenes CREATED into dims).
     if (dimGroup !== null && buildP >= 1) {
-      const target = dimsOn && modeState !== 'flag' ? 1 : 0
+      // …but never WHILE the dock/undock timeline is running, nor during the
+      // short settle after it lands: leaving the flag for Design used to draw
+      // the callouts around a wheel that was still emerging from the cloth.
+      const settled = flagAnim === null && now >= dimsHoldUntil
+      const target = dimsOn && modeState !== 'flag' && settled ? 1 : 0
       if (dimsFade !== target) {
         const step = 16.7 / 300 // ~300ms at 60fps; time-based enough for a fade
         dimsFade = clamp01(dimsFade + (target > dimsFade ? step : -step))
