@@ -50,8 +50,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   applyAssemblyTimeline,
   ASSEMBLY_MS,
-  BEAT,
-  beatP,
   clamp01,
   MIN_SCALE,
   parseTagUnits,
@@ -145,7 +143,6 @@ const ROLL_TRAVEL_PX = 1420
 const ROLL_OVER = 0.023 // rolls ~33px past home before rocking back
 const ROLL_APEX = 0.8 // fraction of the timeline spent reaching that apex
 const ROLL_LEAN_MS = 650 // post-landing turn into the 3/4 resting pose
-const ROLL_RAY_MS = 700 // god-ray reignite after the wheel is home
 
 /** Constant-friction roll: velocity decays linearly to zero at an apex just
  * past home (easeOutQuad — how a real wheel coasts to a stop), then eases
@@ -753,294 +750,12 @@ function createChakraScene(
   const SHADOW_FADE_MS = 600
   let shadowFadeStart = -1e9 // "settled long ago" — fully visible by default
 
-  /* ------------------------- volumetric light (true object occlusion) -- */
-  // The way 3D packages do it, shadow-map accelerated: for every pixel a
-  // ray marches through the AIR in front of the camera and asks at each
-  // step "can this point see the sun?" against the sun's shadow map. Air
-  // the wheel shades stays dark; air in the spoke gaps glows — real 3D
-  // crepuscular rays with no screen-space smearing (and none of its
-  // sparkle artifacts). Colour written with zero alpha composites
-  // additively over the CSS plate.
-  // Depth pre-pass of the solid scene: each ray STOPS at the first surface,
-  // so lit air behind the wheel never paints over it. FULL device res and
-  // NEAREST filtering — RGBA-packed depth must never be interpolated
-  // (blended packed bytes decode to garbage and ring the silhouette with
-  // a jagged fringe).
-  const depthDpr = Math.min(window.devicePixelRatio, 2)
-  const depthRT = new THREE.WebGLRenderTarget(
-    Math.floor(width * depthDpr),
-    Math.floor(height * depthDpr),
-  )
-  depthRT.texture.minFilter = THREE.NearestFilter
-  depthRT.texture.magFilter = THREE.NearestFilter
-  const depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
-  const rayScene = new THREE.Scene()
-  const rayCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-  const rayMat = new THREE.ShaderMaterial({
-    uniforms: {
-      shadowMap: { value: null },
-      shadowMatrix: { value: new THREE.Matrix4() },
-      tDepth: { value: depthRT.texture },
-      invProj: { value: new THREE.Matrix4() },
-      invView: { value: new THREE.Matrix4() },
-      camPos: { value: new THREE.Vector3() },
-      sunDir: { value: new THREE.Vector3() }, // toward the sun
-      // Trimmed from 0.4 when the canvas went full-stage: the same strength
-      // over 2.5× the area over-exposed the frame (virtue panel washed out).
-      strength: { value: 0.33 },
-    },
-    vertexShader: /* glsl */ `
-      varying vec2 vUv;
-      void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-    `,
-    fragmentShader: /* glsl */ `
-      varying vec2 vUv;
-      uniform sampler2D shadowMap;
-      uniform sampler2D tDepth;
-      uniform mat4 shadowMatrix;
-      uniform mat4 invProj;
-      uniform mat4 invView;
-      uniform vec3 camPos;
-      uniform vec3 sunDir;
-      uniform float strength;
-      // march segment = ray ∩ sphere around the wheel's air volume
-      const vec3 VOL_C = vec3(14.0, 3.0, 0.0);
-      const float VOL_R = 460.0; // covers the stage corners in EVERY framing
-                                 // (the pulled-back dock camera included)
-      const int STEPS = 20;
-      // three.js RGBA depth packing (shadow + depth maps are RGBA-packed)
-      const float UnpackDownscale = 255.0 / 256.0;
-      const vec3 PackFactors = vec3(16777216.0, 65536.0, 256.0);
-      const vec4 UnpackFactors = UnpackDownscale / vec4(PackFactors, 1.0);
-      float unpackRGBAToDepth(const in vec4 v) { return dot(v, UnpackFactors); }
-      void main() {
-        vec4 ndc = vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
-        vec4 vp = invProj * ndc;
-        vp /= vp.w;
-        vec3 rayDir = normalize((invView * vec4(vp.xyz, 0.0)).xyz);
-        vec3 oc = camPos - VOL_C;
-        float b = dot(oc, rayDir);
-        float c = dot(oc, oc) - VOL_R * VOL_R;
-        float disc = b * b - c;
-        if (disc < 0.0) discard;
-        float sq = sqrt(disc);
-        float t0 = max(0.0, -b - sq);
-        float t1 = -b + sq;
-        // stop at the first solid surface: reconstruct the depth-buffer hit
-        float dScene = unpackRGBAToDepth(texture2D(tDepth, vUv));
-        if (dScene < 0.9999) {
-          vec4 sn = vec4(vUv * 2.0 - 1.0, dScene * 2.0 - 1.0, 1.0);
-          vec4 sv = invProj * sn;
-          sv /= sv.w;
-          vec3 sw = (invView * vec4(sv.xyz, 1.0)).xyz;
-          t1 = min(t1, length(sw - camPos));
-        }
-        if (t1 <= t0) discard;
-        float stepLen = (t1 - t0) / float(STEPS);
-        // per-pixel jitter hides the step count as grain
-        float jitter = fract(sin(dot(vUv, vec2(12.9898, 78.233))) * 43758.5453);
-        float acc = 0.0;
-        for (int i = 0; i < STEPS; i++) {
-          vec3 p = camPos + rayDir * (t0 + (float(i) + jitter) * stepLen);
-          vec4 sc = shadowMatrix * vec4(p, 1.0);
-          vec3 s = sc.xyz / sc.w;
-          float lit = 1.0;
-          if (s.x > 0.0 && s.x < 1.0 && s.y > 0.0 && s.y < 1.0 && s.z < 1.0) {
-            float d = unpackRGBAToDepth(texture2D(shadowMap, s.xy));
-            lit = d + 0.004 > s.z ? 1.0 : 0.0;
-          }
-          acc += lit;
-        }
-        acc /= float(STEPS);
-        // forward scattering: shafts bloom when looking toward the sun
-        float phase = pow(max(dot(rayDir, sunDir), 0.0), 7.0);
-        // No edge dissolve (the canvas IS the screen) and no surface
-        // attenuation hacks — the light renders UNDER the wheel/flag now
-        // (see the render loop), so it can never wash the subject.
-        vec3 col = vec3(1.0, 0.78, 0.45) * acc * phase * strength;
-        gl_FragColor = vec4(col, 0.0);
-      }
-    `,
-    depthTest: false,
-    depthWrite: false,
-    blending: THREE.NoBlending, // renders alone into rayRT
-  })
-  rayScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), rayMat))
+  /* The volumetric god-ray system (depth pre-pass + 512² ray march +
+     streak blur + cached light RT) was REMOVED 2026-07-23 — the user
+     asked for no light behind the chakra. The wheel is lit by its own
+     rig and the CSS sunset plate only. Recover from git history
+     (commit 10671d7^) if it is ever wanted back. */
 
-  // Stage 2 — visible BEAMS: with the sun dead-behind and the camera in
-  // front we look straight down the light columns, so the physical glow
-  // foreshortens into a corona. The film/game trick: radially stretch the
-  // (correct, wheel-masked) volumetric light field away from the sun's
-  // screen point — the gap glow elongates into rays. Rendered additively
-  // with zero alpha so it also spills over the CSS plate.
-  // Field resolution: at the old ~303px the silhouette stair-stepped along
-  // the radial spokes (the radial smear can't blur across an edge parallel
-  // to it). Bumped to ~512 (capped — 910px froze the iGPU at 20 samples/
-  // px) so the edge is finer; the 5-tap blur below keeps it soft.
-  const rayFieldMax = 512
-  const rayAspect = width / height
-  const rayFieldW = rayAspect >= 1 ? rayFieldMax : Math.round(rayFieldMax * rayAspect)
-  const rayFieldH = rayAspect >= 1 ? Math.round(rayFieldMax / rayAspect) : rayFieldMax
-  const rayRT = new THREE.WebGLRenderTarget(rayFieldW, rayFieldH)
-  /* The beam origin is PINNED to the background plate's baked sun. The
-     plate is a fixed image — it never moves with the 3D camera — so a real
-     sun must not either (user 2026-07-21: the source was sliding around on
-     tab switches because it was re-projected through each tab's camera).
-     World (78,37,-286) seen from the values framing = stage (1105, 514). */
-  const SUN_UV = new THREE.Vector2(1105 / 1920, 1 - 514 / 1080)
-  const streakScene = new THREE.Scene()
-  const streakMat = new THREE.ShaderMaterial({
-    uniforms: {
-      tRay: { value: rayRT.texture },
-      sunUv: { value: new THREE.Vector2(0.5, 0.5) },
-      texel: { value: new THREE.Vector2(1 / rayFieldW, 1 / rayFieldH) },
-      boost: { value: 1.05 }, // soft organic streaks — no procedural fan
-    },
-    vertexShader: /* glsl */ `
-      varying vec2 vUv;
-      void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-    `,
-    fragmentShader: /* glsl */ `
-      varying vec2 vUv;
-      uniform sampler2D tRay;
-      uniform vec2 sunUv;
-      uniform vec2 texel;
-      uniform float boost;
-      void main() {
-        const int SAMPLES = 48;
-        vec2 delta = (vUv - sunUv) * (0.95 / float(SAMPLES));
-        float jitter = fract(sin(dot(vUv, vec2(12.9898, 78.233))) * 43758.5453);
-        vec2 uv = vUv - delta * jitter;
-        vec3 acc = vec3(0.0);
-        float w = 1.0;
-        for (int i = 0; i < SAMPLES; i++) {
-          uv -= delta;
-          acc += texture2D(tRay, uv).rgb * w;
-          w *= 0.972;
-        }
-        // decayed SUM (not average): pixels far from bright sources get
-        // almost nothing, so beams stay local instead of hazing the canvas
-        vec3 streak = acc * 0.05;
-        // fill glow = a 5-tap blur of the field, so the silhouette edge is
-        // soft (a single tap paints the field's blocky edge onto the frame)
-        vec2 b = texel * 1.5;
-        vec3 base = texture2D(tRay, vUv).rgb * 0.4
-          + texture2D(tRay, vUv + vec2(b.x, b.y)).rgb * 0.15
-          + texture2D(tRay, vUv + vec2(-b.x, b.y)).rgb * 0.15
-          + texture2D(tRay, vUv + vec2(b.x, -b.y)).rgb * 0.15
-          + texture2D(tRay, vUv + vec2(-b.x, -b.y)).rgb * 0.15;
-        // NO procedural ray fan and no occlusion tricks — the light is a
-        // BACKGROUND layer (drawn under the wheel/flag by the render loop),
-        // so soft organic streaks from real geometry are all it needs.
-        gl_FragColor = vec4(base * 0.55 + streak * boost, 0.0);
-      }
-    `,
-    depthTest: false,
-    depthWrite: false,
-    transparent: true,
-    blending: THREE.CustomBlending,
-    blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneFactor,
-    blendSrcAlpha: THREE.ZeroFactor,
-    blendDstAlpha: THREE.OneFactor,
-  })
-  streakScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), streakMat))
-
-  /* ---- cached light layer (perf) --------------------------------------
-     The volumetric march (depth pre-pass + 512² field + 48-tap streak) is
-     far too heavy for the Arc iGPU to run EVERY frame on a full-stage canvas
-     — it saturated the GPU and starved touch input (user 2026-07-21: kiosk
-     lag + delayed buttons). The streak now renders into this persistent RT
-     instead of straight to the canvas; the loop RECOMPUTES it only when the
-     scene actually moves (throttled to 1-in-LIGHT_EVERY frames for the slow
-     idle spin / cloth breeze), and cheaply blits the cache UNDER the wheel
-     every frame. Recompute frames are pixel-identical to the old path.
-     Stored linear (NoColorSpace) so the one sRGB encode still happens once,
-     at the blit → canvas write, exactly as the direct render did. */
-  const lightDpr = Math.min(window.devicePixelRatio, 1)
-  const lightRT = new THREE.WebGLRenderTarget(
-    Math.max(2, Math.floor(width * lightDpr)),
-    Math.max(2, Math.floor(height * lightDpr)),
-  )
-  lightRT.texture.colorSpace = THREE.NoColorSpace
-  lightRT.texture.minFilter = THREE.LinearFilter
-  lightRT.texture.magFilter = THREE.LinearFilter
-  const blitScene = new THREE.Scene()
-  const blitMat = new THREE.MeshBasicMaterial({
-    map: lightRT.texture,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-    // The streak shader was a raw pass (no tone mapping); MeshBasicMaterial
-    // would ACES-map the cached light a second time and blow it out.
-    toneMapped: false,
-    // same premultiplied-additive compositing the direct streak used, so the
-    // cache reproduces the exact glow-over-CSS-plate look.
-    blending: THREE.CustomBlending,
-    blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneFactor,
-    blendSrcAlpha: THREE.ZeroFactor,
-    blendDstAlpha: THREE.OneFactor,
-  })
-  blitScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blitMat))
-
-  const _invProj = new THREE.Matrix4()
-  /** Writes the light UNDER-layer onto the cleared canvas. Returns false on
-   * the very first frame (shadow map not rendered yet) — the caller then
-   * does a plain self-clearing beauty render instead. */
-  function renderGodRays(): boolean {
-    const sm = rimSun.shadow.map
-    if (sm === null) return false // first frame: shadow map not rendered yet
-    // depth pre-pass: solid geometry only (ground planes are see-through fx;
-    // the dock's gold flash is LIGHT, not an occluder — with rays now live in
-    // flag mode it must not stamp its quad into the depth buffer)
-    const prevContact = contactShadow.visible
-    const prevCatcher = liveCatcher.visible
-    const prevDims = dimGroup?.visible ?? false
-    const prevFlash = flash?.visible ?? false
-    contactShadow.visible = false
-    liveCatcher.visible = false
-    if (dimGroup) dimGroup.visible = false
-    if (flash) flash.visible = false
-    const prevShadowAuto = renderer.shadowMap.autoUpdate
-    renderer.shadowMap.autoUpdate = false
-    renderer.setRenderTarget(depthRT)
-    // clear to WHITE: packed depth 1 = "no surface" (black decodes as a
-    // surface at the near plane, which discards every ray)
-    renderer.setClearColor(0xffffff, 1)
-    renderer.clear()
-    scene.overrideMaterial = depthMat
-    renderer.render(scene, camera)
-    scene.overrideMaterial = null
-    renderer.setClearColor(0x000000, 0) // restore the transparent canvas clear
-    renderer.setRenderTarget(null)
-    renderer.shadowMap.autoUpdate = prevShadowAuto
-    contactShadow.visible = prevContact
-    liveCatcher.visible = prevCatcher
-    if (dimGroup) dimGroup.visible = prevDims
-    if (flash) flash.visible = prevFlash
-    rayMat.uniforms['shadowMap']!.value = sm.texture
-    ;(rayMat.uniforms['shadowMatrix']!.value as THREE.Matrix4).copy(rimSun.shadow.matrix)
-    ;(rayMat.uniforms['invProj']!.value as THREE.Matrix4).copy(
-      _invProj.copy(camera.projectionMatrix).invert(),
-    )
-    ;(rayMat.uniforms['invView']!.value as THREE.Matrix4).copy(camera.matrixWorld)
-    ;(rayMat.uniforms['camPos']!.value as THREE.Vector3).copy(camera.position)
-    ;(rayMat.uniforms['sunDir']!.value as THREE.Vector3).copy(rimSun.position).normalize()
-    // stage 1: physical volumetric field → rayRT
-    renderer.setRenderTarget(rayRT)
-    renderer.clear()
-    renderer.render(rayScene, rayCam)
-    renderer.setRenderTarget(null)
-    // stage 2: radial beam stretch → the CACHED light RT (blitted under the
-    // wheel each frame by the loop). Origin pinned to the plate's sun.
-    ;(streakMat.uniforms['sunUv']!.value as THREE.Vector2).copy(SUN_UV)
-    renderer.setRenderTarget(lightRT)
-    renderer.clear()
-    renderer.render(streakScene, rayCam)
-    renderer.setRenderTarget(null)
-    return true
-  }
 
   // Swap the studio env for one built from the ACTUAL sunset plate — the
   // wheel then reflects/absorbs the same warm sky and dark sea it sits in.
@@ -1198,7 +913,6 @@ function createChakraScene(
   let buildT0 = 0
   let assemblyRefs: AssemblyRefs | null = null
   let buildPaused = false
-  const RAY_STRENGTH_BASE = 0.33 // matches rayMat's authored uniform
 
   function makeAssemblyRefs(): AssemblyRefs {
     return {
@@ -1797,16 +1511,8 @@ function createChakraScene(
   renderer.domElement.addEventListener('pointercancel', onPointerCancel)
 
   /* ----------------------------------------------------- main loop -- */
-  // Light-cache perf state (see lightRT): recompute the volumetric only when
-  // the field-driving pose actually changes, and never more than 1-in-N
-  // frames for the slow steady motions.
-  let frameCount = 0
-  let lastLightKey = Number.NaN
-  let lightValid = false
-  const LIGHT_EVERY = 3
   renderer.setAnimationLoop(() => {
     const now = performance.now()
-    frameCount++
     if (modeState === 'wheel' && buildP < 1 && !buildPaused && assemblyRefs !== null) {
       buildP = clamp01((now - buildT0) / ASSEMBLY_MS)
       applyAssemblyTimeline(buildP, assemblyRefs)
@@ -1914,50 +1620,12 @@ function createChakraScene(
         halo.rotation.copy(selected.rotation)
       }
     }
-    // THE LIGHT IS A CACHED BACKGROUND LAYER (user 2026-07-21: it sits BELOW
-    // the chakra + every element, and the kiosk must stay responsive). The
-    // volumetric (lightRT) is recomputed only when the field-driving pose
-    // moves — throttled to 1-in-LIGHT_EVERY for the slow idle spin / cloth
-    // breeze, every frame during fast transitions — then blitted under the
-    // wheel each frame. Sun shafts run on EVERY tab; held OFF only while the
-    // rolling entrance displaces the box, then reignited over ROLL_RAY_MS.
-    const lightEligible = buildP >= BEAT.standUp[0] && !rolling
-    if (lightEligible) {
-      const ramp = easeInOutCubic(beatP(buildP, [BEAT.standUp[0], 1] as const))
-      const rollLight = roll === null ? 1 : S((now - roll.doneAt) / ROLL_RAY_MS)
-      rayMat.uniforms['strength']!.value = RAY_STRENGTH_BASE * ramp * rollLight
-
-      // Pose signature — any change means the light field is stale.
-      const key =
-        chakra.rotation.z * 97.13 +
-        camera.position.x * 3.1 + camera.position.y * 5.7 + camera.position.z * 11.3 +
-        flagP * 31.7 + dimsFade * 17.3 + rayMat.uniforms['strength']!.value * 101.0
-      const moved = !(Math.abs(key - lastLightKey) < 1e-4)
-      lastLightKey = key
-      const clothWaving =
-        flagGroup !== null && flagGroup.visible && modeState === 'flag' && flagAnim === null
-      // Fast transitions need a per-frame light; steady slow motion is fine
-      // at 1-in-LIGHT_EVERY (idle spin ~0.2°/frame — imperceptible).
-      const fastAnim =
-        dragging || camTween !== null || flagAnim !== null || buildP < 1 ||
-        (roll !== null && roll.doneAt >= 0 && now - roll.doneAt < ROLL_RAY_MS)
-      const recompute =
-        !lightValid || fastAnim || ((moved || clothWaving) && frameCount % LIGHT_EVERY === 0)
-      if (recompute && renderGodRays()) lightValid = true
-    } else {
-      lightValid = false // off-screen during the roll — force a fresh field on return
-    }
-
-    if (lightValid) {
-      renderer.autoClear = false
-      renderer.clear() // transparent canvas
-      renderer.render(blitScene, rayCam) // cached light, additive under
-      renderer.clearDepth()
-      renderer.render(scene, camera) // wheel/flag over
-      renderer.autoClear = true
-    } else {
-      renderer.render(scene, camera)
-    }
+    // NO volumetric light behind the chakra (user 2026-07-23: "remove the
+    // lights from behind of chakra"). The scene renders the wheel/flag on
+    // the transparent canvas over the CSS background plate — the sunset
+    // itself is the only backlight. This also removes the whole per-frame
+    // ray cost from the kiosk. See renderGodRays() for the retired passes.
+    renderer.render(scene, camera)
     bootDone = true
   })
 
@@ -1980,13 +1648,6 @@ function createChakraScene(
     spokeGeo.dispose()
     spokes.forEach((s) => s.material.dispose())
     material.dispose()
-    rayMat.dispose()
-    depthRT.dispose()
-    depthMat.dispose()
-    rayRT.dispose()
-    streakMat.dispose()
-    lightRT.dispose()
-    blitMat.dispose()
     // flag resources (only allocated if flag mode was ever entered)
     if (flagGroup !== null) {
       scene.remove(flagGroup)
