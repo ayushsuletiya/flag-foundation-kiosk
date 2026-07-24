@@ -5,6 +5,74 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-24 — chakra transitions, Tiranga hoist, copy fits, podium grounding, Quick Access
+
+**⚠️ ONE THING IS UNCONFIRMED — read before touching the symbols detail screen.**
+`db56060` moved the podium contact line and the user never signed it off; their
+last word on that screen was "what the fuck is ths" over a floating peacock.
+Verify it on the kiosk FIRST.
+
+**Chakra — the flag tab**
+- `ea99b5a` **undock slowed + dims held back.** Leaving "Chakra in Flag" for
+  Design snapped: the reverse dock ran 1.9s (user: "too fast") and the Design
+  callouts began fading the moment the mode flipped — i.e. while the wheel was
+  still emerging from the cloth. `FLAG_BACK_MS` 1900 → **2700** (dock IN stays
+  3200), and new `dimsHoldUntil` keeps the callout fade target at 0 while the
+  dock/undock timeline is live plus `DIMS_SETTLE_MS` (260ms) after it lands.
+- `502203b` **the Tiranga is HOISTED, not cross-faded.** Pole, finial, base and
+  cloth shared one opacity ramp; mid-ramp you saw a solid bare mast, a
+  translucent rectangle, and the *printed* chakra hanging in mid-air as a ghost
+  beside the real one flying in. Now: mast plants first (p 0.38–0.50), cloth
+  fades 0.47–0.60 **and runs up the mast** from `FLAG_HOIST_DROP` below, settled
+  by p 0.74 — well before the merge at 0.85, so `chakraDock` (derived from the
+  resting cloth) still lands exactly on the print. `setFlagOpacity` is gone,
+  replaced by `mastMats` / `clothMat` refs on separate schedules.
+  Also: the cloth **keeps waving while it is lowered** (it used to stop dead
+  mid-gust the instant another pill was tapped). Still frozen for the dock IN
+  and for the last of the undock until the chakra has peeled away.
+- `d3d7050` **the hoist is ONE WAY.** User: don't bring it down on the way out,
+  just fade it. `flagDir` gates the height write. Measured cloth-bbox top:
+  rest 391 · IN at p 0.55 = 518 (climbing) · OUT at p 0.55 = 391 (fade only).
+  Side benefit: a dock interrupted mid-climb fades from where it got to instead
+  of snapping back down the mast.
+
+**History — Know More copy**
+- `aa19085` the intro auto-fits the gap between heading (y 243) and facts panel
+  (y 597); it steps 30 → 23px until it fits. Kept as an **overflow guard** only.
+- `957f77f` **the real fix — the copy got shorter, not smaller** (user: "dont
+  small the text … instead short that"). 1905 281→178 chars, 1907 248→149; both
+  were restating their own bullets verbatim. All 9 years now render at the Figma
+  30px and the auto-fit no longer engages anywhere.
+
+**Symbols — podium grounding (two bugs, one of them still open)**
+- `b873c11` **the measurement was wrong.** `useGroundedOffset` measured
+  `static.png`, but the detail screen plays the TURNTABLE — and for the tiger
+  and peacock the poster is a *different render* (1122×1402, tighter padding)
+  from the frames (460×818). Now measures `f_0001.png`, falls back to the poster
+  only when a slug has no frames. Silhouette bottom is constant across a
+  turntable (≤2.2px over 107 frames), so frame 1 stands in for the loop. Clamp
+  ceiling 160 → 200 (the banyan's true drop is 161 and was being clipped).
+- `db56060` **the contact line was ALSO wrong — UNCONFIRMED FIX.** 725.5 sat
+  ~50px below the podium's top face, out on the wall; it only ever *looked*
+  right because it was paired with the bad measurement. Three sources agree on
+  ~675: baked stage art's top ellipse spans y 646.5→698.2 (centre 672.3–672.9),
+  the designed pedestal glow is centred at 675, the approved tiger render had
+  paws at 676.8. Resulting dy: tiger 36.6 · peacock 70.1 · elephant 85.7 ·
+  banyan 112.5 · flag −41.6. Floaters stay 0. **Needs the user's eye.**
+
+**Quick Access**
+- `5ce0ba6` the overlay's tiles ARE the home tiles now. New shared module
+  `src/screens/home/homeTiles.ts` (`HOME_TILES`, `designedLabel`, the box
+  metrics); the overlay had its own order (National Symbols 1st vs 4th on Home)
+  and its own label strings ("Explore Ashok Chakra" vs "Ashok Chakra"). It now
+  lays the same cards on the home rhythm at the panel's 0.952 scale and reads
+  the same Excel labels.
+
+**Tooling note (cost me time twice):** the preview pane throttles timers and
+serves stale frames — a 700ms wait measured 1302ms. Motion is NOT judgeable
+there. Use the dev scrub hooks (`__chakraFlagScrub`, `__chakraFlagScreen`,
+`__chakraRollScrub`) and read numbers, then let the user judge feel.
+
 ### 2026-07-23 — perf fix, photo rules, light REMOVED, flag framing, transitions
 
 **Read this first: two things were REVERSED late in the day.** The
