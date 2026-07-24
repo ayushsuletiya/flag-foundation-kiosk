@@ -96,6 +96,9 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       preload: path.join(dirname, 'preload.cjs'),
+      // Kiosk runs fullscreen-forever; never let Chromium throttle rAF/timers
+      // if the window is ever briefly occluded (watchdog reload, USB popup).
+      backgroundThrottling: false,
     },
   })
 

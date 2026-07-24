@@ -7,17 +7,17 @@
  * screens that prove the Excel wiring; real screens replace them in Phases 2-6.
  */
 import { useEffect } from 'react'
-import { HashRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Stage } from './app/Stage.tsx'
 import { recordNavigation } from './app/navTrace.ts'
 import { CHAKRA, HISTORY_BASE } from './assets/paths.ts'
+import { probeImageCached, probeVideoCached } from './assets/probe.ts'
 import { useContent } from './data/ContentContext.tsx'
 import { useIdleReset } from './app/useIdleReset.ts'
 import { DevContentScreen } from './app/DevContentScreen.tsx'
 import { QuickAccessProvider } from './components/QuickAccessOverlay.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { HomeScreen } from './screens/home/HomeScreen.tsx'
-import { MonumentalIntroScreen } from './screens/monumental/MonumentalIntroScreen.tsx'
 import { MapExplorerScreen } from './screens/monumental/MapExplorerScreen.tsx'
 import { InstallationDetailScreen } from './screens/monumental/InstallationDetailScreen.tsx'
 import { ChakraExplorerScreen } from './screens/chakra/ChakraExplorerScreen.tsx'
@@ -45,8 +45,15 @@ function WarmChakra() {
   useEffect(() => {
     const timer = setTimeout(() => {
       void import('./screens/chakra/Chakra3D.tsx')
-      const img = new Image()
-      img.src = `${CHAKRA.background}/bg.png`
+      // Warm the chakra background PROBE cache (not only the decode): the
+      // /chakra DynamicBackground reuses these resolved probes, so its `ready`
+      // flips on the FIRST frame — the sunset paints immediately and the
+      // entrance never dips through a blank/black frame.
+      const ckBg = CHAKRA.background
+      void probeVideoCached(`${ckBg}/bg.mp4`)
+      void probeImageCached(`${ckBg}/poster.png`)
+      void probeImageCached(`${ckBg}/bg.png`)
+      for (let i = 1; i <= 5; i++) void probeImageCached(`${ckBg}/bg-${i}.png`)
       // History rewind intro: warm its GL chunk + every year background so
       // the film has all its frames the moment the visitor taps History.
       void import('./screens/history/rewindGL.ts')
@@ -73,7 +80,11 @@ function AnimatedRoutes() {
   const location = useLocation()
   recordNavigation(location.pathname) // idempotent — safe under StrictMode
   const transitionKey = location.pathname.replace(/^\/history\/[^/]+/, '/history')
-  const inert = location.pathname === '/symbols'
+  // /symbols opens at rest behind its own black fade; /chakra runs its own
+  // roll-in entrance (bare sunset → wheel rolls → chrome rises). Both own their
+  // reveal, so skip the page-level route-enter fade. For /chakra that fade was
+  // over the black Stage and read as a black flash on entry (user 2026-07-25).
+  const inert = location.pathname === '/symbols' || location.pathname === '/chakra'
 
   return (
     <div
@@ -83,7 +94,9 @@ function AnimatedRoutes() {
     >
       <Routes location={location}>
         <Route path="/" element={<HomeScreen />} />
-        <Route path="/monumental" element={<MonumentalIntroScreen />} />
+        {/* Intro video removed (user decision) — Monumental Flags opens straight
+            on the map. This redirect covers every entry point to /monumental. */}
+        <Route path="/monumental" element={<Navigate to="/monumental/map" replace />} />
         <Route path="/monumental/map" element={<MapExplorerScreen />} />
         <Route path="/monumental/detail/:rowId" element={<InstallationDetailScreen />} />
         <Route path="/history" element={<YearMainScreen />} />

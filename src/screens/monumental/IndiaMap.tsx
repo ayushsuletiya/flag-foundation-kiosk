@@ -21,7 +21,7 @@
  *     state; square corner bottom-right points at the state (offset rule
  *     reproduces Figma's Odisha chip at 1263,423 exactly).
  */
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { PngSequencePlayer } from '../../components/PngSequencePlayer.tsx'
 import { MONUMENTAL } from '../../assets/paths.ts'
 import {
@@ -238,7 +238,7 @@ export interface IndiaMapProps {
   statesWithInstallations: ReadonlySet<string>
 }
 
-export function IndiaMap({ selectedState, onSelectState, statesWithInstallations }: IndiaMapProps) {
+function IndiaMapImpl({ selectedState, onSelectState, statesWithInstallations }: IndiaMapProps) {
   const { available: seqAvailable, frameCount: markerFrames } = useMarkerSequence()
 
   const activeEntries = activeEntriesByState.get(selectedState) ?? []
@@ -377,3 +377,9 @@ export function IndiaMap({ selectedState, onSelectState, statesWithInstallations
     </div>
   )
 }
+
+/** Memoized: unrelated MapExplorerScreen re-renders (tile expand, overlay
+ *  toggle, list-scroll threshold) no longer reconcile the 36-state SVG +
+ *  markers. Props are reference-stable (onSelectState via useCallback,
+ *  statesWithInstallations via useMemo, selectedState a plain string). */
+export const IndiaMap = memo(IndiaMapImpl)

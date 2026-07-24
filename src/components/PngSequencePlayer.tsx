@@ -96,6 +96,8 @@ export function PngSequencePlayer({
   // poster while the canvas was still blank if frame 0 hadn't decoded yet.
   const paintedRef = useRef(false)
   const [painted, setPainted] = useState(false)
+  // Last frame index requested — pausing then holds the CURRENT frame, not 0.
+  const lastDrawnRef = useRef(0)
 
   // Preload every frame (from the shared cache); first successful load flips to
   // 'ready', all-failed flips to 'failed'.
@@ -156,6 +158,7 @@ export function PngSequencePlayer({
 
     /** Draw frame `idx`, falling back to the nearest earlier loaded frame. */
     const draw = (idx: number): void => {
+      lastDrawnRef.current = idx
       let img: HTMLImageElement | null = null
       for (let k = idx; k >= 0 && img === null; k--) {
         img = framesRef.current[k] ?? null
@@ -194,6 +197,15 @@ export function PngSequencePlayer({
     }
 
     if (!playing) {
+      // Hold the CURRENT frame (not always 0) so pausing a mid-loop side card
+      // never snaps it back to the start.
+      draw(lastDrawnRef.current)
+      return
+    }
+
+    // A single-frame sequence never animates — paint once and stop, so a static
+    // card doesn't keep an idle rAF re-arming at 60Hz forever.
+    if (frameCount <= 1) {
       draw(0)
       return
     }

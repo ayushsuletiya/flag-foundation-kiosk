@@ -10,7 +10,7 @@
  *
  * Symbols without any media get the styled placeholder tile (build spec §1).
  */
-import type { CSSProperties } from 'react'
+import { memo, type CSSProperties } from 'react'
 import { PngSequencePlayer } from '../../components/PngSequencePlayer.tsx'
 import { useSymbolMedia } from './symbolsMedia.ts'
 
@@ -25,6 +25,8 @@ export interface SymbolVisualProps {
   /** "live" plays the turntable; "still" renders only the static poster. */
   mode?: 'live' | 'still'
   fit?: 'cover' | 'contain'
+  /** Pause the turntable (off-screen, or non-center during motion) — perf. */
+  playing?: boolean
   style?: CSSProperties
 }
 
@@ -89,13 +91,14 @@ function PlaceholderTile({ name, style }: { name: string; style?: CSSProperties 
   )
 }
 
-export function SymbolVisual({
+function SymbolVisualImpl({
   slug,
   name,
   width,
   height,
   mode = 'live',
   fit = 'cover',
+  playing = true,
   style,
 }: SymbolVisualProps) {
   const media = useSymbolMedia(slug)
@@ -129,6 +132,7 @@ export function SymbolVisual({
       frameCount={Math.max(1, media.frameCount)}
       fps={SEQUENCE_FPS}
       loop
+      playing={playing}
       poster={media.hasStatic ? media.staticUrl : undefined}
       width={width}
       height={height}
@@ -137,3 +141,7 @@ export function SymbolVisual({
     />
   )
 }
+
+/** Memoized so the carousel's per-frame re-renders (turn glide / orbit drag)
+ *  don't reconcile every card's player subtree — props are stable per card. */
+export const SymbolVisual = memo(SymbolVisualImpl)

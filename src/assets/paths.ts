@@ -6,9 +6,9 @@
  * without reading code. Runtime-relative URLs (served at /assets/… in vite
  * dev, copied next to dist/index.html for the packaged file:// build).
  *
- * Every folder named background/ (and the monumental intro/) accepts EITHER
- * bg.mp4 OR bg.png (or bg-1..5.png for a crossfade) — resolution order lives
- * in components/DynamicBackground.tsx. Screens must take paths from here,
+ * Every folder named background/ accepts EITHER bg.mp4 OR bg.png (or
+ * bg-1..5.png for a crossfade) — resolution order lives in
+ * components/DynamicBackground.tsx. Screens must take paths from here,
  * never hardcode them.
  */
 
@@ -20,9 +20,6 @@ export const HOME = {
 } as const
 
 export const MONUMENTAL = {
-  /** intro.mp4 plays once → map; poster.png shows under/instead of it */
-  introVideo: 'assets/1-monumental-flags/intro/intro.mp4',
-  introPoster: 'assets/1-monumental-flags/intro/poster.png',
   /** bg.mp4 (full-bleed loop) | bg.png (calibrated terrain still) */
   mapBackground: 'assets/1-monumental-flags/map/background',
   mapStates: 'assets/1-monumental-flags/map/states',

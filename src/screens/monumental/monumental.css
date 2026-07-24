@@ -2,31 +2,6 @@
    Geometry lives inline in the screens (literal Figma px); this file only
    holds what CSS-in-JS can't do: keyframes and pressed states. */
 
-/* Intro fallback shimmer ("Loading map…" while the 5s mp4 is absent) */
-@keyframes mon-shimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
-}
-
-.mon-shimmer-text {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 251, 235, 0.25) 0%,
-    rgba(255, 251, 235, 0.9) 50%,
-    rgba(255, 251, 235, 0.25) 100%
-  );
-  background-size: 400px 100%;
-  background-repeat: no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: rgba(255, 251, 235, 0.25);
-  animation: mon-shimmer 1.4s linear infinite;
-}
-
 /* Generic fade/scale entrances */
 @keyframes mon-fade-in {
   from {

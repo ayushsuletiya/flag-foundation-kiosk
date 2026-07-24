@@ -339,12 +339,25 @@ export function SymbolsCarouselScreen() {
           const ringIndex = (((i - activeIndex) % count) + count) % count
           let off = ringIndex
           if (off > count / 2) off -= count
-          const lifted = mode !== 'rest'
-          // At rest only slots -2..2 exist; while lifted/settling the WHOLE
-          // ring is mounted so it can float around the podium and glide home.
-          if (!lifted && (Math.abs(off) > 2 || (count <= 2 && off < 0))) return null
+          // Full ring mounts only for the press-hold orbit and its glide-home
+          // settle (the whole ring floats). A 'turn' just slides the visible
+          // track, so a ±4 window suffices (turnRef clamps ±2.5, pose input ±2
+          // → max visible off 4.5). This stops the every-3.5s auto-advance from
+          // spinning up all ~14 turntable players for the 480ms turn.
+          const showAll = mode === 'orbit' || mode === 'settle'
+          const maxOff = mode === 'turn' ? 4 : 2
+          if (!showAll && (Math.abs(off) > maxOff || (count <= 2 && off < 0))) return null
           const slug = symbolSlug(s.symbol)
           const isCenter = off === 0
+          // Pause turntables nobody watches: the invisible ±2 cards at rest, and
+          // every non-center card during the brief turn/settle glide (the
+          // heaviest GPU moment). Rest + orbit keep all visible cards live.
+          const cardPlaying =
+            mode === 'rest'
+              ? Math.abs(off) < 2
+              : mode === 'turn' || mode === 'settle'
+                ? isCenter
+                : true
           const turn = mode === 'turn' ? trackPose(off + turnOffset) : undefined
           const pose = mode === 'orbit' ? orbitPose(ringIndex, count, spin) : undefined
           const style = turn
@@ -376,6 +389,7 @@ export function SymbolsCarouselScreen() {
                   height={472}
                   mode="live"
                   fit="contain"
+                  playing={cardPlaying}
                 />
               </div>
               <span className="sy-card-dim" style={turn ? { opacity: turn.dim } : undefined} />

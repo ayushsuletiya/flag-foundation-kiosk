@@ -162,13 +162,13 @@
   pointer-events: none;
 }
 
-/* While the entrance runs, the screen arrives as a BLACK dip (no warm-brown
-   base flash — user 2026-07-20) and the sunset shows BARE: crisp, no scrim,
-   lifted a touch. The 3.5px blur and the scrim only dress the frame for the
-   chrome — they ease back in (750ms transitions above) at reveal, together
-   with the rising UI. */
+/* While the entrance runs, the sunset shows BARE (crisp, lifted a touch, no
+   scrim). The base stays the warm-brown gradient (.ck-screen) — NO black dip
+   (user 2026-07-25: the entrance must never flash black). The 3.5px blur and
+   the scrim only dress the frame for the chrome — they ease back in (750ms
+   transitions above) at reveal, together with the rising UI. */
 .ck-screen.ck-intro-hold {
-  background: #070402;
+  background: linear-gradient(180deg, #241205 0%, #1a0e04 55%, #120a03 100%);
 }
 
 .ck-screen.ck-intro-hold .ck-bg {

@@ -44,7 +44,7 @@ screens never hardcode them.
   placeholder. Applies to home, map, select-state, all history years, chakra, both
   symbols stages. Chakra additionally needs `bg.png` kept beside any `bg.mp4`
   (three.js env texture samples the still).
-- Monumental intro → `1-monumental-flags/intro/intro.mp4` (plays once → map; poster.png under it)
+- Monumental Flags opens straight on the map (intro video removed — user decision).
 - Waving flag markers → `1-monumental-flags/map/flag-marker/f_0001.png…` (static.png until present)
 - Symbol turntables → `4-national-symbols/turntables/<slug>/f_0001.png…` (static.png poster)
 - Symbol DYK close-ups → `4-national-symbols/detail/dyk/<slug>.png` (falls back to static cutout)

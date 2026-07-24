@@ -29,8 +29,11 @@
   /* Frosted panel — the screen behind blurs through the popup (user ask
      2026-07-20). Panel-sized, single layer, nothing nested inside it uses
      backdrop-filter, so the iGPU perf guard (no FULL-SCREEN blur) holds. */
-  backdrop-filter: blur(22px) saturate(1.15);
-  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  /* blur 14 (was 22): over the 74%-opaque scrim the frost reads identically,
+     but the pass re-runs every frame the overlay is open over live media
+     (home video / chakra scene), so ~40% cheaper per frame on the iGPU. */
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
 }
 
 .qa-pressable {

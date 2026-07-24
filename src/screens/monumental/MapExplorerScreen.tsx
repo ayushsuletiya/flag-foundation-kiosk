@@ -14,7 +14,7 @@
  * full-bleed; until it lands, the terrain still is positioned via the
  * calibrated TERRAIN_PLACEMENT so India sits under the map box.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import type { Installation } from '../../data/schema.ts'
@@ -334,7 +334,8 @@ export function MapExplorerScreen() {
   const [selectedState, setSelectedState] = useState(getLastSelectedState)
   const [overlayOpen, setOverlayOpen] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [listScrollTop, setListScrollTop] = useState(0)
+  const [atListTop, setAtListTop] = useState(true)
+  const atListTopRef = useRef(true)
   const listKeyRef = useRef(0)
 
   const installations = useMemo(
@@ -360,11 +361,11 @@ export function MapExplorerScreen() {
     setExpandedId(installations[0]?.id ?? null)
   }, [installations])
 
-  const applyState = (state: string) => {
+  const applyState = useCallback((state: string) => {
     setSelectedState(state)
     setLastSelectedState(state)
     listKeyRef.current += 1 // remount ScrollList → scroll back to top
-  }
+  }, [])
 
   // The cold-start default ('Odisha') is a guess baked into monumentalGeo. If
   // the client's content.xlsx has no installations for the current state, fall
@@ -385,7 +386,7 @@ export function MapExplorerScreen() {
   // viewport's top edge, so the overlap region below that edge doubles in
   // brightness and the step reads as a hard clip line under the filter chips.
   const firstRowGlowPatchActive =
-    expandedId != null && expandedId === installations[0]?.id && listScrollTop <= 1
+    expandedId != null && expandedId === installations[0]?.id && atListTop
 
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
@@ -490,7 +491,16 @@ export function MapExplorerScreen() {
         trackWidth={10}
         trackGap={45}
         overscan={{ top: 0, right: 70, bottom: 70, left: 70 }}
-        onScrollTopChange={setListScrollTop}
+        onScrollTopChange={(st) => {
+          // Only the "at top" boolean matters (first-row glow patch), so
+          // re-render when it CROSSES the threshold — not every scroll frame,
+          // which otherwise reconciled the whole map SVG + tiles per tick.
+          const t = st <= 1
+          if (t !== atListTopRef.current) {
+            atListTopRef.current = t
+            setAtListTop(t)
+          }
+        }}
         style={{ position: 'absolute', left: 51, top: 312 }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 23.5, paddingBottom: 24 }}>

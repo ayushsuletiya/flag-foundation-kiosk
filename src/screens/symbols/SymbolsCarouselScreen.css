@@ -117,7 +117,8 @@
   will-change: transform, opacity;
   transition:
     transform 560ms cubic-bezier(0.22, 0.8, 0.25, 1),
-    opacity 400ms ease;
+    opacity 400ms ease,
+    background-color 200ms ease;
 }
 
 .sy-card3d[data-slot='0'] {
@@ -183,6 +184,20 @@
   transition:
     transform 220ms linear,
     opacity 220ms linear;
+}
+
+/* Perf (iGPU): backdrop-filter blur(16px) re-blurs every overlapping card pane
+   on EVERY frame while the ring is in motion — the dominant compositor cost.
+   Drop the live blur during orbit/turn/settle and stand in a deeper opaque
+   tint. background-color interpolates (backdrop-filter can't), so the base
+   transition eases the tint and masks the swap. Rest keeps the cached, free
+   blur — one uniform recipe, no per-card special-casing. */
+.sy-carousel[data-mode='orbit'] .sy-card3d,
+.sy-carousel[data-mode='turn'] .sy-card3d,
+.sy-carousel[data-mode='settle'] .sy-card3d {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: rgba(6, 10, 27, 0.72);
 }
 
 /* Turning drives the dim per frame (inline) — drop the slow slot fade */
