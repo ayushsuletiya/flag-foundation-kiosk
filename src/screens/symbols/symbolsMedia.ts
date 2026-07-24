@@ -218,7 +218,19 @@ export function useGroundedOffset(
     setOffset(0)
     if (!enabled || !GROUNDED_SLUGS.has(slug)) return
     let alive = true
-    void measureAlphaBounds(staticUrlFor(slug)).then((bounds) => {
+    // Measure what is actually ON SCREEN — the TURNTABLE FRAME, not the
+    // poster. Every grounded slug ships both, and for the tiger and the
+    // peacock the poster is a different render (1122x1402, tighter padding)
+    // than the frames (460x818): grounding off the poster dropped them ~40px
+    // when the playing frames needed ~90-120, so they stood in mid-air above
+    // the podium (user 2026-07-24, peacock screenshot). static.png stays as
+    // the fallback for any slug that has no frames. The silhouette bottom is
+    // constant across a turntable (≤2.2px over 107 frames), so frame 1 is a
+    // valid stand-in for the whole loop.
+    const measure = measureAlphaBounds(frameUrl(slug, 1)).then(
+      (b) => b ?? measureAlphaBounds(staticUrlFor(slug)),
+    )
+    void measure.then((bounds) => {
       if (!alive || bounds === null) return
       const scale = Math.min(boxW / bounds.naturalWidth, boxH / bounds.naturalHeight)
       const renderedH = bounds.naturalHeight * scale
@@ -226,7 +238,9 @@ export function useGroundedOffset(
       const visibleBottom = boxTop + offsetY + bounds.bottomFrac * renderedH
       const dy = podiumY - visibleBottom
       // Sanity clamp — a wild bbox (bad art) must never fling the subject.
-      setOffset(Math.max(-120, Math.min(160, dy)))
+      // 160 used to clip the banyan (its true drop is 161), so the ceiling is
+      // 200: still far short of anything that could look like a glitch.
+      setOffset(Math.max(-120, Math.min(200, dy)))
     })
     return () => {
       alive = false
