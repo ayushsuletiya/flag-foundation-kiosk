@@ -496,10 +496,14 @@ const DIMS_TGT = new THREE.Vector3(14.8, 28.94, 0)
    wheel, seated a touch lower — the shrink-to-dock owns it from there. */
 const FLAG_CAM_HOME = new THREE.Vector3(-0.71, 44.1, 403.9)
 const FLAG_TGT_HOME = new THREE.Vector3(-0.71, 44.1, 0)
-/* DOCK: same apparent flag size/stage position as ever — s preserved at
-   2.759 px/unit (z 537.7), target shifted for the full-stage centre. */
-const FLAG_CAM_DOCK = new THREE.Vector3(41.05, 73.2, 537.7)
-const FLAG_TGT_DOCK = new THREE.Vector3(-18.95, 45.2, 0)
+/* DOCK — the flag hero framing (user 2026-07-23: bigger, better placed).
+   Dollied along the SAME view axis (cam = tgt + (cam-tgt)*k) so the oblique
+   look is unchanged and it reads as a pure zoom: z 537.7 → 398, s 2.759 →
+   3.73 px/unit, so the 180-unit cloth grows 497px → ~671px wide. The whole
+   view is then shifted so the flag centres in the free band between the
+   text column (ends x 625) and the cards (start x 1348) — centre ≈ 986. */
+const FLAG_CAM_DOCK = new THREE.Vector3(36.11, 66.63, 412)
+const FLAG_TGT_DOCK = new THREE.Vector3(-9.85, 45.2, 0)
 const CHAKRA_HOME_POS = new THREE.Vector3(0, 0, 0)
 const GLOW_COLOR = new THREE.Color(1.0, 0.82, 0.45)
 
@@ -1672,12 +1676,14 @@ function createChakraScene(
         __chakraPlay?: () => void
         __chakraRollScrub?: (v: number) => void
         __chakraFlagScrub?: (v: number) => void
+        __chakraFlagScreen?: () => unknown
         __chakraWheelScreen?: () => { cx: number; cy: number; r: number }
       }
       delete dbg.__chakraScrub
       delete dbg.__chakraPlay
       delete dbg.__chakraRollScrub
       delete dbg.__chakraFlagScrub
+      delete dbg.__chakraFlagScreen
       delete dbg.__chakraWheelScreen
     }
   }
@@ -1728,6 +1734,7 @@ function createChakraScene(
       __chakraPlay?: () => void
       __chakraRollScrub?: (v: number) => void
       __chakraFlagScrub?: (v: number) => void
+      __chakraFlagScreen?: () => unknown
       __chakraWheelScreen?: () => { cx: number; cy: number; r: number }
     }
     dbg.__chakraScrub = (v) => {
@@ -1752,6 +1759,28 @@ function createChakraScene(
         cx: ((pc.x + 1) / 2) * width,
         cy: ((1 - pc.y) / 2) * height,
         r: (Math.abs(pc.y - pt.y) / 2) * height,
+      }
+    }
+    // Cloth bounding box in canvas px — lets the flag framing be TUNED to
+    // numbers instead of eyeballed (its dock camera is oblique, so the
+    // mapping is not a plain scale).
+    dbg.__chakraFlagScreen = () => {
+      if (clothMesh === null || clothPos.length === 0) return null
+      let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9
+      const v = new THREE.Vector3()
+      for (const p of clothPos) {
+        v.copy(p).add(clothMesh.position).project(camera)
+        const sx = ((v.x + 1) / 2) * width
+        const sy = ((1 - v.y) / 2) * height
+        if (sx < minX) minX = sx
+        if (sx > maxX) maxX = sx
+        if (sy < minY) minY = sy
+        if (sy > maxY) maxY = sy
+      }
+      return {
+        x: Math.round(minX), y: Math.round(minY),
+        w: Math.round(maxX - minX), h: Math.round(maxY - minY),
+        cx: Math.round((minX + maxX) / 2), cy: Math.round((minY + maxY) / 2),
       }
     }
     // Freeze the flag docking timeline at progress v and render one frame —
