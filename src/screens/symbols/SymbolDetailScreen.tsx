@@ -117,9 +117,21 @@ export function SymbolDetailScreen() {
   /** Real artwork (static or frames) → mock subject frame; else placeholder box. */
   const hasArt = media.ready && (media.hasStatic || media.frameCount > 0)
   // Standing symbols (animals / tree / flag) get their visible bottom pinned
-  // to the podium top (725.5 — tiger's paws-on-podium line); floaters keep
-  // the mock's frame. Measured from each artwork's alpha bbox at runtime.
-  const groundedDy = useGroundedOffset(activeSlug, hasArt, 216.5, 407, 509, 725.5)
+  // to the podium's CONTACT LINE; floaters keep the mock's frame. Measured
+  // from each artwork's alpha bbox at runtime.
+  //
+  // The line is the centre of the upper tier's top ellipse — where something
+  // standing in the middle of a round podium actually touches it. Three
+  // independent sources agree: the baked stage art puts that ellipse at stage
+  // y 646.5→698.2 (centre 672.3-672.9), the designed pedestal glow is centred
+  // at 675 (.syd-glow, top 658 + 34/2), and the approved tiger render had its
+  // paws at 676.8. The old 725.5 was 50px LOWER — past the front rim, out on
+  // the podium wall. It only ever looked right because it was paired with a
+  // measurement of static.png, which for the tiger is padded differently from
+  // the frames that actually play; fixing the measurement (b873c11) exposed
+  // the bad line and dropped every subject through the podium face (user
+  // 2026-07-24, peacock standing on the front edge).
+  const groundedDy = useGroundedOffset(activeSlug, hasArt, 216.5, 407, 509, 675)
 
   if (identity === null) {
     // Content still loading — hold the stage.
