@@ -24,15 +24,18 @@
 
 /* Optional blur-fill (fill prop) — the same photo cropped to fill, blurred
    and scaled up so its soft edge never reaches the tile border. Only for
-   uniform tiles that must keep a consistent box. */
+   uniform tiles that must keep a consistent box.
+   OPAQUE on purpose: at partial opacity the card's plate mixed through the
+   letterbox bands and read as a dull grey bar above the photo (user
+   2026-07-23). Full opacity makes the bands a natural blurred continuation
+   of the photo; the slight dim keeps the sharp copy dominant. */
 .ucp-fill {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(16px) saturate(1.15);
+  filter: blur(16px) saturate(1.1) brightness(0.85);
   transform: scale(1.25);
-  opacity: 0.6;
   pointer-events: none;
 }
