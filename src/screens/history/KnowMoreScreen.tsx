@@ -81,19 +81,30 @@ export function KnowMoreScreen() {
 
   /* Fit the intro into the gap between the heading and the facts panel. Layout
      px only — the Stage scale is applied above us, so offsetTop/offsetHeight
-     are already in the 1920×1080 coordinate system. No dep array on purpose:
-     it re-fits after a webfont swap too, and the loop exits on the first size
-     that fits (one measurement for every year but 1905). */
+     are already in the 1920×1080 coordinate system. Keyed to the intro content
+     (year switch) + a font-ready re-fit, so a gallery-thumbnail tap no longer
+     re-runs this measure/shrink reflow loop on every render. */
   const introRef = useRef<HTMLParagraphElement | null>(null)
   useLayoutEffect(() => {
-    const el = introRef.current
-    if (el === null) return
-    const limit = HK_FACTS_TOP - HK_LEFT_TOP - HK_INTRO_GAP
-    for (let size = HK_INTRO_MAX; size >= HK_INTRO_MIN; size--) {
-      el.style.fontSize = `${size}px`
-      if (el.offsetTop + el.offsetHeight <= limit) break
+    const fit = () => {
+      const el = introRef.current
+      if (el === null) return
+      const limit = HK_FACTS_TOP - HK_LEFT_TOP - HK_INTRO_GAP
+      for (let size = HK_INTRO_MAX; size >= HK_INTRO_MIN; size--) {
+        el.style.fontSize = `${size}px`
+        if (el.offsetTop + el.offsetHeight <= limit) break
+      }
     }
-  })
+    fit()
+    // Re-fit once webfonts finish swapping (Poppins metrics shift the wrap).
+    let alive = true
+    void document.fonts?.ready.then(() => {
+      if (alive) fit()
+    })
+    return () => {
+      alive = false
+    }
+  }, [row?.year])
 
   if (row === null) {
     return <div className="hk-screen" />

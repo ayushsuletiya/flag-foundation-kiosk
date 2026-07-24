@@ -102,33 +102,57 @@ const STATE_SHAPES: StateShape[] = (() => {
 
 const MARKER_SEQ_PATTERN = `${MONUMENTAL.flagMarker}/f_{frame}.png`
 const MARKER_STATIC = `${MONUMENTAL.flagMarker}/static.png`
-/** Frame budget for the future user-provided sequence; extra files are
- *  ignored, shorter sequences hold their last loaded frame (player skips). */
-const MARKER_FRAME_COUNT = 60
+/** Safe ceiling for the client-dropped waving-flag loop. */
+const MARKER_MAX_FRAMES = 240
 
-let markerSeqKnown: boolean | null = null
-const markerSeqProbe = new Promise<boolean>((resolve) => {
-  const img = new Image()
-  img.onload = () => resolve(true)
-  img.onerror = () => resolve(false)
-  img.src = MARKER_SEQ_PATTERN.replace('{frame}', '0001')
-}).then((ok) => {
-  markerSeqKnown = ok
-  return ok
+function probeMarkerFrame(n: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(true)
+    img.onerror = () => resolve(false)
+    img.src = MARKER_SEQ_PATTERN.replace('{frame}', String(n).padStart(4, '0'))
+  })
+}
+
+/** Discover the marker frame count (exponential grow + binary search), like
+ *  symbolsMedia — the client drops any-length loop with zero code changes.
+ *  A hardcoded 60 truncated a longer loop and froze a shorter one on its last
+ *  frame each cycle. 0 = no sequence (static marker). */
+async function discoverMarkerFrames(): Promise<number> {
+  if (!(await probeMarkerFrame(1))) return 0
+  let lo = 1
+  let hi = 2
+  while (hi <= MARKER_MAX_FRAMES && (await probeMarkerFrame(hi))) {
+    lo = hi
+    hi *= 2
+  }
+  if (hi > MARKER_MAX_FRAMES) return MARKER_MAX_FRAMES
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1
+    if (await probeMarkerFrame(mid)) lo = mid
+    else hi = mid
+  }
+  return lo
+}
+
+let markerFrameCount: number | null = null
+const markerSeqProbe = discoverMarkerFrames().then((count) => {
+  markerFrameCount = count
+  return count
 })
 
-function useMarkerSequenceAvailable(): boolean {
-  const [available, setAvailable] = useState(markerSeqKnown ?? false)
+function useMarkerSequence(): { available: boolean; frameCount: number } {
+  const [count, setCount] = useState(markerFrameCount ?? 0)
   useEffect(() => {
     let mounted = true
-    void markerSeqProbe.then((ok) => {
-      if (mounted) setAvailable(ok)
+    void markerSeqProbe.then((c) => {
+      if (mounted) setCount(c)
     })
     return () => {
       mounted = false
     }
   }, [])
-  return available
+  return { available: count > 0, frameCount: count }
 }
 
 // ---------------------------------------------------------------------------
@@ -144,10 +168,12 @@ function FlagMarker({
   point,
   selected,
   animated,
+  frameCount,
 }: {
   point: DistrictPoint
   selected: boolean
   animated: boolean
+  frameCount: number
 }) {
   const px = mapX(point.x)
   const py = mapY(point.y)
@@ -179,7 +205,7 @@ function FlagMarker({
       {animated ? (
         <PngSequencePlayer
           srcPattern={MARKER_SEQ_PATTERN}
-          frameCount={MARKER_FRAME_COUNT}
+          frameCount={frameCount}
           fps={30}
           loop
           poster={MARKER_STATIC}
@@ -213,7 +239,7 @@ export interface IndiaMapProps {
 }
 
 export function IndiaMap({ selectedState, onSelectState, statesWithInstallations }: IndiaMapProps) {
-  const seqAvailable = useMarkerSequenceAvailable()
+  const { available: seqAvailable, frameCount: markerFrames } = useMarkerSequence()
 
   const activeEntries = activeEntriesByState.get(selectedState) ?? []
 
@@ -317,6 +343,7 @@ export function IndiaMap({ selectedState, onSelectState, statesWithInstallations
           point={point}
           selected={selected}
           animated={seqAvailable}
+          frameCount={markerFrames}
         />
       ))}
 

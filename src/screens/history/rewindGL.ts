@@ -272,6 +272,11 @@ export async function createRewindGL(
       material.dispose()
       particles.points.geometry.dispose()
       particles.material.dispose()
+      // dispose() frees programs/buffers but NOT the underlying WebGL context —
+      // it lingers on the detached canvas until GC, and each History entry makes
+      // a fresh one, piling toward Chromium's ~16-context cap (which would evict
+      // the persistent chakra context). Release it deterministically.
+      renderer.forceContextLoss()
       renderer.dispose()
     },
   }

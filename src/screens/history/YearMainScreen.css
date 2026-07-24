@@ -260,17 +260,23 @@
   background: var(--gold-gradient);
 }
 
-/* Year pills — flex + gap (audit risk #5: row must survive year edits) */
+/* Year pills — flex + gap (audit risk #5: row must survive year edits). The
+   row fills the bar (left/right inset) and the pills flex-shrink, so adding a
+   10th year no longer overflows past the rounded edge; the max-width caps them
+   at the designed 177px for the current 9 so nothing changes today. */
 .hy-pills {
   position: absolute;
   left: 20px;
+  right: 20px;
   top: 62px;
   display: flex;
   gap: 14px;
 }
 
 .hy-pill {
-  width: 177px;
+  flex: 1 1 0;
+  max-width: 177px;
+  min-width: 0;
   height: 76px;
   border-radius: 10px;
   /* Figma pill glass: fill rgba(74,59,46,.45), 1px #8F692B, GLASS blur 4.

@@ -74,6 +74,17 @@ class Reporter {
 /** Trimmed string or null for blank/absent cells. */
 function asString(cell: Cell | undefined): string | null {
   if (cell === null || cell === undefined) return null
+  // A date-typed cell (read with cellDates) would String()-dump to a JS date
+  // string; render it as "26 January 2002". Use UTC — xlsx date serials are
+  // UTC-anchored, so local getters can drift a calendar day.
+  if (cell instanceof Date) {
+    return cell.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+  }
   const s = String(cell).trim()
   return s === '' ? null : s
 }
@@ -81,6 +92,7 @@ function asString(cell: Cell | undefined): string | null {
 /** Finite number or null. Accepts numeric strings like "108" / "108.5". */
 function asNumber(cell: Cell | undefined): number | null {
   if (cell === null || cell === undefined) return null
+  if (cell instanceof Date) return null // a date is not a plain number
   if (typeof cell === 'number') return Number.isFinite(cell) ? cell : null
   const s = String(cell).trim().replace(/,/g, '')
   if (s === '') return null
@@ -187,6 +199,19 @@ function parseHomeTiles(wb: WorkBook, reporter: Reporter): HomeTile[] {
   if (tiles.length !== 4) {
     reporter.warn(found.name, `Expected 4 home tiles, found ${tiles.length}`)
   }
+  // Rows bind to routes by POSITION (Monumental / History / Chakra / Symbols),
+  // so a reordered sheet silently misroutes a tile. Warn if the sorted labels
+  // don't look like that order — the category keyword should survive a reword.
+  const EXPECTED_TILE_KEYWORDS = ['monumental', 'history', 'chakra', 'symbol']
+  tiles.forEach((tile, i) => {
+    const kw = EXPECTED_TILE_KEYWORDS[i]
+    if (kw !== undefined && !tile.label.toLowerCase().includes(kw)) {
+      reporter.warn(
+        found.name,
+        `Home tile #${i + 1} "${tile.label}" isn't where the "${kw}" category is expected — Home Menu rows must stay in Monumental / History / Chakra / Symbols order (tiles route by position)`,
+      )
+    }
+  })
   return tiles
 }
 
@@ -219,11 +244,16 @@ function parseSymbolIdentities(wb: WorkBook, reporter: Reporter): SymbolIdentity
     }
     seen.add(symbol)
 
-    const milestones = (['Milestone 1', 'Milestone 2', 'Milestone 3', 'Milestone 4'] as const)
-      .map((h) => asString(col(row, h)))
-      .filter((m): m is string => m !== null)
-    if (milestones.length < 4) {
-      reporter.warn(found.name, `"${symbol}" has ${milestones.length}/4 milestones`, row.excelRow)
+    // Keep all four slots by POSITION ('' for a blank). The detail screen maps
+    // milestones onto four different-shaped stat cards (wide/small/small/wide),
+    // so filtering blanks out would shift e.g. Milestone 4 into Milestone 2's
+    // small slot. The screen skips rendering the empty ones.
+    const milestones = (['Milestone 1', 'Milestone 2', 'Milestone 3', 'Milestone 4'] as const).map(
+      (h) => asString(col(row, h)) ?? '',
+    )
+    const filledMilestones = milestones.filter((m) => m !== '').length
+    if (filledMilestones < 4) {
+      reporter.warn(found.name, `"${symbol}" has ${filledMilestones}/4 milestones`, row.excelRow)
     }
 
     const symbolismHeading = asString(col(row, 'Symbolism heading'))
@@ -320,7 +350,10 @@ function parseInstallations(wb: WorkBook, reporter: Reporter): Installation[] {
       reporter.warn(found.name, `Missing site id ("#") for "${location}" — assigned fallback id`, row.excelRow)
       id = nextFallbackId++
     } else if (seenIds.has(id)) {
-      reporter.error(found.name, `Duplicate site id ${id} ("${location}")`, row.excelRow)
+      // Reusing an id collides React keys and makes both rows expand/route as
+      // one — give the duplicate a fresh unique id instead (like a missing id).
+      reporter.error(found.name, `Duplicate site id ${id} ("${location}") — assigned fallback id`, row.excelRow)
+      id = nextFallbackId++
     }
     seenIds.add(id)
 
@@ -631,7 +664,9 @@ export function loadContent(data: ArrayBuffer | Uint8Array): LoadResult {
   let wb: WorkBook | null = null
   try {
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
-    wb = read(bytes, { type: 'array' })
+    // cellDates keeps date-typed cells as Date objects instead of raw serials
+    // (e.g. 37282), which asString/asNumber then handle explicitly.
+    wb = read(bytes, { type: 'array', cellDates: true })
   } catch (err) {
     reporter.error(
       '(workbook)',

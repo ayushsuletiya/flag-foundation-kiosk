@@ -22,7 +22,7 @@ import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
 import { UncroppedPhoto } from '../../components/UncroppedPhoto.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
-import { useGroundedOffset, useSymbolMedia } from './symbolsMedia.ts'
+import { useGroundedTransform, useSymbolMedia } from './symbolsMedia.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
 import { SYMBOLS, SHARED } from '../../assets/paths.ts'
 import {
@@ -35,6 +35,26 @@ import {
 import './SymbolDetailScreen.css'
 
 const CARD_AUTO_ADVANCE_MS = 7000
+
+/** Podium contact line (centre of the top ellipse, measured off the baked
+ * stage art: the lit top face spans stage-y 648→703, centre ≈675). Everything
+ * standing on the podium has its visible feet pinned here. */
+const PODIUM_CONTACT_Y = 675
+
+/** Grounded subjects are scaled so their visible height matches a target,
+ * fixing the turntable renders that pad the subject very differently (elephant
+ * /banyan fill ~40% of frame, tiger ~68%, flag ~95%) and so appeared as tiny
+ * models or a towering pole. The four creatures/tree share the tiger's visible
+ * height in the Figma reference frame (795:3849) — the tiger renders at scale
+ * ~1. The flag stands TALLER: a pole-mounted flag reads wrong shrunk to an
+ * animal's height, and the Tiranga is the hero symbol here. */
+const PODIUM_SUBJECT_VISIBLE_H = 344
+const FLAG_VISIBLE_H = 450
+
+/** Visible-height target for a grounded symbol on the podium. */
+function podiumTargetHeight(slug: string): number {
+  return slug === 'flag' ? FLAG_VISIBLE_H : PODIUM_SUBJECT_VISIBLE_H
+}
 
 /** The 4 milestone slots at audited Figma geometry (wide/small/small/wide). */
 const STAT_SLOTS = [
@@ -117,21 +137,16 @@ export function SymbolDetailScreen() {
   /** Real artwork (static or frames) → mock subject frame; else placeholder box. */
   const hasArt = media.ready && (media.hasStatic || media.frameCount > 0)
   // Standing symbols (animals / tree / flag) get their visible bottom pinned
-  // to the podium's CONTACT LINE; floaters keep the mock's frame. Measured
-  // from each artwork's alpha bbox at runtime.
-  //
-  // The line is the centre of the upper tier's top ellipse — where something
-  // standing in the middle of a round podium actually touches it. Three
-  // independent sources agree: the baked stage art puts that ellipse at stage
-  // y 646.5→698.2 (centre 672.3-672.9), the designed pedestal glow is centred
-  // at 675 (.syd-glow, top 658 + 34/2), and the approved tiger render had its
-  // paws at 676.8. The old 725.5 was 50px LOWER — past the front rim, out on
-  // the podium wall. It only ever looked right because it was paired with a
-  // measurement of static.png, which for the tiger is padded differently from
-  // the frames that actually play; fixing the measurement (b873c11) exposed
-  // the bad line and dropped every subject through the podium face (user
-  // 2026-07-24, peacock standing on the front edge).
-  const groundedDy = useGroundedOffset(activeSlug, hasArt, 216.5, 407, 509, 675)
+  // to the podium's CONTACT LINE and their visible height normalised so every
+  // symbol reads at the same on-podium scale (floaters keep the mock's frame).
+  // Measured from each artwork's alpha bbox at runtime — see useGroundedTransform.
+  const grounded = useGroundedTransform(activeSlug, hasArt, {
+    boxTop: 216.5,
+    boxW: 407,
+    boxH: 509,
+    podiumY: PODIUM_CONTACT_Y,
+    targetVisibleH: podiumTargetHeight(activeSlug),
+  })
 
   if (identity === null) {
     // Content still loading — hold the stage.
@@ -196,6 +211,9 @@ export function SymbolDetailScreen() {
         {/* Stat cards — Excel milestones parsed as "Label: Value". */}
         {milestones.slice(0, STAT_SLOTS.length).map((m, i) => {
           const slot = STAT_SLOTS[i]!
+          // Blank milestone — keep the slot position for the others (so the
+          // wide/small/small/wide mapping holds), just draw no card here.
+          if (m.label === '' && m.value === '') return null
           const gold = isNumericMilestone(m.value)
           const base = gold ? 50 : m.value.length <= 16 ? 35 : 30
           const fontSize = fitFontSize(m.value, base, slot.width - 56)
@@ -216,18 +234,22 @@ export function SymbolDetailScreen() {
           )
         })}
 
-        {/* Pedestal glow + turntable on the baked podium. Artwork PNGs carry
-            transparent padding (tiger ≈8.1% top / 7.9% bottom), so the mock's
-            subject frame (solved from the 795:3849 render: visible tiger
-            y258→685, paws ON the podium) is larger than the visible subject:
-            407x509 with bottom y=725.5. Placeholder tiles have no padding, so
-            they keep the podium-top footprint (352x439, bottom y=692). */}
+        {/* Pedestal glow + turntable on the baked podium. Real art renders in a
+            407x509 box that useGroundedTransform then translates + scales so the
+            visible feet sit on the contact line and every symbol reads at the
+            tiger's on-podium size. Placeholder tiles have no padding, so they
+            keep the podium-top footprint (352x439 @ (784, 253)). */}
         <div className="syd-glow" />
         <div
           className="syd-subject"
           style={
             hasArt
-              ? { left: 771.5, top: 216.5, transform: `translateY(${groundedDy}px)` }
+              ? {
+                  left: 771.5,
+                  top: 216.5,
+                  transform: `translateY(${grounded.dy}px) scale(${grounded.scale})`,
+                  transformOrigin: `50% ${grounded.originY}px`,
+                }
               : { left: 784, top: 253 }
           }
         >

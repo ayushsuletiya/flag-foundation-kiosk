@@ -27,6 +27,11 @@ import './monumental.css'
 const INTRO_VIDEO = MONUMENTAL.introVideo
 const INTRO_POSTER = MONUMENTAL.introPoster
 const FALLBACK_ADVANCE_MS = 1200
+/** Hard ceiling for the whole intro, comfortably past the intended ~5s clip. A
+ * video that neither ends nor errors (muted-autoplay silently rejected, a decode
+ * stall, or an over-long/looping file) must not strand the visitor here until
+ * the 120s idle reset drags them home. */
+const MAX_INTRO_MS = 8000
 
 export function MonumentalIntroScreen() {
   const navigate = useNavigate()
@@ -47,6 +52,15 @@ export function MonumentalIntroScreen() {
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoFailed])
+
+  // Hard ceiling armed on mount: covers the cases the video events never
+  // report (autoplay reject / stall / over-long file). goToMap is idempotent,
+  // so a normal onEnded before this fires makes it a no-op.
+  useEffect(() => {
+    const timer = setTimeout(goToMap, MAX_INTRO_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div

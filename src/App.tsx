@@ -15,6 +15,7 @@ import { useContent } from './data/ContentContext.tsx'
 import { useIdleReset } from './app/useIdleReset.ts'
 import { DevContentScreen } from './app/DevContentScreen.tsx'
 import { QuickAccessProvider } from './components/QuickAccessOverlay.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { HomeScreen } from './screens/home/HomeScreen.tsx'
 import { MonumentalIntroScreen } from './screens/monumental/MonumentalIntroScreen.tsx'
 import { MapExplorerScreen } from './screens/monumental/MapExplorerScreen.tsx'
@@ -106,7 +107,9 @@ function App() {
         <IdleReset />
         <WarmChakra />
         <QuickAccessProvider>
-          <AnimatedRoutes />
+          <ErrorBoundary>
+            <AnimatedRoutes />
+          </ErrorBoundary>
         </QuickAccessProvider>
       </HashRouter>
     </Stage>

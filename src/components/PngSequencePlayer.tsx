@@ -44,6 +44,35 @@ function frameUrl(pattern: string, frame: number, padWidth: number): string {
   return pattern.replace('{frame}', String(frame).padStart(padWidth, '0'))
 }
 
+/**
+ * Decoded frames are cached across mounts (keyed by URL). The symbols carousel
+ * mounts/unmounts many players on every auto-advance (user decision: turntables
+ * play on every card), and without this each remount re-decoded a whole ~100-
+ * frame sequence from scratch — a repeated CPU/GPU burst that janked the ring on
+ * the integrated GPU. Bounded (LRU by Map insertion order) so it can't grow
+ * without limit. Sharing an immutable <img> across instances is safe — canvas
+ * drawImage only reads it.
+ */
+const FRAME_CACHE = new Map<string, HTMLImageElement>()
+const FRAME_CACHE_MAX = 512
+
+function loadFrame(url: string): HTMLImageElement {
+  const cached = FRAME_CACHE.get(url)
+  if (cached !== undefined) {
+    FRAME_CACHE.delete(url)
+    FRAME_CACHE.set(url, cached) // refresh recency
+    return cached
+  }
+  const img = new Image()
+  img.src = url
+  FRAME_CACHE.set(url, img)
+  if (FRAME_CACHE.size > FRAME_CACHE_MAX) {
+    const oldest = FRAME_CACHE.keys().next().value
+    if (oldest !== undefined) FRAME_CACHE.delete(oldest)
+  }
+  return img
+}
+
 export function PngSequencePlayer({
   srcPattern,
   frameCount,
@@ -62,9 +91,14 @@ export function PngSequencePlayer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const framesRef = useRef<(HTMLImageElement | null)[]>([])
   const [status, setStatus] = useState<LoadStatus>('loading')
+  // Poster stays up until a real frame has actually been PAINTED (not merely
+  // decoded) — flipping to 'ready' on first-frame-loaded used to unmount the
+  // poster while the canvas was still blank if frame 0 hadn't decoded yet.
+  const paintedRef = useRef(false)
+  const [painted, setPainted] = useState(false)
 
-  // Preload every frame; first successful load flips to 'ready',
-  // all-failed flips to 'failed'.
+  // Preload every frame (from the shared cache); first successful load flips to
+  // 'ready', all-failed flips to 'failed'.
   useEffect(() => {
     let cancelled = false
     const frames: (HTMLImageElement | null)[] = new Array<HTMLImageElement | null>(
@@ -72,6 +106,8 @@ export function PngSequencePlayer({
     ).fill(null)
     framesRef.current = frames
     setStatus('loading')
+    paintedRef.current = false
+    setPainted(false)
 
     if (frameCount <= 0) {
       setStatus('failed')
@@ -84,21 +120,24 @@ export function PngSequencePlayer({
       settled += 1
       if (settled === frameCount && loaded === 0) setStatus('failed')
     }
+    const markLoaded = (i: number, img: HTMLImageElement) => {
+      if (cancelled) return
+      frames[i] = img
+      loaded += 1
+      if (loaded === 1) setStatus('ready')
+      onSettle()
+    }
 
     for (let i = 0; i < frameCount; i++) {
-      const img = new Image()
-      img.onload = () => {
-        if (cancelled) return
-        frames[i] = img
-        loaded += 1
-        if (loaded === 1) setStatus('ready')
-        onSettle()
+      const img = loadFrame(frameUrl(srcPattern, startFrame + i, padWidth))
+      if (img.complete) {
+        // Cache hit that's already decoded (or already errored) — no re-decode.
+        if (img.naturalWidth > 0) markLoaded(i, img)
+        else onSettle()
+      } else {
+        img.addEventListener('load', () => markLoaded(i, img), { once: true })
+        img.addEventListener('error', () => !cancelled && onSettle(), { once: true })
       }
-      img.onerror = () => {
-        if (cancelled) return
-        onSettle()
-      }
-      img.src = frameUrl(srcPattern, startFrame + i, padWidth)
     }
 
     return () => {
@@ -148,6 +187,10 @@ export function PngSequencePlayer({
         const dh = img.naturalHeight * scale
         ctx.drawImage(img, (width - dw) / 2, (height - dh) / 2, dw, dh)
       }
+      if (!paintedRef.current) {
+        paintedRef.current = true
+        setPainted(true) // a real frame is now on the canvas — the poster can go
+      }
     }
 
     if (!playing) {
@@ -194,7 +237,7 @@ export function PngSequencePlayer({
 
   return (
     <div className={className} style={boxStyle}>
-      {poster !== undefined && status === 'loading' && (
+      {poster !== undefined && !painted && (
         <img
           src={poster}
           alt=""

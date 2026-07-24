@@ -666,6 +666,10 @@ function createChakraScene(
   // so the change is a gain in sheen rather than a shift in hue.
   const pmrem = new THREE.PMREMGenerator(renderer)
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+  // Sunset env map built async below (captured for disposal); sceneDisposed
+  // guards that async load against a teardown that races ahead of it.
+  let sunsetEnv: THREE.Texture | null = null
+  let sceneDisposed = false
   scene.environment = envTex
   scene.environmentIntensity = 0
 
@@ -784,10 +788,20 @@ function createChakraScene(
   // Environment texture: always the still (assets/3-ashok-chakra/background/
   // bg.png) even when the DOM background plays bg.mp4 — three.js needs a
   // sampleable image, and the two share one folder by convention.
+  // Capture the generated PMREM output texture so dispose() can free it —
+  // pmrem.dispose() only frees the generator's working targets, not this RT, so
+  // each /chakra entry would otherwise leak a full cubemap RT. Also guard the
+  // async callback against a teardown that beat the image load (it would touch
+  // a disposed scene/pmrem).
   new THREE.TextureLoader().load('assets/3-ashok-chakra/background/bg.png', (t) => {
+    if (sceneDisposed) {
+      t.dispose()
+      return
+    }
     t.mapping = THREE.EquirectangularReflectionMapping
     t.colorSpace = THREE.SRGBColorSpace
-    scene.environment = pmrem.fromEquirectangular(t).texture
+    sunsetEnv = pmrem.fromEquirectangular(t).texture
+    scene.environment = sunsetEnv
     scene.environmentIntensity = 0.5
     t.dispose()
   })
@@ -1685,7 +1699,24 @@ function createChakraScene(
     bootDone = true
   })
 
+  // Warm the flag during idle so the first "Chakra in Flag" tap only plays the
+  // animation — buildFlag()'s cloth pre-warm is a synchronous burst that would
+  // otherwise land right on the tab switch. The flag is built hidden
+  // (flagGroup.visible stays false until a flag transition), so this is
+  // pose-identical and invisible until the user actually opens the flag tab.
+  const warmFlagIdle = () => {
+    if (!sceneDisposed && flagGroup === null) buildFlag()
+  }
+  const ric = (
+    window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+    }
+  ).requestIdleCallback
+  if (typeof ric === 'function') ric(warmFlagIdle, { timeout: 4000 })
+  else window.setTimeout(warmFlagIdle, 2500)
+
   function dispose() {
+    sceneDisposed = true
     renderer.setAnimationLoop(null)
     renderer.domElement.removeEventListener('pointerdown', onPointerDown)
     renderer.domElement.removeEventListener('pointermove', onPointerMove)
@@ -1719,8 +1750,13 @@ function createChakraScene(
     }
     for (const r of flagDisposables) r.dispose()
     flagDisposables.length = 0
+    sunsetEnv?.dispose()
     envTex.dispose()
     pmrem.dispose()
+    // Free the WebGL context deterministically (three's dispose() leaves it on
+    // the detached canvas until GC) so /chakra re-entries don't pile contexts
+    // toward Chromium's ~16 cap.
+    renderer.forceContextLoss()
     renderer.dispose()
     // Dev hooks close over this scene graph — drop them so a disposed scene
     // isn't retained (and a stale scrub can't drive freed resources).

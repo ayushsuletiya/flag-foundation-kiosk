@@ -21,11 +21,12 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useContent } from '../data/ContentContext.tsx'
 import {
   HOME_TILES,
@@ -186,7 +187,12 @@ function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
               width: QA_TILE_W,
               height: QA_TILE_H,
               borderRadius: 47.231,
-              border: '3.736px solid var(--cream-border)',
+              // No real border: with box-sizing:border-box it would shrink the
+              // photo's containing box by 3.736px each side, so the percentage
+              // crops (which resolve against the full box on Home) would land
+              // ~2.7% off here — the exact regression Home avoids. The cream
+              // frame is drawn as an inset overlay below instead.
+              border: 'none',
               overflow: 'hidden',
               cursor: 'pointer',
             }}
@@ -201,6 +207,18 @@ function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
               className={
                 tile.solidScrim === true ? 'qa-tile-scrim qa-tile-scrim--solid' : 'qa-tile-scrim'
               }
+            />
+            {/* Cream frame as an overlay (like Home's ::after) so the photo crop
+                above resolves against the FULL 280px box. */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: 47.231,
+                border: '3.736px solid var(--cream-border)',
+                pointerEvents: 'none',
+              }}
             />
             <span
               style={{
@@ -236,6 +254,14 @@ function QuickAccessOverlay({ onClose }: { onClose: () => void }) {
 export function QuickAccessProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const value = useMemo<QuickAccessContextValue>(() => ({ open: () => setIsOpen(true) }), [])
+  const { pathname } = useLocation()
+
+  // Close on ANY navigation — including the 120s idle reset's navigate('/') —
+  // so a visitor who walks away with the overlay open doesn't leave the next
+  // visitor facing a dimmed modal over the home screen.
+  useEffect(() => {
+    setIsOpen(false)
+  }, [pathname])
 
   return (
     <QuickAccessContext.Provider value={value}>

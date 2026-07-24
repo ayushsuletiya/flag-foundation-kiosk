@@ -19,7 +19,10 @@ import { useEffect, useState } from 'react'
 import { SYMBOLS } from '../../assets/paths.ts'
 
 export const SYMBOL_BASE = SYMBOLS.symbols
-const MAX_FRAMES = 1024
+// A realistic ceiling for a turntable loop — the shipped sequences are ~107
+// frames. A lower cap bounds the worst case if a client drops an oversized
+// sequence (each 460x818 frame is ~1.5MB decoded).
+const MAX_FRAMES = 240
 const MAX_DYK_IMAGES = 12
 
 export interface SymbolMedia {
@@ -196,58 +199,94 @@ function measureAlphaBounds(url: string): Promise<AlphaBounds | null> {
   return job
 }
 
+export interface GroundedTransform {
+  /** translateY (px) applied to the subject box. */
+  dy: number
+  /** Uniform scale, taken about the feet (see originY) so grounding holds. */
+  scale: number
+  /** transform-origin Y in element-local px — the visible feet row. */
+  originY: number
+}
+
+const IDENTITY_TRANSFORM: GroundedTransform = { dy: 0, scale: 1, originY: 0 }
+
+interface GroundedOpts {
+  boxTop: number
+  boxW: number
+  boxH: number
+  /** Podium contact line (centre of the top ellipse) in stage px. */
+  podiumY: number
+  /** Every grounded subject is scaled so its VISIBLE height matches this. */
+  targetVisibleH: number
+  minScale?: number
+  maxScale?: number
+}
+
 /**
- * Vertical offset (px) that drops a grounded symbol's VISIBLE bottom edge
- * onto the podium top. The artwork renders `object-fit: contain` inside a
- * box at `boxTop` with size `boxW`x`boxH`; transparent padding differs per
- * artwork, so the alpha bbox of static.png decides where the feet really
- * are. Returns 0 while measuring, for floating symbols, and for slugs
- * without art.
+ * Places a grounded symbol on the podium and NORMALISES its on-podium size.
+ *
+ * Two problems the turntable renders create, both solved here:
+ *
+ * 1. Grounding — the artwork renders `object-fit: contain` inside a fixed box,
+ *    but each PNG carries a different amount of transparent padding, so the
+ *    visible feet sit at a different height per symbol. We measure the alpha
+ *    bbox of frame 1 (what actually plays — the tiger/peacock posters are a
+ *    different, tighter render than their frames) and translate the box so the
+ *    visible bottom lands on `podiumY`. static.png is the fallback for slugs
+ *    with no frames; the silhouette bottom is ~constant across a turntable
+ *    (≤2.2px over 107 frames), so frame 1 stands in for the loop.
+ *
+ * 2. Scale — the subjects fill wildly different fractions of their frame
+ *    (elephant/banyan ~40%, tiger ~68%, flag ~95%). Plain contain made the
+ *    small ones look like toys on a big podium and the flag tower. We scale
+ *    each so its VISIBLE height equals `targetVisibleH`. The tiger is the
+ *    Figma reference (frame 795:3849); pass its visible height as the target
+ *    and the tiger renders at scale ~1 while the rest match its presentation.
+ *    The scale is taken about the feet row, so grounding is unaffected.
+ *
+ * Returns the identity transform while measuring, for floating symbols, and
+ * for slugs without art.
  */
-export function useGroundedOffset(
+export function useGroundedTransform(
   slug: string,
   enabled: boolean,
-  boxTop: number,
-  boxW: number,
-  boxH: number,
-  podiumY: number,
-): number {
-  const [offset, setOffset] = useState(0)
+  opts: GroundedOpts,
+): GroundedTransform {
+  const { boxTop, boxW, boxH, podiumY, targetVisibleH } = opts
+  const minScale = opts.minScale ?? 0.5
+  const maxScale = opts.maxScale ?? 2.2
+  const [transform, setTransform] = useState<GroundedTransform>(IDENTITY_TRANSFORM)
 
   useEffect(() => {
-    setOffset(0)
+    setTransform(IDENTITY_TRANSFORM)
     if (!enabled || !GROUNDED_SLUGS.has(slug)) return
     let alive = true
-    // Measure what is actually ON SCREEN — the TURNTABLE FRAME, not the
-    // poster. Every grounded slug ships both, and for the tiger and the
-    // peacock the poster is a different render (1122x1402, tighter padding)
-    // than the frames (460x818): grounding off the poster dropped them ~40px
-    // when the playing frames needed ~90-120, so they stood in mid-air above
-    // the podium (user 2026-07-24, peacock screenshot). static.png stays as
-    // the fallback for any slug that has no frames. The silhouette bottom is
-    // constant across a turntable (≤2.2px over 107 frames), so frame 1 is a
-    // valid stand-in for the whole loop.
     const measure = measureAlphaBounds(frameUrl(slug, 1)).then(
       (b) => b ?? measureAlphaBounds(staticUrlFor(slug)),
     )
     void measure.then((bounds) => {
       if (!alive || bounds === null) return
-      const scale = Math.min(boxW / bounds.naturalWidth, boxH / bounds.naturalHeight)
-      const renderedH = bounds.naturalHeight * scale
+      const fit = Math.min(boxW / bounds.naturalWidth, boxH / bounds.naturalHeight)
+      const renderedH = bounds.naturalHeight * fit
       const offsetY = (boxH - renderedH) / 2 // contain letterbox
-      const visibleBottom = boxTop + offsetY + bounds.bottomFrac * renderedH
-      const dy = podiumY - visibleBottom
+      // Element-local feet row (before any transform); scale pivots here so the
+      // feet stay put, so dy is the same whatever the scale is.
+      const feetLocal = offsetY + bounds.bottomFrac * renderedH
+      const visibleH = (bounds.bottomFrac - bounds.topFrac) * renderedH
+      const scale =
+        visibleH > 1 ? Math.max(minScale, Math.min(maxScale, targetVisibleH / visibleH)) : 1
       // Sanity clamp — a wild bbox (bad art) must never fling the subject.
       // 160 used to clip the banyan (its true drop is 161), so the ceiling is
       // 200: still far short of anything that could look like a glitch.
-      setOffset(Math.max(-120, Math.min(200, dy)))
+      const dy = Math.max(-120, Math.min(200, podiumY - (boxTop + feetLocal)))
+      setTransform({ dy, scale, originY: feetLocal })
     })
     return () => {
       alive = false
     }
-  }, [slug, enabled, boxTop, boxW, boxH, podiumY])
+  }, [slug, enabled, boxTop, boxW, boxH, podiumY, targetVisibleH, minScale, maxScale])
 
-  return offset
+  return transform
 }
 
 /** Live media facts for one symbol slug. */

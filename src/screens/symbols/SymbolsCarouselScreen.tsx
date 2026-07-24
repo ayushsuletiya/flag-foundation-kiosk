@@ -23,7 +23,11 @@ import { SYMBOLS } from '../../assets/paths.ts'
 import './SymbolsCarouselScreen.css'
 
 const SWIPE_THRESHOLD_PX = 60
-const HOLD_TO_ORBIT_MS = 260
+// A stationary press must be held this long before the ring lifts into orbit.
+// 260ms swallowed ordinary touchscreen taps on side cards (a tap held ~300-500ms
+// engaged orbit, then a straight-up release span=0 changed nothing) — 460ms
+// keeps the deliberate press-hold gesture while letting a firm tap still rotate.
+const HOLD_TO_ORBIT_MS = 460
 const SETTLE_MS = 750
 const TURN_MS = 480
 // Attract behavior: at rest the carousel advances by itself (smooth track

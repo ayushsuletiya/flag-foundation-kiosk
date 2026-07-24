@@ -366,6 +366,19 @@ export function MapExplorerScreen() {
     listKeyRef.current += 1 // remount ScrollList → scroll back to top
   }
 
+  // The cold-start default ('Odisha') is a guess baked into monumentalGeo. If
+  // the client's content.xlsx has no installations for the current state, fall
+  // back to the first state that does — otherwise the map opens on an empty
+  // list, zero markers, and a gold chip, looking broken.
+  useEffect(() => {
+    if (content === null || countByState.size === 0) return
+    if ((countByState.get(selectedState) ?? 0) === 0) {
+      const first = [...countByState.keys()][0]
+      if (first !== undefined) applyState(first)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, countByState, selectedState])
+
   // While true, the untethered patch after the list is the SOLE source of the
   // first tile's glow (the in-list tile suppresses its own box-shadow). The
   // two must never paint together: the tile's copy is clipped at the scroll

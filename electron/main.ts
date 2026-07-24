@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { watch, type FSWatcher } from 'chokidar'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
@@ -60,6 +60,29 @@ async function loadDevServer(win: BrowserWindow, attempt = 0): Promise<void> {
   }
 }
 
+/** Load the renderer — the built file in production, the dev server in dev.
+ * Shared by createWindow and the crash-recovery path so the kiosk self-heals. */
+function loadRenderer(win: BrowserWindow): void {
+  if (win.isDestroyed()) return
+  if (app.isPackaged) {
+    // Production: load the built renderer from dist/ (base './' in vite.config.ts).
+    void win.loadFile(path.join(dirname, '../dist/index.html'))
+  } else {
+    void loadDevServer(win)
+  }
+}
+
+/** Rebuild the renderer after a crash, throttled so a hard-failing build can't
+ * spin in a tight reload loop. */
+let lastRecoverAt = 0
+function recoverRenderer(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const now = Date.now()
+  if (now - lastRecoverAt < 3000) return
+  lastRecoverAt = now
+  loadRenderer(mainWindow)
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1920,
@@ -76,38 +99,79 @@ function createWindow(): void {
     },
   })
 
-  if (app.isPackaged) {
-    // Production: load the built renderer from dist/ (base './' in vite.config.ts).
-    void mainWindow.loadFile(path.join(dirname, '../dist/index.html'))
-  } else {
-    void loadDevServer(mainWindow)
-  }
+  loadRenderer(mainWindow)
+
+  const wc = mainWindow.webContents
+
+  // Kiosk self-heal: a renderer crash/OOM or an unresponsive page leaves the
+  // window OPEN on a dead/black canvas, so window-all-closed never fires and the
+  // app never quits for an OS watchdog to restart. Reload the renderer instead.
+  wc.on('render-process-gone', (_event, details) => {
+    if (details.reason !== 'clean-exit') recoverRenderer()
+  })
+  wc.on('unresponsive', () => {
+    recoverRenderer()
+  })
+
+  // Neutralise reload / DevTools / fullscreen-toggle / quit / nav shortcuts in
+  // the packaged kiosk — a USB keyboard on the exposed NUC must not escape the
+  // shell. Dev keeps them for debugging.
+  wc.on('before-input-event', (event, input) => {
+    if (!app.isPackaged || input.type !== 'keyDown') return
+    if (input.control || input.alt || input.meta || ['F5', 'F11', 'F12'].includes(input.key)) {
+      event.preventDefault()
+    }
+  })
 
   mainWindow.on('closed', () => {
     mainWindow = null
   })
 }
 
-app.whenReady().then(() => {
-  // Renderer pulls the workbook bytes over IPC (works packaged, where the
-  // renderer is on file:// and cannot fetch the data directory).
-  ipcMain.handle('read-content-file', async (): Promise<Uint8Array> => {
-    const buf = await readFile(CONTENT_XLSX_PATH)
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
-  })
-
-  startContentWatcher()
-  createWindow()
-
-  app.on('activate', () => {
-    // macOS dev convenience: re-create the window when the dock icon is clicked.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
-})
-
-app.on('window-all-closed', () => {
-  // Kiosk: quitting when the window goes away lets the OS watchdog restart us.
-  if (contentDebounce) clearTimeout(contentDebounce)
-  void contentWatcher?.close()
+// Single-instance: a watchdog restart or a double-fired autostart shortcut must
+// not stack a second fullscreen kiosk window (orphaning the first and doubling
+// GPU/IPC load). A duplicate launch focuses the existing instance instead.
+if (!app.requestSingleInstanceLock()) {
   app.quit()
-})
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+
+  app.whenReady().then(() => {
+    // No application menu → no default reload/DevTools/quit accelerators live in
+    // the packaged build (autoHideMenuBar only hides the bar, not its shortcuts).
+    Menu.setApplicationMenu(null)
+
+    // Renderer pulls the workbook bytes over IPC (works packaged, where the
+    // renderer is on file:// and cannot fetch the data directory).
+    ipcMain.handle('read-content-file', async (): Promise<Uint8Array> => {
+      const buf = await readFile(CONTENT_XLSX_PATH)
+      return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
+    })
+
+    startContentWatcher()
+    createWindow()
+
+    // GPU process death loses the WebGL context (chakra/rewind go black) without
+    // killing the renderer — reload to rebuild the contexts.
+    app.on('child-process-gone', (_event, details) => {
+      if (details.type === 'GPU') recoverRenderer()
+    })
+
+    app.on('activate', () => {
+      // macOS dev convenience: re-create the window when the dock icon is clicked.
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+
+  app.on('window-all-closed', () => {
+    // Kiosk: quitting when the window goes away lets the OS watchdog restart us.
+    if (contentDebounce) clearTimeout(contentDebounce)
+    void contentWatcher?.close()
+    app.quit()
+  })
+}

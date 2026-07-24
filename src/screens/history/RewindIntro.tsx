@@ -94,10 +94,19 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
     skipRef.current = finish
 
     void (async () => {
-      const urls = rewindYears.map((y) => `${HISTORY_BASE}/${y}/background/bg-1.png`)
-      const present = await Promise.all(urls.map(probeImageCached))
-      const usable = urls.filter((_, i) => present[i])
-      const usableYears = rewindYears.filter((_, i) => present[i])
+      // Match what the year screens actually render: prefer bg-1.png, fall back
+      // to a single bg.png. (A bg.mp4-only year has no still to texture, so it
+      // simply isn't part of the rewind — the year still plays its video live.)
+      const resolved = await Promise.all(
+        rewindYears.map(async (y) => {
+          const dir = `${HISTORY_BASE}/${y}/background`
+          if (await probeImageCached(`${dir}/bg-1.png`)) return `${dir}/bg-1.png`
+          if (await probeImageCached(`${dir}/bg.png`)) return `${dir}/bg.png`
+          return null
+        }),
+      )
+      const usable = resolved.filter((u): u is string => u !== null)
+      const usableYears = rewindYears.filter((_, i) => resolved[i] !== null)
       if (!alive) return
       if (usable.length < 2) {
         finish() // nothing to rewind through — hand straight over

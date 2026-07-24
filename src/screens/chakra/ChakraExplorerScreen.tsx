@@ -180,7 +180,7 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
           <button
             type="button"
             className="ck-cta"
-            onClick={() => onSelect(1 + Math.floor(Math.random() * Math.max(1, virtues.length)))}
+            onClick={() => onSelect(virtues[Math.floor(Math.random() * virtues.length)]?.spoke ?? null)}
           >
             Touch a Spoke
           </button>
@@ -475,6 +475,14 @@ export function ChakraExplorerScreen() {
 
   const chakra = content?.chakra
   const virtues = chakra?.virtues ?? []
+  // The wheel always draws 24 tappable spokes, but content.xlsx can hot-reload
+  // with fewer virtues — ignore selecting a spoke that has no backing virtue
+  // (it would ease/pulse the wheel while the left column silently showed the
+  // intro). null always clears.
+  const validSpokes = useMemo(() => new Set(virtues.map((v) => v.spoke)), [virtues])
+  const selectSpoke = (s: number | null) => {
+    if (s === null || validSpokes.has(s)) setSpoke(s)
+  }
 
   const colorCode = useMemo(() => chakraRowHex(chakra?.rows ?? []), [chakra])
   const spokeCount = useMemo(() => chakraSpokeCount(chakra?.rows ?? []), [chakra])
@@ -558,7 +566,7 @@ export function ChakraExplorerScreen() {
             wheelRef.current?.style.setProperty('transform', `translateX(${x.toFixed(2)}px)`)
           }}
           onRollDone={reveal}
-          onSpokeTap={(s) => setSpoke(s)}
+          onSpokeTap={selectSpoke}
           onBackgroundTap={() => setSpoke(null)}
         />
       </div>
@@ -590,7 +598,7 @@ export function ChakraExplorerScreen() {
         key={tab}
         className={leaveTo !== null ? 'ck-tab-body ck-tab-body--leave' : 'ck-tab-body'}
       >
-        {tab === 'values' && <ValuesTab virtues={virtues} spoke={spoke} onSelect={setSpoke} />}
+        {tab === 'values' && <ValuesTab virtues={virtues} spoke={spoke} onSelect={selectSpoke} />}
         {tab === 'design' && (
           <DesignTab colorCode={colorCode} spokeCount={spokeCount} meaning={meaning} />
         )}
