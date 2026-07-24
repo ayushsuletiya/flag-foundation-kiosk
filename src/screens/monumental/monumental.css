@@ -130,9 +130,6 @@
   box-sizing: border-box;
 }
 
-/* Map list card thumbnail (345x250 area). */
-.inst-thumb {
-  border-radius: 19.795px;
-  border: 1.414px solid #ffffff;
-  box-sizing: border-box;
-}
+/* (The map LIST card keeps a uniform box instead — a row of ragged tiles
+   reads as broken — so its frame stays on the slot and the photo is
+   blur-filled inside it. See MapExplorerScreen.) */

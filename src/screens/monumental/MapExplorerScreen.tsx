@@ -250,14 +250,19 @@ function InstallationTile({
               top: 108,
               width: 345,
               height: 250.27,
+              borderRadius: 19.795,
+              border: '1.414px solid #FFFFFF',
+              overflow: 'hidden',
+              background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
             }}
           >
             {!photoFailed ? (
-              // Never crop the installation, and let the frame hug the
-              // photo — the slot itself stays transparent.
+              // These cards are a LIST — they keep a consistent box (user
+              // 2026-07-23), filled by a blurred copy of the photo so the
+              // tiranga is never cropped and no bare plate shows.
               <UncroppedPhoto
                 src={installationPhoto(row.id)}
-                imgClassName="inst-thumb"
+                fill
                 onError={() => setPhotoFailed(true)}
               />
             ) : (
@@ -268,11 +273,6 @@ function InstallationTile({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  // Slot is transparent now — the no-photo state keeps the plate.
-                  borderRadius: 19.795,
-                  border: '1.414px solid #FFFFFF',
-                  background: 'linear-gradient(160deg, #7A5223 0%, #3E2708 100%)',
-                  boxSizing: 'border-box',
                 }}
               >
                 <img

@@ -23,6 +23,13 @@ import './UncroppedPhoto.css'
 export interface UncroppedPhotoProps {
   src: string
   alt?: string
+  /**
+   * Fill the slot with a blurred copy of the same photo behind the sharp
+   * one. For UNIFORM tiles — a list/grid of same-size cards, where ragged
+   * hugging frames would look broken (user 2026-07-23: the map list keeps
+   * its consistent box). Leave off wherever the frame should hug.
+   */
+  fill?: boolean
   /** Extra class on the centring wrapper. */
   className?: string
   style?: CSSProperties
@@ -34,6 +41,7 @@ export interface UncroppedPhotoProps {
 export function UncroppedPhoto({
   src,
   alt = '',
+  fill = false,
   className,
   style,
   imgClassName,
@@ -41,6 +49,10 @@ export function UncroppedPhoto({
 }: UncroppedPhotoProps) {
   return (
     <span className={className ? `ucp ${className}` : 'ucp'} style={style}>
+      {fill && (
+        // Same file as the sharp copy, so the browser decodes it once.
+        <img src={src} alt="" aria-hidden="true" draggable={false} className="ucp-fill" />
+      )}
       <img
         src={src}
         alt={alt}
