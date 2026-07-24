@@ -12,7 +12,7 @@
  * (screen not built yet)" placeholder — those years show the year's Main
  * Slide Copy instead, so the panel never renders an em-dash stub.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
@@ -27,6 +27,18 @@ import './KnowMoreScreen.css'
 
 const TRACK_LEFT = 100
 const TRACK_WIDTH = 932
+
+/* The left column is pixel-placed: heading at stage y 243, facts panel at 597.
+   Everything between belongs to the intro, and the Excel copy that fills it is
+   client-editable — 1905 ("The First National Flag Conceived", 281 chars) wraps
+   the heading onto a second line AND runs to five lines, so its last line
+   collided with the top of the facts panel. Rather than trim the client's copy,
+   the intro shrinks a step at a time until it fits the gap it actually has. */
+const HK_LEFT_TOP = 243
+const HK_FACTS_TOP = 597
+const HK_INTRO_GAP = 26 // breathing room above the facts panel
+const HK_INTRO_MAX = 30 // Figma size
+const HK_INTRO_MIN = 23
 
 /** Gold double-chevron bullet lead (Figma 873:91, ~21px, rebuilt per row). */
 function DoubleChevronIcon({ size = 21 }: { size?: number }) {
@@ -66,6 +78,22 @@ export function KnowMoreScreen() {
   useEffect(() => {
     setSelected(0) // year switch resets the gallery
   }, [row?.year])
+
+  /* Fit the intro into the gap between the heading and the facts panel. Layout
+     px only — the Stage scale is applied above us, so offsetTop/offsetHeight
+     are already in the 1920×1080 coordinate system. No dep array on purpose:
+     it re-fits after a webfont swap too, and the loop exits on the first size
+     that fits (one measurement for every year but 1905). */
+  const introRef = useRef<HTMLParagraphElement | null>(null)
+  useLayoutEffect(() => {
+    const el = introRef.current
+    if (el === null) return
+    const limit = HK_FACTS_TOP - HK_LEFT_TOP - HK_INTRO_GAP
+    for (let size = HK_INTRO_MAX; size >= HK_INTRO_MIN; size--) {
+      el.style.fontSize = `${size}px`
+      if (el.offsetTop + el.offsetHeight <= limit) break
+    }
+  })
 
   if (row === null) {
     return <div className="hk-screen" />
@@ -147,7 +175,9 @@ export function KnowMoreScreen() {
         <h1 className="hk-heading">
           <BlurTypeText text={heading} delay={80} stagger={22} budget={560} />
         </h1>
-        <p className="hk-intro">{intro}</p>
+        <p className="hk-intro" ref={introRef}>
+          {intro}
+        </p>
       </div>
       <div className="hk-facts">
         {bullets.map((text) => (
