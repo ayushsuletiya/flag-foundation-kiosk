@@ -138,7 +138,7 @@ const HIGHLIGHT = new THREE.Color(0xffb300)
    1420px clears the whole box past the stage's left edge with margin. The
    wheel rolls UPRIGHT (a leaned wheel translating reads as sliding — user
    2026-07-20) and only leans into the 3/4 hero pose after it has landed. */
-const ROLL_MS = 1800 // travel + settle rock-back
+const ROLL_MS = 1000 // travel + settle rock-back (snappy: was 1800, felt lazy — user 2026-07-25)
 const ROLL_TRAVEL_PX = 1420
 const ROLL_OVER = 0.023 // rolls ~33px past home before rocking back
 const ROLL_APEX = 0.8 // fraction of the timeline spent reaching that apex

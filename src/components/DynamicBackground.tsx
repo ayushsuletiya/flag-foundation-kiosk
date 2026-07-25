@@ -118,6 +118,14 @@ export interface DynamicBackgroundProps {
   fallback?: ReactNode
   className?: string
   style?: CSSProperties
+  /**
+   * Fade the resolved media in over 600ms (`.dbg-enter`). Default true — it
+   * hides the pop when probing/decoding land after the route transition. Set
+   * FALSE when the media is pre-warmed and must paint on the first frame: the
+   * fade-from-transparent over a dark base otherwise reads as a black dip on
+   * entry (user report: chakra page — its bg is warmed in App.tsx WarmChakra).
+   */
+  fadeIn?: boolean
 }
 
 export function DynamicBackground({
@@ -126,6 +134,7 @@ export function DynamicBackground({
   fallback = null,
   className,
   style,
+  fadeIn = true,
 }: DynamicBackgroundProps) {
   const sources = useDynamicBackground(base)
 
@@ -133,12 +142,16 @@ export function DynamicBackground({
 
   // Whatever resolves, ease it in: probing + (on cold visits) media decode
   // land AFTER the route transition has finished, so an unfaded mount reads
-  // as the screen "popping" out of black (user report: chakra page).
-  const enter = (media: ReactNode) => (
-    <div className="dbg-enter" style={{ position: 'absolute', inset: 0 }}>
-      {media}
-    </div>
-  )
+  // as the screen "popping" out of black (user report: chakra page). When the
+  // media is pre-warmed (fadeIn=false) we skip the fade so it paints instantly.
+  const enter = (media: ReactNode) =>
+    fadeIn ? (
+      <div className="dbg-enter" style={{ position: 'absolute', inset: 0 }}>
+        {media}
+      </div>
+    ) : (
+      <div style={{ position: 'absolute', inset: 0 }}>{media}</div>
+    )
 
   if (sources.video !== null) {
     return enter(

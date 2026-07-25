@@ -8,10 +8,13 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  /* Warm base under the (async) golden-sunset bg — the pre-decode frame
-     must not be pure black, or the screen reads as a black flash before
-     abruptly appearing (user report 2026-07-20). */
-  background: linear-gradient(180deg, #241205 0%, #1a0e04 55%, #120a03 100%);
+  /* Base under the (async) golden-sunset bg — SAMPLED from bg.png itself
+     (sky #bf8758 / mid #a16f41 / ground #7f502d) so a cold pre-decode frame
+     reads as the sunset already there, never a black void. The old near-black
+     base (#241205→#120a03) WAS the "black screen" on entry (user 2026-07-25:
+     "why that fucking black screen comes"). bg is object-fit:cover full-stage,
+     so this base only ever shows in the brief load gap. */
+  background: linear-gradient(180deg, #bf8758 0%, #a16f41 55%, #7f502d 100%);
 }
 
 /* The three.js wheel/flag mounts whenever its lazy chunk (and on tab
@@ -163,12 +166,13 @@
 }
 
 /* While the entrance runs, the sunset shows BARE (crisp, lifted a touch, no
-   scrim). The base stays the warm-brown gradient (.ck-screen) — NO black dip
-   (user 2026-07-25: the entrance must never flash black). The 3.5px blur and
-   the scrim only dress the frame for the chrome — they ease back in (750ms
+   scrim). The base is the sampled sunset gradient BRIGHTENED to match the
+   held bg's brightness(1.14) below — so a cold load gap reads as the (bright)
+   sunset already there, NOT a black flash (user 2026-07-25). The blur and the
+   scrim only dress the frame for the chrome — they ease back in (750ms
    transitions above) at reveal, together with the rising UI. */
 .ck-screen.ck-intro-hold {
-  background: linear-gradient(180deg, #241205 0%, #1a0e04 55%, #120a03 100%);
+  background: linear-gradient(180deg, #da9a64 0%, #b87f4a 55%, #915b33 100%);
 }
 
 .ck-screen.ck-intro-hold .ck-bg {

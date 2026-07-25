@@ -452,19 +452,22 @@ export function ChakraExplorerScreen() {
   // child <DynamicBackground> re-uses them, so this costs nothing extra.
   const reveal = () => setIntro((p) => (p === 'wait' || p === 'roll' ? 'reveal' : p))
 
-  // Background ready → one breath (its 600ms fade + a beat) → roll. If the
-  // folder is empty/broken, don't stall the visitor: force the roll at 4s.
+  // Background ready → a short beat (the bg keeps fading in UNDER the rolling
+  // wheel — 250ms feels immediate, not lazy — user 2026-07-25) → roll. If the
+  // folder is empty/broken, don't stall the visitor: force the roll at 2.2s.
   useEffect(() => {
     if (intro !== 'wait') return
     const advance = () => setIntro((p) => (p === 'wait' ? 'roll' : p))
-    const t = window.setTimeout(advance, bg.ready ? 700 : 4000)
+    const t = window.setTimeout(advance, bg.ready ? 250 : 2200)
     return () => window.clearTimeout(t)
   }, [intro, bg.ready])
   // The kiosk must never dead-end behind the intro: if the wheel chunk (or
   // WebGL) never delivers onRollDone, force the reveal on wall-clock time.
+  // Sized just past the roll (250ms beat + 1000ms ROLL_MS) so a stalled scene
+  // reveals the UI fast instead of holding a near-empty stage for seconds.
   useEffect(() => {
     if (intro !== 'roll') return
-    const t = window.setTimeout(reveal, 7000)
+    const t = window.setTimeout(reveal, 2600)
     return () => window.clearTimeout(t)
   }, [intro])
   useEffect(() => {
@@ -519,13 +522,16 @@ export function ChakraExplorerScreen() {
       }
     >
       <div className="ck-bg" style={{ overflow: 'hidden' }}>
-        <DynamicBackground base={BG_BASE} />
+        {/* fadeIn={false}: the sunset is pre-warmed (App.tsx WarmChakra), so it
+            paints on the first frame instead of fading up from the dark base —
+            that fade was the "black dip" on entry (user 2026-07-25). */}
+        <DynamicBackground base={BG_BASE} fadeIn={false} />
         {/* Progressive blur: a blurred copy masked to die out by the ground
             (see .ck-bg-blur). Probes are cached, so the second mount costs
             no extra requests. (A bg.mp4 drop-in would double video decode —
             the chakra folder convention is a bg.png still.) */}
         <div className="ck-bg-blur" aria-hidden="true">
-          <DynamicBackground base={BG_BASE} />
+          <DynamicBackground base={BG_BASE} fadeIn={false} />
         </div>
       </div>
       <div className="ck-scrim" />
