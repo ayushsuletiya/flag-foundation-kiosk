@@ -114,6 +114,10 @@ function YearCounter({ target }: { target: string }) {
   )
 }
 
+/** One era's background media, tagged with its year — the unit both the
+ * incoming (bgShown) and the held outgoing (bgHold) backdrop render from. */
+type BgFrame = { year: string; assets: HistoryYearAssets }
+
 export function YearMainScreen() {
   const navigate = useNavigate()
   const { year: yearParam } = useParams()
@@ -153,18 +157,24 @@ export function YearMainScreen() {
     if (bgUrl !== null) prevBgRef.current = bgUrl
   }, [bgUrl])
 
-  // Keep the LAST fully-ready background painted while the next year's media
-  // probes/loads — the backdrop must never blank to the dark base during a jump
-  // (hard "no black" rule) and the warp needs a real image underneath it. Only
-  // the backdrop holds; the hero (counter, title, flag) updates instantly, and
-  // the warp bridges old→new over the held bg, swapping under it once ready.
-  const [bgShown, setBgShown] = useState<{ year: string; assets: HistoryYearAssets } | null>(null)
+  // Cross-fade backgrounds through an era jump WITHOUT ever exposing the dark
+  // base — that black flash under the fading-in image is what read as a flicker
+  // "in" on touch (user 2026-07-25). bgShown is the INCOMING bg (fades up);
+  // bgHold is the OUTGOING bg, painted opaque UNDERNEATH it, so the incoming
+  // fades over the old image and never over black — and it holds through the
+  // next year's probe so the backdrop never blanks. The warp covers the swap;
+  // bgHold is dropped when the warp lands. The hero (counter/title) still
+  // updates instantly; only the backdrop is bridged.
+  const [bgShown, setBgShown] = useState<BgFrame | null>(null)
+  const [bgHold, setBgHold] = useState<BgFrame | null>(null)
+  const shownRef = useRef<BgFrame | null>(null)
   useEffect(() => {
-    if (row !== null && assets.ready) {
-      setBgShown((prev) =>
-        prev !== null && prev.year === row.year ? prev : { year: row.year, assets },
-      )
-    }
+    if (row === null || !assets.ready) return
+    const cur = shownRef.current
+    const next: BgFrame = { year: row.year, assets }
+    if (cur !== null && cur.year !== row.year) setBgHold(cur) // hold outgoing under the warp
+    shownRef.current = next
+    setBgShown(next)
   }, [assets, row])
 
   if (row === null) {
@@ -185,9 +195,24 @@ export function YearMainScreen() {
 
   return (
     <div className="hy-screen">
-      {/* Background: era video, photo(s), or honest fallback, under tint + scrim.
-          Sourced from bgShown (last-ready year) so it holds the outgoing image
-          through the next year's probe instead of blanking to the dark base. */}
+      {/* Outgoing background — held opaque UNDER the incoming one for the length
+          of the warp, so the incoming fades over a real image (never the dark
+          base) and the touch never flickers through black. Dropped on warp land. */}
+      {warp !== null && bgHold !== null && (
+        <div className="hy-bg-layer hy-bg-hold" key={`hold-${bgHold.year}`}>
+          {bgHold.assets.backgroundVideo !== null ? (
+            <VideoLoop src={bgHold.assets.backgroundVideo} poster={bgHold.assets.backgrounds[0]} />
+          ) : bgHold.assets.backgrounds.length > 0 ? (
+            <BackgroundLoop images={bgHold.assets.backgrounds} />
+          ) : (
+            <FallbackBackdrop />
+          )}
+        </div>
+      )}
+
+      {/* Incoming background (fades in over the held one, per above). Sourced from
+          bgShown so it also holds the outgoing image through the next year's probe
+          instead of blanking to the dark base. */}
       <div className="hy-bg-layer" key={bgShown?.year ?? 'pending'}>
         {bgShown === null ? null : bgShown.assets.backgroundVideo !== null ? (
           <VideoLoop src={bgShown.assets.backgroundVideo} poster={bgShown.assets.backgrounds[0]} />
@@ -205,7 +230,10 @@ export function YearMainScreen() {
           key={warp.id}
           fromUrl={warp.from}
           toUrl={warp.to}
-          onDone={() => setWarp(null)}
+          onDone={() => {
+            setWarp(null)
+            setBgHold(null)
+          }}
         />
       )}
 
@@ -232,9 +260,11 @@ export function YearMainScreen() {
       <div className="hy-hero">
         <div className="hy-year-row">
           <YearCounter target={row.year} />
-          {assets.yearFlag !== null ? (
-            <img className="hy-year-flag" key={row.year} src={assets.yearFlag} alt="" />
-          ) : assets.ready ? (
+          {/* Flag sourced from bgShown (like the backdrop) so it holds the
+              outgoing year's flag through the probe instead of blinking out. */}
+          {bgShown !== null && bgShown.assets.yearFlag !== null ? (
+            <img className="hy-year-flag" key={bgShown.year} src={bgShown.assets.yearFlag} alt="" />
+          ) : bgShown !== null ? (
             <span className="hy-year-flag hy-year-flag-ph">
               <ChakraMark size={64} color="#D8C287" style={{ opacity: 0.35 }} />
             </span>

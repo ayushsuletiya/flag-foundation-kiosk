@@ -19,6 +19,14 @@
   animation: hy-fade-in 350ms ease both;
 }
 
+/* The OUTGOING background, held opaque UNDER the incoming .hy-bg-layer during a
+   warp so the incoming fades over a real image, never the dark base (kills the
+   flicker-in on touch). No fade of its own — it's already fully painted. */
+.hy-bg-hold {
+  animation: none;
+  opacity: 1;
+}
+
 /* The one-shot WebGL fast-forward pass covers only the BACKGROUND: it's placed
    right after .hy-bg-layer in the DOM and carries NO z-index, so the tint,
    scrim and all chrome (which come later) paint over it — the year, title and
