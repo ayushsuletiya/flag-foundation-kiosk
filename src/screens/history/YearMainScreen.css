@@ -19,10 +19,11 @@
   animation: hy-fade-in 350ms ease both;
 }
 
-/* The OUTGOING background, held opaque UNDER the incoming .hy-bg-layer during a
-   warp so the incoming fades over a real image, never the dark base (kills the
-   flicker-in on touch). No fade of its own — it's already fully painted. */
-.hy-bg-hold {
+/* The new backdrop when it's swapped in MID-WARP (revealPending): it must appear
+   at full opacity instantly, UNDER the still-opaque warp, so the warp's tail
+   dissolve lands straight on the crisp photo — no fade-from-dark, and the photo
+   never appears before the effect (user 2026-07-25). */
+.hy-bg-instant {
   animation: none;
   opacity: 1;
 }

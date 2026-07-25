@@ -139,43 +139,54 @@ export function YearMainScreen() {
 
   const assets = useHistoryYearAssets(row?.year ?? null)
 
-  // WebGL "fast-forward through the timeline" warp: when the primary background
-  // resolves to a NEW era, play a one-shot directional time-stretch from the old
-  // bg to the new one (WarpTransition → warpGL). Triggered off the resolved bg
-  // url (not the year param) so both textures are known/cached before it runs;
-  // video-bg years give a null url and simply skip the warp.
-  const bgUrl = assets.ready ? (assets.backgrounds[0] ?? null) : null
+  // Background + WebGL "fast-forward through time" warp, coordinated so the EFFECT
+  // LEADS THE PHOTO. The DOM <img> decodes faster than the WebGL warp uploads its
+  // textures, so if we swapped the backdrop to the new era on `ready` the new
+  // photo would pop in BEFORE the warp — the exact bug the user hit. Instead the
+  // OLD backdrop stays on screen (bgShown) while the warp plays over it; the new
+  // photo is swapped in MID-WARP (onReveal), hidden under the opaque pass, so it
+  // is only ever uncovered by the warp's own tail dissolve — never before it.
+  const [bgShown, setBgShown] = useState<BgFrame | null>(null)
+  const [bgFade, setBgFade] = useState(true)
   const [warp, setWarp] = useState<{ from: string; to: string; id: number } | null>(null)
-  const prevBgRef = useRef<string | null>(null)
+  const displayedRef = useRef<BgFrame | null>(null) // the frame actually on screen
+  const pendingRef = useRef<BgFrame | null>(null) // the new era waiting for reveal
+  const targetYearRef = useRef<string | null>(null) // era we've already begun showing
   const warpIdRef = useRef(0)
   useEffect(() => {
-    const prev = prevBgRef.current
-    if (bgUrl !== null && prev !== null && prev !== bgUrl) {
-      warpIdRef.current += 1
-      setWarp({ from: prev, to: bgUrl, id: warpIdRef.current })
-    }
-    if (bgUrl !== null) prevBgRef.current = bgUrl
-  }, [bgUrl])
-
-  // Cross-fade backgrounds through an era jump WITHOUT ever exposing the dark
-  // base — that black flash under the fading-in image is what read as a flicker
-  // "in" on touch (user 2026-07-25). bgShown is the INCOMING bg (fades up);
-  // bgHold is the OUTGOING bg, painted opaque UNDERNEATH it, so the incoming
-  // fades over the old image and never over black — and it holds through the
-  // next year's probe so the backdrop never blanks. The warp covers the swap;
-  // bgHold is dropped when the warp lands. The hero (counter/title) still
-  // updates instantly; only the backdrop is bridged.
-  const [bgShown, setBgShown] = useState<BgFrame | null>(null)
-  const [bgHold, setBgHold] = useState<BgFrame | null>(null)
-  const shownRef = useRef<BgFrame | null>(null)
-  useEffect(() => {
     if (row === null || !assets.ready) return
-    const cur = shownRef.current
+    // Already began showing/warping to this era (repeat effect run, gallery
+    // second-pass, or a warp still in flight) — don't restart it.
+    if (targetYearRef.current === row.year) return
+    targetYearRef.current = row.year
     const next: BgFrame = { year: row.year, assets }
-    if (cur !== null && cur.year !== row.year) setBgHold(cur) // hold outgoing under the warp
-    shownRef.current = next
-    setBgShown(next)
+    const from = displayedRef.current?.assets.backgrounds[0] ?? null
+    const to = assets.backgrounds[0] ?? null
+    // Warp only when we can stretch one STILL into another. First paint, a video
+    // era, or a bg-less era just shows the new backdrop directly (fade in).
+    if (displayedRef.current === null || from === null || to === null) {
+      displayedRef.current = next
+      setBgFade(true)
+      setBgShown(next)
+      return
+    }
+    // Keep the OLD backdrop on screen; the warp will reveal the new one.
+    pendingRef.current = next
+    warpIdRef.current += 1
+    setWarp({ from, to, id: warpIdRef.current })
   }, [assets, row])
+
+  // Uncover the new backdrop mid-warp (called by WarpTransition just before its
+  // tail dissolve): swap it in at FULL opacity (no fade) while the opaque pass
+  // still covers it, so the dissolve lands straight onto the crisp new photo.
+  const revealPending = () => {
+    const p = pendingRef.current
+    if (p === null) return
+    pendingRef.current = null
+    displayedRef.current = p
+    setBgFade(false)
+    setBgShown(p)
+  }
 
   if (row === null) {
     // Content still loading (or empty workbook) — hold a dark frame.
@@ -195,25 +206,14 @@ export function YearMainScreen() {
 
   return (
     <div className="hy-screen">
-      {/* Outgoing background — held opaque UNDER the incoming one for the length
-          of the warp, so the incoming fades over a real image (never the dark
-          base) and the touch never flickers through black. Dropped on warp land. */}
-      {warp !== null && bgHold !== null && (
-        <div className="hy-bg-layer hy-bg-hold" key={`hold-${bgHold.year}`}>
-          {bgHold.assets.backgroundVideo !== null ? (
-            <VideoLoop src={bgHold.assets.backgroundVideo} poster={bgHold.assets.backgrounds[0]} />
-          ) : bgHold.assets.backgrounds.length > 0 ? (
-            <BackgroundLoop images={bgHold.assets.backgrounds} />
-          ) : (
-            <FallbackBackdrop />
-          )}
-        </div>
-      )}
-
-      {/* Incoming background (fades in over the held one, per above). Sourced from
-          bgShown so it also holds the outgoing image through the next year's probe
-          instead of blanking to the dark base. */}
-      <div className="hy-bg-layer" key={bgShown?.year ?? 'pending'}>
+      {/* Backdrop — era video, photo(s), or honest fallback, under tint + scrim.
+          Holds the OLD era through a jump; the warp swaps in the new one mid-pass
+          (revealPending) at full opacity, so the photo never precedes the effect.
+          `hy-bg-instant` = no fade for that under-the-warp swap; otherwise fades. */}
+      <div
+        className={bgFade ? 'hy-bg-layer' : 'hy-bg-layer hy-bg-instant'}
+        key={bgShown?.year ?? 'pending'}
+      >
         {bgShown === null ? null : bgShown.assets.backgroundVideo !== null ? (
           <VideoLoop src={bgShown.assets.backgroundVideo} poster={bgShown.assets.backgrounds[0]} />
         ) : bgShown.assets.backgrounds.length > 0 ? (
@@ -224,15 +224,17 @@ export function YearMainScreen() {
       </div>
 
       {/* Fast-forward warp — a WebGL directional time-stretch from the old era to
-          the new one, laid over the bg for one shot then dropped (user 2026-07-25). */}
+          the new one, laid over the bg for one shot then dropped (user 2026-07-25).
+          It reveals the new backdrop just before its tail dissolve (onReveal). */}
       {warp !== null && (
         <WarpTransition
           key={warp.id}
           fromUrl={warp.from}
           toUrl={warp.to}
+          onReveal={revealPending}
           onDone={() => {
+            revealPending() // safety: show the new bg even if the warp degraded to a cut
             setWarp(null)
-            setBgHold(null)
           }}
         />
       )}
