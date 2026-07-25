@@ -6,8 +6,15 @@
  * Electron build can navigate under file://. Routes render Phase 1 placeholder
  * screens that prove the Excel wiring; real screens replace them in Phases 2-6.
  */
-import { useEffect } from 'react'
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import {
+  HashRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  type Location,
+} from 'react-router-dom'
 import { Stage } from './app/Stage.tsx'
 import { recordNavigation } from './app/navTrace.ts'
 import { CHAKRA, HISTORY_BASE } from './assets/paths.ts'
@@ -67,49 +74,121 @@ function WarmChakra() {
   return null
 }
 
+/** The route table, rendered for an EXPLICIT location so the crossfade can keep
+ * the outgoing page rendering (at its own frozen location) while the incoming
+ * page enters at the new one. */
+function RouteTable({ location }: { location: Location }) {
+  return (
+    <Routes location={location}>
+      <Route path="/" element={<HomeScreen />} />
+      {/* Intro video removed (user decision) — Monumental Flags opens straight
+          on the map. This redirect covers every entry point to /monumental. */}
+      <Route path="/monumental" element={<Navigate to="/monumental/map" replace />} />
+      <Route path="/monumental/map" element={<MapExplorerScreen />} />
+      <Route path="/monumental/detail/:rowId" element={<InstallationDetailScreen />} />
+      <Route path="/history" element={<YearMainScreen />} />
+      <Route path="/history/:year" element={<YearMainScreen />} />
+      <Route path="/history/:year/more" element={<KnowMoreScreen />} />
+      <Route path="/chakra" element={<ChakraExplorerScreen />} />
+      <Route path="/symbols" element={<SymbolsCarouselScreen />} />
+      <Route path="/symbols/:slug" element={<SymbolDetailScreen />} />
+      <Route path="/dev/content" element={<DevContentScreen />} />
+      {/* Unknown routes fall back to home — kiosk must never dead-end. */}
+      <Route path="*" element={<HomeScreen />} />
+    </Routes>
+  )
+}
+
+/** Fade duration of the page cross-dissolve (matches `.page-enter` in index.css). */
+const PAGE_FADE_MS = 300
+
+interface PageEntry {
+  key: string
+  location: Location
+}
+
 /**
- * Page-level crossfade: the arriving screen fades/rises in over the dark
- * stage (320ms). Key rules:
- * - History year pills swap :year via replace-nav — the year stays INSIDE
- *   one page, so the key collapses the segment and the screen's own inner
- *   fades handle it (a full remount would restart the bg crossfade loop).
- * - /symbols (carousel) opens at rest behind its own 0.9s black fade
- *   (user decision — no home→symbols transition); the wrapper stays inert.
+ * Page-level CROSS-DISSOLVE: on navigation the arriving page fades in ON TOP of
+ * the outgoing one, which stays fully painted underneath until the fade
+ * finishes — so a completed page is ALWAYS on screen and the transition never
+ * dips through the (warm) stage, let alone black (the failure mode we chased
+ * all of 2026-07-25). Both trees are briefly alive during the ~300ms fade;
+ * deliberately short for the iGPU guard (a WebGL page unmounts right after).
+ *
+ * History year pills swap :year via replace-nav — the year stays INSIDE one
+ * page (same transitionKey), so no crossfade fires and the screen's own inner
+ * fades handle it (a full remount would restart the bg crossfade loop).
  */
 function AnimatedRoutes() {
   const location = useLocation()
   recordNavigation(location.pathname) // idempotent — safe under StrictMode
   const transitionKey = location.pathname.replace(/^\/history\/[^/]+/, '/history')
-  // /symbols opens at rest behind its own black fade; /chakra runs its own
-  // roll-in entrance (bare sunset → wheel rolls → chrome rises). Both own their
-  // reveal, so skip the page-level route-enter fade. For /chakra that fade was
-  // over the black Stage and read as a black flash on entry (user 2026-07-25).
-  const inert = location.pathname === '/symbols' || location.pathname === '/chakra'
+
+  // A stack of live pages: the LAST entry is current; any earlier entries are
+  // outgoing pages still fading out beneath it. React keeps each instance alive
+  // by its stable `key`, so an outgoing page is NOT remounted while it exits.
+  const [pages, setPages] = useState<PageEntry[]>([{ key: transitionKey, location }])
+
+  useEffect(() => {
+    let changed = false
+    setPages((prev) => {
+      const top = prev[prev.length - 1]
+      if (top.key === transitionKey) {
+        // Same page (e.g. a history year swap) — update its location in place.
+        if (top.location === location) return prev
+        const next = prev.slice()
+        next[next.length - 1] = { key: transitionKey, location }
+        return next
+      }
+      // New page — append; the previous one(s) stay to fade out beneath it.
+      changed = true
+      return [...prev.filter((p) => p.key !== transitionKey), { key: transitionKey, location }]
+    })
+    // Fallback cleanup in case the animationend below is ever missed.
+    if (changed) {
+      const t = window.setTimeout(
+        () => setPages((prev) => (prev.length > 1 ? [prev[prev.length - 1]] : prev)),
+        PAGE_FADE_MS + 250,
+      )
+      return () => window.clearTimeout(t)
+    }
+  }, [transitionKey, location])
+
+  // Drop every outgoing page once the arriving page has finished fading in.
+  const settle = () => setPages((prev) => (prev.length > 1 ? [prev[prev.length - 1]] : prev))
 
   return (
-    <div
-      key={transitionKey}
-      className={inert ? undefined : 'route-enter'}
-      style={{ position: 'absolute', inset: 0 }}
-    >
-      <Routes location={location}>
-        <Route path="/" element={<HomeScreen />} />
-        {/* Intro video removed (user decision) — Monumental Flags opens straight
-            on the map. This redirect covers every entry point to /monumental. */}
-        <Route path="/monumental" element={<Navigate to="/monumental/map" replace />} />
-        <Route path="/monumental/map" element={<MapExplorerScreen />} />
-        <Route path="/monumental/detail/:rowId" element={<InstallationDetailScreen />} />
-        <Route path="/history" element={<YearMainScreen />} />
-        <Route path="/history/:year" element={<YearMainScreen />} />
-        <Route path="/history/:year/more" element={<KnowMoreScreen />} />
-        <Route path="/chakra" element={<ChakraExplorerScreen />} />
-        <Route path="/symbols" element={<SymbolsCarouselScreen />} />
-        <Route path="/symbols/:slug" element={<SymbolDetailScreen />} />
-        <Route path="/dev/content" element={<DevContentScreen />} />
-        {/* Unknown routes fall back to home — kiosk must never dead-end. */}
-        <Route path="*" element={<HomeScreen />} />
-      </Routes>
-    </div>
+    <>
+      {pages.map((p, i) => {
+        const isTop = i === pages.length - 1
+        const entering = isTop && pages.length > 1
+        return (
+          <div
+            key={p.key}
+            className={entering ? 'page-enter' : undefined}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: i,
+              // Outgoing pages beneath must not swallow taps meant for the
+              // arriving page on top.
+              pointerEvents: isTop ? undefined : 'none',
+            }}
+            // Guard on currentTarget so bubbling child animations (a screen's
+            // own entrance) don't settle the stack early.
+            onAnimationEnd={
+              entering
+                ? (e) => {
+                    if (e.target === e.currentTarget) settle()
+                  }
+                : undefined
+            }
+          >
+            <RouteTable location={p.location} />
+          </div>
+        )
+      })}
+    </>
   )
 }
 

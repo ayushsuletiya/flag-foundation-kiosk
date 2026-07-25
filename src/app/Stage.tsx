@@ -46,7 +46,10 @@ export function Stage({ children }: { children: ReactNode }) {
     transform: fit.scale === 1 ? undefined : `scale(${fit.scale})`,
     transformOrigin: 'top left',
     overflow: 'hidden',
-    background: '#000000',
+    // Warm-dark, NOT #000 — this shows in any gap between a screen leaving and
+    // the next painting (e.g. the home tap hand-off). Pure black here read as a
+    // black flash on every navigation (user 2026-07-25).
+    background: '#2a1a0e',
   }
 
   return <div style={style}>{children}</div>

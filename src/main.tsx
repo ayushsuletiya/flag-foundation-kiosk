@@ -34,3 +34,21 @@ createRoot(document.getElementById('root')!).render(
     </ContentProvider>
   </StrictMode>,
 )
+
+// Hand off from the static boot splash (index.html) to the app once the first
+// frame has painted. The initial createRoot render is synchronous, so after two
+// animation frames the mounted tree (its warm screen base at minimum) is on
+// screen — fading the splash then reveals a warm screen, never the black body.
+// A hard cap guarantees the splash can never get stuck over the app.
+const splash = document.getElementById('boot-splash')
+if (splash !== null) {
+  const hide = (): void => {
+    if (splash.classList.contains('boot-hide')) return
+    splash.classList.add('boot-hide')
+    const done = (): void => splash.remove()
+    splash.addEventListener('transitionend', done, { once: true })
+    window.setTimeout(done, 700) // fallback if transitionend is missed
+  }
+  requestAnimationFrame(() => requestAnimationFrame(hide))
+  window.setTimeout(hide, 4000)
+}
