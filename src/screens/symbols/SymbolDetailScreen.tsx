@@ -20,7 +20,6 @@ import { BackButton } from '../../components/BackButton.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { PaginationDots } from '../../components/PaginationDots.tsx'
-import { UncroppedPhoto } from '../../components/UncroppedPhoto.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
 import { useGroundedTransform, useSymbolMedia } from './symbolsMedia.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
@@ -67,6 +66,32 @@ const STAT_SLOTS = [
   { left: 368, top: 587, width: 244, height: 112 },
   { left: 103, top: 723, width: 509, height: 112 },
 ] as const
+
+/**
+ * DYK photo — keeps a CONSISTENT rounded box for every fact card. HORIZONTAL
+ * photos FILL it (object-fit: cover); VERTICAL / square photos FIT (contain)
+ * with a blurred copy of themselves behind, because cover would crop a tall
+ * subject like the Pashupati seal (user 2026-07-25). Aspect is measured on load,
+ * so it adapts to whatever the client drops in.
+ */
+function DykPhoto({ src }: { src: string }) {
+  const [fit, setFit] = useState(false) // true = vertical/square → contain + blur
+  return (
+    <>
+      {fit && (
+        <img src={src} alt="" aria-hidden="true" draggable={false} className="syd-dyk-blur" />
+      )}
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        className="syd-dyk-sharp"
+        style={{ objectFit: fit ? 'contain' : 'cover' }}
+        onLoad={(e) => setFit(e.currentTarget.naturalHeight >= e.currentTarget.naturalWidth)}
+      />
+    </>
+  )
+}
 
 /** Gold circle chevron (audit: 45px visual, ≥80px hit area). */
 function ChevronButton({
@@ -275,7 +300,7 @@ export function SymbolDetailScreen() {
               <p className="syd-dyk-heading">Did You Know?</p>
               <div className="syd-dyk-photo">
                 {cardImage !== null ? (
-                  <UncroppedPhoto src={cardImage} />
+                  <DykPhoto src={cardImage} />
                 ) : (
                   <SymbolVisual
                     slug={activeSlug}

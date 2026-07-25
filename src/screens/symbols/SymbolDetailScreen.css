@@ -242,18 +242,38 @@
   top: 99px;
   width: 454px;
   height: 285px;
+  /* Consistent rounded box: it carries the radius and clips the blurred fill
+     (and rounds whatever photo rests on it), so an odd-shaped photo like the
+     Pashupati seal keeps the same frame as the rest (user 2026-07-25). */
+  border-radius: 32px;
+  overflow: hidden;
 }
 
-/* Frame on the image so it hugs the photo's shape (UncroppedPhoto sizes
-   and centres it). The SymbolVisual fallback keeps the old plate. */
-.syd-dyk-photo .ucp-img {
-  border-radius: 32px;
+/* Sharp photo fills the box; object-fit is set inline (cover for horizontal,
+   contain for vertical/square — DykPhoto). The box carries the radius. */
+.syd-dyk-sharp {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+/* Blurred backing — only rendered for vertical/square photos (fit mode), so the
+   box still fills instead of showing the card plate around a contained photo. */
+.syd-dyk-blur {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(16px) saturate(1.1) brightness(0.85);
+  transform: scale(1.25);
 }
 
 .syd-dyk-photo > svg,
 .syd-dyk-photo > canvas,
 .syd-dyk-photo > div {
-  border-radius: 32px;
   background: rgba(0, 0, 0, 0.25);
 }
 
