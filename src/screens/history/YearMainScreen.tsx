@@ -21,7 +21,6 @@ import { previousPathname } from '../../app/navTrace.ts'
 import { useHistoryYearAssets, type HistoryYearAssets } from './historyAssets.ts'
 import { ChakraMark, FallbackBackdrop } from './HistoryFallback.tsx'
 import { RewindIntro } from './RewindIntro.tsx'
-import { WarpTransition } from './WarpTransition.tsx'
 import { VideoLoop } from '../../components/VideoLoop.tsx'
 import './YearMainScreen.css'
 
@@ -139,54 +138,23 @@ export function YearMainScreen() {
 
   const assets = useHistoryYearAssets(row?.year ?? null)
 
-  // Background + WebGL "fast-forward through time" warp, coordinated so the EFFECT
-  // LEADS THE PHOTO. The DOM <img> decodes faster than the WebGL warp uploads its
-  // textures, so if we swapped the backdrop to the new era on `ready` the new
-  // photo would pop in BEFORE the warp — the exact bug the user hit. Instead the
-  // OLD backdrop stays on screen (bgShown) while the warp plays over it; the new
-  // photo is swapped in MID-WARP (onReveal), hidden under the opaque pass, so it
-  // is only ever uncovered by the warp's own tail dissolve — never before it.
+  // Backdrop swap on year change — a plain crossfade, no transition effect (user
+  // 2026-07-25: dropped the warp/slide entirely). The new era's backdrop fades in
+  // over the previous one, which is held opaque underneath until the fade lands,
+  // so the swap never dips through the dark base. The hero (counter, title, flag)
+  // updates with the year.
   const [bgShown, setBgShown] = useState<BgFrame | null>(null)
-  const [bgFade, setBgFade] = useState(true)
-  const [warp, setWarp] = useState<{ from: string; to: string; id: number } | null>(null)
-  const displayedRef = useRef<BgFrame | null>(null) // the frame actually on screen
-  const pendingRef = useRef<BgFrame | null>(null) // the new era waiting for reveal
-  const targetYearRef = useRef<string | null>(null) // era we've already begun showing
-  const warpIdRef = useRef(0)
+  const [bgPrev, setBgPrev] = useState<BgFrame | null>(null)
+  const shownRef = useRef<BgFrame | null>(null)
   useEffect(() => {
     if (row === null || !assets.ready) return
-    // Already began showing/warping to this era (repeat effect run, gallery
-    // second-pass, or a warp still in flight) — don't restart it.
-    if (targetYearRef.current === row.year) return
-    targetYearRef.current = row.year
+    const cur = shownRef.current
+    if (cur !== null && cur.year === row.year) return
+    if (cur !== null) setBgPrev(cur) // hold the old backdrop under the fading-in new one
     const next: BgFrame = { year: row.year, assets }
-    const from = displayedRef.current?.assets.backgrounds[0] ?? null
-    const to = assets.backgrounds[0] ?? null
-    // Warp only when we can stretch one STILL into another. First paint, a video
-    // era, or a bg-less era just shows the new backdrop directly (fade in).
-    if (displayedRef.current === null || from === null || to === null) {
-      displayedRef.current = next
-      setBgFade(true)
-      setBgShown(next)
-      return
-    }
-    // Keep the OLD backdrop on screen; the warp will reveal the new one.
-    pendingRef.current = next
-    warpIdRef.current += 1
-    setWarp({ from, to, id: warpIdRef.current })
+    shownRef.current = next
+    setBgShown(next)
   }, [assets, row])
-
-  // Uncover the new backdrop mid-warp (called by WarpTransition just before its
-  // tail dissolve): swap it in at FULL opacity (no fade) while the opaque pass
-  // still covers it, so the dissolve lands straight onto the crisp new photo.
-  const revealPending = () => {
-    const p = pendingRef.current
-    if (p === null) return
-    pendingRef.current = null
-    displayedRef.current = p
-    setBgFade(false)
-    setBgShown(p)
-  }
 
   if (row === null) {
     // Content still loading (or empty workbook) — hold a dark frame.
@@ -206,13 +174,30 @@ export function YearMainScreen() {
 
   return (
     <div className="hy-screen">
+      {/* Previous backdrop — held opaque UNDER the new one while it fades in, so
+          the crossfade never dips through the dark base. Dropped once the fade
+          lands (onAnimationEnd on the new layer below). */}
+      {bgPrev !== null && bgPrev.year !== bgShown?.year && (
+        <div className="hy-bg-layer hy-bg-instant" key={`prev-${bgPrev.year}`}>
+          {bgPrev.assets.backgroundVideo !== null ? (
+            <VideoLoop src={bgPrev.assets.backgroundVideo} poster={bgPrev.assets.backgrounds[0]} />
+          ) : bgPrev.assets.backgrounds.length > 0 ? (
+            <BackgroundLoop images={bgPrev.assets.backgrounds} />
+          ) : (
+            <FallbackBackdrop />
+          )}
+        </div>
+      )}
+
       {/* Backdrop — era video, photo(s), or honest fallback, under tint + scrim.
-          Holds the OLD era through a jump; the warp swaps in the new one mid-pass
-          (revealPending) at full opacity, so the photo never precedes the effect.
-          `hy-bg-instant` = no fade for that under-the-warp swap; otherwise fades. */}
+          Plain crossfade on year change (no transition effect). */}
       <div
-        className={bgFade ? 'hy-bg-layer' : 'hy-bg-layer hy-bg-instant'}
+        className="hy-bg-layer"
         key={bgShown?.year ?? 'pending'}
+        onAnimationEnd={(e) => {
+          // Only OUR fade (not a bubbled child animation) drops the held layer.
+          if (e.target === e.currentTarget) setBgPrev(null)
+        }}
       >
         {bgShown === null ? null : bgShown.assets.backgroundVideo !== null ? (
           <VideoLoop src={bgShown.assets.backgroundVideo} poster={bgShown.assets.backgrounds[0]} />
@@ -222,22 +207,6 @@ export function YearMainScreen() {
           <FallbackBackdrop />
         )}
       </div>
-
-      {/* Fast-forward warp — a WebGL directional time-stretch from the old era to
-          the new one, laid over the bg for one shot then dropped (user 2026-07-25).
-          It reveals the new backdrop just before its tail dissolve (onReveal). */}
-      {warp !== null && (
-        <WarpTransition
-          key={warp.id}
-          fromUrl={warp.from}
-          toUrl={warp.to}
-          onReveal={revealPending}
-          onDone={() => {
-            revealPending() // safety: show the new bg even if the warp degraded to a cut
-            setWarp(null)
-          }}
-        />
-      )}
 
       <div className="hy-tint" />
       <div className="hy-left-scrim" />

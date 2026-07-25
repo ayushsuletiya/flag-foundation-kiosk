@@ -14,32 +14,19 @@
 .hy-bg-layer {
   position: absolute;
   inset: 0;
-  /* Quiet fade — the WebGL warp (WarpTransition) owns the era-jump motion; this
-     just settles the new bg underneath it. */
+  /* Plain crossfade on year change — the new backdrop fades in over the held
+     previous one (.hy-bg-instant). No transition effect (user 2026-07-25). */
   animation: hy-fade-in 350ms ease both;
 }
 
-/* The new backdrop when it's swapped in MID-WARP (revealPending): it must appear
-   at full opacity instantly, UNDER the still-opaque warp, so the warp's tail
-   dissolve lands straight on the crisp photo — no fade-from-dark, and the photo
-   never appears before the effect (user 2026-07-25). */
+/* The PREVIOUS backdrop, held opaque UNDER the new one while it crossfades in,
+   so the year-to-year swap never dips through the dark base. No fade of its own
+   — it's already fully painted. */
 .hy-bg-instant {
   animation: none;
   opacity: 1;
 }
 
-/* The one-shot WebGL fast-forward pass covers only the BACKGROUND: it's placed
-   right after .hy-bg-layer in the DOM and carries NO z-index, so the tint,
-   scrim and all chrome (which come later) paint over it — the year, title and
-   timeline stay crisp while only the backdrop warps (user 2026-07-25). */
-.hy-warp-canvas {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1920px;
-  height: 1080px;
-  pointer-events: none;
-}
 
 /* Year counter spin — the digits blur/stretch a touch while rolling, snapping
    crisp when they land on the target era. */
