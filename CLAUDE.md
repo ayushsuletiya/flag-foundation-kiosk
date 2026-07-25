@@ -54,8 +54,12 @@ screens never hardcode them.
 
 ## Key user decisions (do not regress)
 - Select State overlay: selection highlights only; **Continue** applies.
-- Map: **only the selected state renders** (outline, lift, markers); other states = bare render,
-  invisible tap targets only. One marker per district (dedupe in render).
+- Map: **only the selected state renders** (outline, lift, markers); other states = bare render.
+  Only states WITH installations are tap targets — states with zero Excel data are UNTOUCHABLE
+  (pointer-events:none) and omitted from the Select State grid (user 2026-07-25: tapping a no-data
+  state used to bounce the map to the first Excel state, Andaman & Nicobar). Long state names use
+  `stateShortLabel()` (schema.ts) in the pills/chips — e.g. "Andaman & Nicobar" (fits the pill).
+  One marker per district (dedupe in render).
 - Symbols detail: "Did You Know?" heading is a FIXED label; chevrons page FACTS, not symbols.
 - Symbols carousel: 3D ring; press-hold lifts ALL cards into a floating orbit — **finger drag is the
   only thing that spins it** (no auto-spin); release = drop-to-select (nearest-front card wins).
@@ -70,20 +74,41 @@ screens never hardcode them.
   scene per tab. Pill switches re-pose the scene live: camera TWEENS values↔design, dims
   callouts FADE (the build-from-nothing assembly no longer plays on tab switches), and the
   flag dock plays forward into the flag and in REVERSE back out of it.
-- Chakra section ENTRANCE (user 2026-07-20): arriving from outside /chakra → background alone
-  (~750ms) → the finished wheel ROLLS in from stage left (Chakra3D entrance="roll": the scene
-  drives the .ck-wheel box translateX AND the axle spin from one remaining-travel number, so it
-  never slips), settles with a small rock-back → chrome rises in staggered. Any touch skips;
-  in-section tab hops never replay it (gated on navTrace previousPathname, like History).
-  Entrance dressing: the screen dips through BLACK (not the warm-brown base), the sunset shows
-  BARE while the wheel travels (no blur, no scrim, brightness 1.14), and the blur + scrim ease
-  back in at reveal; the roll waits for the background to be ready (useDynamicBackground).
+- Chakra section ENTRANCE (user 2026-07-20; TIGHTENED for snappiness 2026-07-25): arriving from
+  outside /chakra → a short background beat (250ms — the sunset keeps fading in UNDER the roll) →
+  the finished wheel ROLLS in from stage left (Chakra3D entrance="roll": the scene drives the
+  .ck-wheel box translateX AND the axle spin from one remaining-travel number, so it never slips),
+  settles with a small rock-back → chrome rises in staggered. Total hold ≈ 1.25s, NOT the old ~2.5s
+  (beat was 700ms, `ROLL_MS` was 1800ms — user 2026-07-25: "too lazy, black screen for ~2s"). The
+  reveal is gated on the roll's onRollDone with a 2600ms wall-clock fallback (was 7000) so a slow
+  GPU can't hold a near-empty stage. Keep it snappy — do not restore the long timings. Any touch
+  skips; in-section tab hops never replay it (gated on navTrace previousPathname, like History).
+  NO BLACK DIP (user 2026-07-25: "why that fucking black screen comes"). Two causes were killed:
+  (1) the .ck-screen / .ck-intro-hold base is the sunset gradient SAMPLED from bg.png (warm amber,
+  not the old near-black #241205), so any cold-load gap reads as the sunset already there;
+  (2) the chakra <DynamicBackground fadeIn={false}> paints the (pre-warmed) sunset at opacity 1 on
+  the first frame instead of the 600ms `.dbg-enter` fade-up-from-black. Entrance dressing: the
+  sunset shows BARE while the wheel travels (no scrim, brightness 1.14), scrim eases back at reveal;
+  the roll waits for the background to be ready (useDynamicBackground).
   Background blur is PROGRESSIVE (user 2026-07-20): sharp plate + a blur(7px) copy in
   .ck-bg-blur gradient-masked to die out by the ground — sky soft, sea/shore crisp.
-- Home → Symbols: **NO transition animation** (user decision 2026-07-19, after two iterations —
-  a full home-exit + arrive cinematic was built and then removed entirely; do not reintroduce).
-  All 4 home tiles navigate instantly. The symbols screen has no intro either (trail sweep also
-  removed): it opens AT REST on the tiger behind a brief 0.9s black fade.
+- Page transitions: a **CROSS-DISSOLVE** handled centrally in `AnimatedRoutes` (App.tsx). The
+  arriving page fades in (`.page-enter`, 300ms opacity) ON TOP of the outgoing page, which is kept
+  fully painted underneath (a stack of live pages keyed by transitionKey) until the fade finishes —
+  so a completed page is ALWAYS on screen and the transition never dips through the stage/black
+  (user 2026-07-25, hard req). Both trees are briefly alive (~300ms) — keep the fade short (iGPU).
+  Do NOT go back to a one-sided fade over the stage, and do NOT re-add a home-leave opacity fade:
+  the tile onClick calls navigate() immediately (only feedback is the tile :active press,
+  `.home-tile:active` scale 0.96) — the cross-dissolve does the visual hand-off. (Superseded the
+  2026-07-19 "instant, no animation" decision once every layer was made warm — a dissolve over a
+  warm-but-painted page can't flash black.) The symbols screen still opens AT REST on the tiger.
+- NO BLACK anywhere on entry (user 2026-07-25, hard requirement). The stack was full of pure-#000
+  fills that flashed black in every load/transition gap; all are now WARM: (a) a static boot splash
+  in index.html (warm radial + wordmark + pulse) paints BEFORE React so a cold load / kiosk boot is
+  never the black <body> — main.tsx fades+removes #boot-splash after first paint; (b) html/body/#root
+  and <Stage> are #2a1a0e (warm-dark), not #000; (c) every screen base is a warm sunset tone, never
+  near-black (home #a86a34, chakra sampled gradient). Keep it this way — never reintroduce a #000 fill
+  or an opacity-fade that exposes an empty stage.
 - History: entering the section from OUTSIDE plays the WebGL "rewind to the past" intro
   (RewindIntro.tsx + rewindGL.ts — lazy chunk, any touch skips) and the section now
   DEFAULTS TO 1857 (user decision 2026-07-20 — story reads oldest-first; was 1947).
