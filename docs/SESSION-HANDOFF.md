@@ -3,7 +3,76 @@
 Written for a fresh session with zero context. The 2026-07-18/19 handoff
 (chakra assembly, Windows crash triage) is preserved below this section.
 
-## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
+## 0. THIS SESSION — what shipped (branch `feat/chakra-assembly`; latest 11 commits NOT yet pushed)
+
+### 2026-07-25 (cont. 2) — history transition REMOVED · scenic bg motion · FULL AUDIO system
+
+**COMMITTED, NOT PUSHED** — 11 commits ahead of `origin/feat/chakra-assembly`
+(tip `20caf58`, range `e09f81e`…`20caf58`). Run `git push` to publish.
+⚠️ **The user's Magnific API key was exposed in a screenshot — they MUST ROTATE it**
+(Settings → API Keys). My scratchpad copy is deleted.
+
+**History year transition — TRIED, then REMOVED (user rejected the effect).** Iterated
+a WebGL "fast-forward" warp (warpGL.ts / WarpTransition.tsx) → de-janked (imperative
+odometer, GL pre-warm, 720p) → then a DOM slide + chromatic aberration (TimeSlide
+Transition.tsx). User: "u r doing wrong thing" → "just remove the effect". Now
+`YearMainScreen` does a **plain crossfade** (bgShown + bgPrev held under the fade,
+`onAnimationEnd` drops prev). **warpGL.ts, WarpTransition.tsx, TimeSlideTransition.tsx
+are DELETED.** Do NOT re-add an era-jump effect. (Commit 526ceaf.)
+
+**Symbols carousel — prev/next NAV BUTTONS** (‹ ••••• ›) flanking the pagination dots
+on the podium (glass chevrons, gold), wired to `rotate(±1)`; one flex row hugs the
+dots at any count. (ccef0c9.) NOTE: carousel still **auto-advances every 3.5s**
+(AUTO_ADVANCE_MS) — contradicts CLAUDE.md "no auto-spin"; user told, hasn't decided.
+
+**Dev port** — `vite.config.ts` `server.port = Number(process.env.PORT)||5173` +
+`autoPort:true` in the ROOT `../.claude/launch.json` (outside the repo). (db96434.)
+
+**Scenic BACKGROUND MOTION (Magnific Kling 2.5 image→video).** static bg.png →
+locked-camera loop → ffmpeg seamless loop → drop-in `bg.mp4`:
+`3-ashok-chakra/background/bg.mp4` (sunset/water; **bg.png KEPT for three.js**),
+`4-national-symbols/carousel-background/bg.mp4` (2:1 — padded→gen→cropped back),
+`4-national-symbols/detail-background/bg.mp4`. **Map bg SKIPPED** (user "ignore map
+for now"; unresolved: animate select-state vs replace client main-map loop).
+**History/installation PEOPLE PHOTOS intentionally NOT animated** (user was angry
+when I animated the 1947 Nehru photo — reverted; never animate the archival
+people/place photos). Model note: Seedance moderation false-positived a sunset —
+**use Kling 2.5** (cheap, locked camera via prompt) for these. (f116811.)
+
+**FULL AUDIO SYSTEM (864ab22 + 20caf58 + `_shared/audio/*` + `symbols/*/sound.mp3`).**
+Browsers gate audio until a gesture → everything **arms on the first touch**.
+- `src/audio/sectionAudio.ts` — per-zone looping SCORE crossfaded by route
+  (home=ambience · monumental · history · chakra · symbols); `playCue()` one-shot
+  (History rewind = own cinematic intro, ducks the bed); `setLayer()` secondary
+  layer for per-symbol beds. `<SectionAudio>` (App, inside router) maps
+  pathname→bed via useLocation, arms on first pointerdown.
+- `src/audio/sfx.ts` — synthesized Web-Audio UI SFX (no files): tap/select/home/
+  back/open + **wave** (carousel slider whoosh) + **place** (map state).
+- `src/components/UiSounds.tsx` — ONE global capture-phase pointerdown listener →
+  playSfx by `data-sfx` → aria-label (Home/Back/Quick Access) → text (Know More/
+  Read More/Continue) → else 'tap'. `data-sfx="wave"` on carousel nav+cards,
+  `"place"` on map state `<g>`, `"open"` on Select-State pill.
+- `src/audio/useSymbolSound.ts` + `probeAudioCached` (probe.ts) — per-symbol
+  ambience: probes `symbols/<slug>/sound.mp3`, plays it low under the Symbols
+  score, crossfades on symbol change, silent if absent. Wired in SymbolsCarousel
+  (activeSlug, ABOVE the early return) + SymbolDetail (slug).
+- ASSETS: `_shared/audio/{ambience,monumental,history,history-intro,chakra,symbols}.mp3`
+  (Magnific music gen, ElevenLabs, ~45s instrumental). 14× `symbols/<slug>/sound.mp3`.
+
+**MAGNIFIC SOUND EFFECTS API (key finding).** The Magnific **MCP has NO SFX tool**
+(only `audio_music_generate`=music, `audio_tts`=voice). The **REST API does**:
+`POST https://api.magnific.com/v1/ai/sound-effects`, header `x-magnific-api-key`,
+body `{text, duration_seconds, loop, prompt_influence}` → async task; poll
+`GET /v1/ai/sound-effects/{task-id}` (CREATED→IN_PROGRESS→COMPLETED, mp3 in
+`data.generated[0]`). `loop:true` = seamless bed. 14 symbol sounds: tiger/elephant/
+peacock/ganga/river-dolphin/banyan/lotus/mango/flag = real foley; rupee=coins,
+lion-capital=reverent hall, saka-calendar=temple bell; **jana-gana-mana (anthem) +
+vande-mataram (song) = NON-MUSICAL ambience only — NEVER the melody (hard rule).**
+
+**OPEN / verify on real Arc kiosk:** audio VOLUME BALANCE + Electron autoplay (bg.mp4
+autoplays muted; the audio layer needs the first touch); map bg animation deferred.
+Stale HMR console ghosts (deleted Warp/TimeSlide/AmbientBed modules) are cosmetic —
+clear on a dev-server restart. `docs/AUDIO-MOTION-PLAN.md` = full per-section sound map.
 
 ### 2026-07-25 (cont.) — UI polish pass: no-black, transitions, map, symbols, CINEMATIC history warp
 
