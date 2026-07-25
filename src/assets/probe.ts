@@ -47,3 +47,23 @@ export function probeVideoCached(url: string): Promise<boolean> {
   }
   return hit
 }
+
+function probeAudio(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const audio = new Audio()
+    audio.preload = 'metadata'
+    audio.onloadedmetadata = () => resolve(true)
+    audio.onerror = () => resolve(false)
+    audio.src = url
+  })
+}
+
+export function probeAudioCached(url: string): Promise<boolean> {
+  const key = `audio:${url}`
+  let hit = cache.get(key)
+  if (hit === undefined) {
+    hit = probeAudio(url)
+    cache.set(key, hit)
+  }
+  return hit
+}

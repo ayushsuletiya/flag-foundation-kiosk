@@ -293,6 +293,7 @@ function IndiaMapImpl({ selectedState, onSelectState, statesWithInstallations }:
           <g
             key={`${shape.state}-${i}`}
             className="mon-state-hit"
+            data-sfx={hasData ? 'place' : undefined}
             transform={`translate(${shape.x * MAP_BOX.width}, ${shape.y * MAP_BOX.height}) scale(${
               (shape.w * MAP_BOX.width) / shape.vbW
             }, ${(shape.h * MAP_BOX.height) / shape.vbH})`}

@@ -15,8 +15,9 @@
  * kiosk must never dead-end behind an intro.
  */
 import { useEffect, useRef, useState } from 'react'
-import { HISTORY_BASE } from '../../assets/paths.ts'
+import { HISTORY_BASE, SHARED } from '../../assets/paths.ts'
 import { probeImageCached } from '../../assets/probe.ts'
+import { playCue } from '../../audio/sectionAudio.ts'
 import type { RewindGL } from './rewindGL.ts'
 import './RewindIntro.css'
 
@@ -71,6 +72,12 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
   const [landed, setLanded] = useState(false)
   const [fading, setFading] = useState(false)
   const skipRef = useRef<() => void>(() => {})
+
+  // The cinematic "rewind through time" cue plays over the intro, ducking the
+  // History section bed until it ends (user 2026-07-25: history intro = its own music).
+  useEffect(() => {
+    playCue(SHARED.scoreHistoryIntro)
+  }, [])
 
   useEffect(() => {
     let alive = true

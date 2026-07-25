@@ -21,6 +21,8 @@ import { CHAKRA, HISTORY_BASE } from './assets/paths.ts'
 import { probeImageCached, probeVideoCached } from './assets/probe.ts'
 import { useContent } from './data/ContentContext.tsx'
 import { useIdleReset } from './app/useIdleReset.ts'
+import { SectionAudio } from './components/SectionAudio.tsx'
+import { UiSounds } from './components/UiSounds.tsx'
 import { DevContentScreen } from './app/DevContentScreen.tsx'
 import { QuickAccessProvider } from './components/QuickAccessOverlay.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
@@ -198,6 +200,8 @@ function App() {
       <HashRouter>
         <IdleReset />
         <WarmChakra />
+        <SectionAudio />
+        <UiSounds />
         <QuickAccessProvider>
           <ErrorBoundary>
             <AnimatedRoutes />

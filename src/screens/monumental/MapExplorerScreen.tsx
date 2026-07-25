@@ -412,6 +412,7 @@ export function MapExplorerScreen() {
       <button
         type="button"
         className="mon-pressable"
+        data-sfx="open"
         onClick={() => setOverlayOpen(true)}
         style={{
           position: 'absolute',

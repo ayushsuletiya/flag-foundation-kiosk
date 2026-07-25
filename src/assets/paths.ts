@@ -55,6 +55,14 @@ export const SYMBOLS = {
 
 export const SHARED = {
   icons: 'assets/_shared/icons',
+  /** Per-zone background scores + one-shot cues (see audio/sectionAudio.ts).
+   *  ambience = home/attract bed; the rest crossfade in by section. */
+  ambience: 'assets/_shared/audio/ambience.mp3',
+  scoreMonumental: 'assets/_shared/audio/monumental.mp3',
+  scoreHistory: 'assets/_shared/audio/history.mp3',
+  scoreHistoryIntro: 'assets/_shared/audio/history-intro.mp3',
+  scoreChakra: 'assets/_shared/audio/chakra.mp3',
+  scoreSymbols: 'assets/_shared/audio/symbols.mp3',
 } as const
 
 /** Installation photos live one folder per site: installations/<id>/1.jpg,

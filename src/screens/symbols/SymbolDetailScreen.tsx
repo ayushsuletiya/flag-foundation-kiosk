@@ -23,6 +23,7 @@ import { PaginationDots } from '../../components/PaginationDots.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
 import { useGroundedTransform, useSymbolMedia } from './symbolsMedia.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { useSymbolSound } from '../../audio/useSymbolSound.ts'
 import { SYMBOLS, SHARED } from '../../assets/paths.ts'
 import {
   fitFontSize,
@@ -140,6 +141,9 @@ export function SymbolDetailScreen() {
   const foundIndex = identities.findIndex((s) => symbolSlug(s.symbol) === slug)
   const index = foundIndex >= 0 ? foundIndex : 0
   const identity = count > 0 ? identities[index]! : null
+
+  // Per-symbol ambience under the score (same bed as the carousel).
+  useSymbolSound(slug ?? null)
 
   const cards = useMemo(() => {
     if (content === null || identity === null) return []

@@ -19,6 +19,7 @@ import { PaginationDots } from '../../components/PaginationDots.tsx'
 import { SymbolVisual } from './SymbolVisual.tsx'
 import { fitFontSize, symbolShortName, symbolSlug, symbolSubtitle } from './symbolsData.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
+import { useSymbolSound } from '../../audio/useSymbolSound.ts'
 import { SYMBOLS } from '../../assets/paths.ts'
 import './SymbolsCarouselScreen.css'
 
@@ -112,6 +113,10 @@ export function SymbolsCarouselScreen() {
     return t >= 0 ? t : 0
   }, [identities])
   const activeIndex = count > 0 ? (selected ?? defaultIndex) % count : 0
+
+  // Per-symbol ambience crossfades under the score as the active symbol changes;
+  // silent for symbols without a sound file (drop <slug>/sound.mp3 to add one).
+  useSymbolSound(count > 0 ? symbolSlug(identities[activeIndex]!.symbol) : null)
 
   const swipeStartX = useRef<number | null>(null)
 
@@ -377,6 +382,7 @@ export function SymbolsCarouselScreen() {
               className={glowSlug === slug ? 'sy-card3d sy-card-glow' : 'sy-card3d'}
               data-slot={Math.abs(off) > 2 ? (off < 0 ? -2 : 2) : off}
               data-slug={slug}
+              data-sfx={isCenter ? undefined : 'wave'}
               aria-label={isCenter ? shortName : `Show ${symbolShortName(s)}`}
               tabIndex={isCenter ? -1 : 0}
               style={style}
@@ -417,6 +423,7 @@ export function SymbolsCarouselScreen() {
           <button
             type="button"
             className="sy-nav-btn"
+            data-sfx="wave"
             aria-label="Previous symbol"
             onClick={() => rotate(-1)}
           >
@@ -428,6 +435,7 @@ export function SymbolsCarouselScreen() {
           <button
             type="button"
             className="sy-nav-btn"
+            data-sfx="wave"
             aria-label="Next symbol"
             onClick={() => rotate(1)}
           >
