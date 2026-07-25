@@ -14,7 +14,6 @@
  * order 1-4 map to routes in TILES order); Figma strings are the fallback
  * so the screen never renders empty while content loads.
  */
-import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
@@ -22,50 +21,39 @@ import { HOME, SHARED } from '../../assets/paths.ts'
 import { HOME_TILES, designedLabel } from './homeTiles.ts'
 import './HomeScreen.css'
 
-/** The home eases out over this long before the route actually changes. */
-const HOME_LEAVE_MS = 240
-
 // Runtime asset URLs come from src/assets/paths.ts (relative so they resolve
 // served from the project root) and under file:// in the packaged build
 // (assets/ copied next to dist/index.html by the vite build config).
 const WAVE_SVG = `${SHARED.icons}/wave.svg`
-const SWASH_SVG = `${SHARED.icons}/title-swash.svg`
+const TITLE_LOCKUP_SVG = HOME.titleLockup
 const LOGO_PNG = HOME.logo
 
 export function HomeScreen() {
   const navigate = useNavigate()
   const { content } = useContent()
   const homeTiles = content?.homeTiles ?? []
-  const [leaving, setLeaving] = useState(false)
-  const leaveTimer = useRef<number | undefined>(undefined)
 
-  // Smooth the hand-off: the home fades out before the route changes, so the
-  // arriving screen's own entrance doesn't begin from a hard cut. The tile's
-  // :active press feedback fires instantly, so the tap still feels immediate
-  // through the short delay. (Only the home tree is alive during the fade — it
-  // unmounts before the destination mounts — so the kiosk iGPU guard holds.)
-  const goToSection = (route: string) => {
-    if (leaving) return
-    setLeaving(true)
-    leaveTimer.current = window.setTimeout(() => navigate(route), HOME_LEAVE_MS)
-  }
-  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+  // Navigate INSTANTLY on tap — snappy, and no fade-to-nothing that would flash
+  // the stage behind the home (user 2026-07-25). The tile's :active press gives
+  // tactile feedback during the touch-hold; the destination owns its own
+  // entrance and paints its warm base on the same commit (no black cut).
+  const goToSection = (route: string) => navigate(route)
 
   return (
-    <div className={leaving ? 'home-screen home-leaving' : 'home-screen'}>
+    <div className="home-screen">
       {/* Full-bleed background video (poster until the mp4 is delivered) */}
       <div className="home-bg">
         <DynamicBackground base={HOME.background} />
       </div>
       <div className="home-scrim" />
 
-      {/* Title lockup */}
-      <h1 className="home-title">
-        <span className="home-title-script">The </span>
-        Flag Foundation
-      </h1>
-      <img className="home-swash" src={SWASH_SVG} alt="" draggable={false} />
-      <div className="home-of-india">of india</div>
+      {/* Title lockup — single client-supplied SVG (headline + script + swash) */}
+      <img
+        className="home-title-lockup"
+        src={TITLE_LOCKUP_SVG}
+        alt="The Spirit of India"
+        draggable={false}
+      />
 
       {/* Category tiles */}
       {HOME_TILES.map((tile, i) => (

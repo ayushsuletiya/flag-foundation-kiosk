@@ -7,20 +7,13 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #1e1405; /* under-video fill; never visible once poster paints */
+  /* Warm under-video fill (sampled sunset tone), NOT near-black — shows only in
+     the brief gap before the bg paints, so it must never read as black. */
+  background: #a86a34;
   /* Match Figma's (thinner) text rasterization — without this, macOS
      subpixel smoothing renders every glyph visibly bolder than the design. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: opacity 240ms ease, transform 240ms ease;
-}
-
-/* Tapping a tile eases the whole home out (fade + a slight push-in) before the
-   route changes, so the section's own entrance no longer starts from a snap. */
-.home-leaving {
-  opacity: 0;
-  transform: scale(1.02);
-  pointer-events: none;
 }
 
 /* ---- Background video / poster + scrim ---------------------- */
@@ -70,52 +63,16 @@
 }
 
 /* ---- Title lockup -------------------------------------------- */
-.home-title {
+/* Single client-supplied SVG (headline + script accent + swash, with its own
+   drop-shadow glow baked in). Placed at native scale in the top-left, above
+   the category tiles (which start at y553). Replaced the text-built title
+   (Gilroy headline + Parisienne "The"/"of india" + swash SVG) — user 2026-07-25. */
+.home-title-lockup {
   position: absolute;
-  left: 72px;
-  /* Figma box top is 237, but Figma centers Gilroy with different vertical
-     metrics than the browser: measured against the Figma render, the shared
-     baseline must sit at 338.4, which the browser reaches with top 233.4
-     (verified by glyph-ink comparison, 2026-07). */
-  top: 233.4px;
-  font-family: var(--font-headline);
-  font-weight: 400;
-  font-size: 130.319px;
-  line-height: 1.066;
-  color: var(--white);
-  white-space: nowrap;
-}
-
-.home-title-script {
-  font-family: var(--font-script);
-  font-weight: 400;
-  /* Parisienne's tall ascent would inflate the line box and push the Gilroy
-     baseline ~4-5px below Figma's; a zero line-height keeps the h1 strut
-     (Gilroy, 1.066) in charge without affecting glyph rendering. */
-  line-height: 0;
-}
-
-.home-of-india {
-  position: absolute;
-  left: 989.5px;
-  top: 342px;
-  font-family: var(--font-script);
-  font-weight: 400;
-  font-size: 128.645px;
-  line-height: 1.066;
-  color: var(--white);
-  white-space: nowrap;
-}
-
-.home-swash {
-  /* Figma layout box: 891.893x90.389 at (105.5, 368.61). The SVG export is
-     898x98 — expanded by the 6.91px stroke overdraw — so it is placed at
-     natural size, offset up-left by half a stroke width. */
-  position: absolute;
-  left: 102.4px;
-  top: 364.8px;
-  width: 898px;
-  height: 98px;
+  left: 34px;
+  top: 256px;
+  width: 1090px;
+  height: auto;
   pointer-events: none;
 }
 
@@ -129,7 +86,8 @@
   overflow: hidden;
   padding: 0;
   cursor: pointer;
-  transition: transform 120ms ease;
+  /* Fast ease-out so the press-in reads the instant the finger lands. */
+  transition: transform 90ms ease-out;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -147,9 +105,11 @@
   pointer-events: none;
 }
 
-/* Touch feedback (not designed — spec'd in the frame audit) */
+/* Touch feedback (not designed — spec'd in the frame audit).
+   A slightly deeper press than the visual default so the big tiles give a
+   satisfying, snappy "give" under the finger. */
 .home-tile:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .home-tile:active::after {

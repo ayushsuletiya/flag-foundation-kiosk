@@ -17,6 +17,8 @@ export const HOME = {
   background: 'assets/0-home/background',
   cards: 'assets/0-home/cards',
   logo: 'assets/0-home/logo/logo-nju.png',
+  /** Full title lockup (headline + script + swash) as one client-supplied SVG. */
+  titleLockup: 'assets/0-home/title-lockup.svg',
 } as const
 
 export const MONUMENTAL = {
