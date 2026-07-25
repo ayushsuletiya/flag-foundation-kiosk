@@ -71,12 +71,17 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
     if (candidates === null) return
     let alive = true
     void (async () => {
-      const [hasVideo, hasSingle, backgrounds, flags, gallery] = await Promise.all([
+      // Critical path for the MAIN screen (background + flag): the era-jump warp
+      // and the backdrop CANNOT wait on the 24 gallery probes — each one fully
+      // LOADS an image (probe.ts), so gating `ready` on them held the warp back
+      // by up to seconds (user 2026-07-25: "delay to start the animation").
+      // The gallery is only needed on Know More, so it resolves OFF this path
+      // and is merged in a second publish.
+      const [hasVideo, hasSingle, backgrounds, flags] = await Promise.all([
         probeVideoCached(candidates.backgroundVideo),
         probeImageCached(candidates.backgroundSingle),
         probeAll(candidates.backgrounds),
         probeAll(candidates.flags),
-        probeAll(candidates.gallery),
       ])
       if (!alive) return
       if (backgrounds.length === 0 && hasSingle) backgrounds.push(candidates.backgroundSingle)
@@ -85,16 +90,19 @@ export function useHistoryYearAssets(year: string | null): HistoryYearAssets {
       const officialFirst = [...flags].sort(
         (a, b) => Number(a.endsWith('/year-flag.png')) - Number(b.endsWith('/year-flag.png')),
       )
-      setState({
-        key,
-        assets: {
-          ready: true,
-          backgroundVideo: hasVideo ? candidates.backgroundVideo : null,
-          backgrounds,
-          yearFlag: flags[0] ?? null,
-          gallery: [...officialFirst.slice(0, 1), ...gallery],
-        },
-      })
+      const officialGallery = officialFirst.slice(0, 1)
+      const base: HistoryYearAssets = {
+        ready: true,
+        backgroundVideo: hasVideo ? candidates.backgroundVideo : null,
+        backgrounds,
+        yearFlag: flags[0] ?? null,
+        gallery: officialGallery,
+      }
+      setState({ key, assets: base })
+      // Second pass — the Know More gallery, merged in once its probes settle.
+      const gallery = await probeAll(candidates.gallery)
+      if (!alive) return
+      setState({ key, assets: { ...base, gallery: [...officialGallery, ...gallery] } })
     })()
     return () => {
       alive = false

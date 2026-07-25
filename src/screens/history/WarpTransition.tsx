@@ -59,6 +59,13 @@ export function WarpTransition({
           // Crossfade the two eras through the fast middle of the pass.
           const progress = p < 0.22 ? 0 : p > 0.78 ? 1 : (p - 0.22) / 0.56
           gl!.render(progress, speed, flash, elapsed / 1000)
+          // Dissolve the canvas into the crisp DOM background over the tail so
+          // the soft (720p) / vignetted / grainy final frame doesn't SNAP off
+          // when we unmount (user 2026-07-25: flicker at the end). The new bg is
+          // already painted underneath — by now the crossfade has fully landed
+          // on it — so fading down to it is seamless.
+          const c = canvasRef.current
+          if (c !== null) c.style.opacity = p < 0.82 ? '1' : String(Math.max(0, (1 - p) / 0.18))
           if (p < 1 && alive) raf = requestAnimationFrame(loop)
           else finish()
         }

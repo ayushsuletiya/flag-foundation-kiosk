@@ -18,7 +18,7 @@ import { BlurTypeText } from '../../components/BlurTypeText.tsx'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { previousPathname } from '../../app/navTrace.ts'
-import { useHistoryYearAssets } from './historyAssets.ts'
+import { useHistoryYearAssets, type HistoryYearAssets } from './historyAssets.ts'
 import { ChakraMark, FallbackBackdrop } from './HistoryFallback.tsx'
 import { RewindIntro } from './RewindIntro.tsx'
 import { WarpTransition } from './WarpTransition.tsx'
@@ -153,6 +153,20 @@ export function YearMainScreen() {
     if (bgUrl !== null) prevBgRef.current = bgUrl
   }, [bgUrl])
 
+  // Keep the LAST fully-ready background painted while the next year's media
+  // probes/loads — the backdrop must never blank to the dark base during a jump
+  // (hard "no black" rule) and the warp needs a real image underneath it. Only
+  // the backdrop holds; the hero (counter, title, flag) updates instantly, and
+  // the warp bridges old→new over the held bg, swapping under it once ready.
+  const [bgShown, setBgShown] = useState<{ year: string; assets: HistoryYearAssets } | null>(null)
+  useEffect(() => {
+    if (row !== null && assets.ready) {
+      setBgShown((prev) =>
+        prev !== null && prev.year === row.year ? prev : { year: row.year, assets },
+      )
+    }
+  }, [assets, row])
+
   if (row === null) {
     // Content still loading (or empty workbook) — hold a dark frame.
     return <div className="hy-screen" />
@@ -171,12 +185,14 @@ export function YearMainScreen() {
 
   return (
     <div className="hy-screen">
-      {/* Background: era video, photo(s), or honest fallback, under tint + scrim. */}
-      <div className="hy-bg-layer" key={row.year}>
-        {!assets.ready ? null : assets.backgroundVideo !== null ? (
-          <VideoLoop src={assets.backgroundVideo} poster={assets.backgrounds[0]} />
-        ) : assets.backgrounds.length > 0 ? (
-          <BackgroundLoop images={assets.backgrounds} />
+      {/* Background: era video, photo(s), or honest fallback, under tint + scrim.
+          Sourced from bgShown (last-ready year) so it holds the outgoing image
+          through the next year's probe instead of blanking to the dark base. */}
+      <div className="hy-bg-layer" key={bgShown?.year ?? 'pending'}>
+        {bgShown === null ? null : bgShown.assets.backgroundVideo !== null ? (
+          <VideoLoop src={bgShown.assets.backgroundVideo} poster={bgShown.assets.backgrounds[0]} />
+        ) : bgShown.assets.backgrounds.length > 0 ? (
+          <BackgroundLoop images={bgShown.assets.backgrounds} />
         ) : (
           <FallbackBackdrop />
         )}
