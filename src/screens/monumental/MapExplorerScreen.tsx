@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
-import type { Installation } from '../../data/schema.ts'
+import { stateShortLabel, type Installation } from '../../data/schema.ts'
 import { HomeButton } from '../../components/HomeButton.tsx'
 import { QuickAccessPill } from '../../components/QuickAccessPill.tsx'
 import { ScrollList } from '../../components/ScrollList.tsx'
@@ -466,7 +466,7 @@ export function MapExplorerScreen() {
           whiteSpace: 'nowrap',
         }}
       >
-        {selectedState}
+        {stateShortLabel(selectedState)}
       </div>
 
       {/* Installations list — gold scroll rail on the LEFT (audit x51/x63).

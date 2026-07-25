@@ -252,3 +252,17 @@ export const CANONICAL_STATES: readonly string[] = [
   'Uttarakhand',
   'West Bengal',
 ] as const
+
+/**
+ * Display labels for state/UT names that overflow the compact map pills/chips.
+ * The CANONICAL name stays the data key everywhere — this is presentation only.
+ */
+const STATE_SHORT_LABELS: Readonly<Record<string, string>> = {
+  'Andaman & Nicobar Islands': 'Andaman & Nicobar',
+  'Dadra & Nagar Haveli and Daman & Diu': 'Dadra & Nagar Haveli',
+}
+
+/** Short display label for a state/UT (falls back to the canonical name). */
+export function stateShortLabel(state: string): string {
+  return STATE_SHORT_LABELS[state] ?? state
+}

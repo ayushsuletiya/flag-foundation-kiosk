@@ -23,6 +23,7 @@
  */
 import { memo, useEffect, useMemo, useState } from 'react'
 import { PngSequencePlayer } from '../../components/PngSequencePlayer.tsx'
+import { stateShortLabel } from '../../data/schema.ts'
 import { MONUMENTAL } from '../../assets/paths.ts'
 import {
   ACTIVE_SCALE_X,
@@ -282,14 +283,21 @@ function IndiaMapImpl({ selectedState, onSelectState, statesWithInstallations }:
         viewBox={`0 0 ${MAP_BOX.width} ${MAP_BOX.height}`}
         style={{ position: 'absolute', left: MAP_BOX.left, top: MAP_BOX.top, overflow: 'visible' }}
       >
-        {STATE_SHAPES.map((shape, i) => (
+        {STATE_SHAPES.map((shape, i) => {
+          // States with no installations are UNTOUCHABLE — tapping one used to
+          // call onSelectState, which the screen then bounced to the first
+          // Excel state (Andaman & Nicobar), so a no-data tap "jumped" the map
+          // to Andaman (user 2026-07-25). pointer-events:none makes them inert.
+          const hasData = statesWithInstallations.has(shape.state)
+          return (
           <g
             key={`${shape.state}-${i}`}
             className="mon-state-hit"
             transform={`translate(${shape.x * MAP_BOX.width}, ${shape.y * MAP_BOX.height}) scale(${
               (shape.w * MAP_BOX.width) / shape.vbW
             }, ${(shape.h * MAP_BOX.height) / shape.vbH})`}
-            onClick={() => onSelectState(shape.state)}
+            onClick={hasData ? () => onSelectState(shape.state) : undefined}
+            style={{ pointerEvents: hasData ? undefined : 'none', cursor: hasData ? 'pointer' : 'default' }}
           >
             {shape.paths.map((d, j) => (
               <path
@@ -314,7 +322,8 @@ function IndiaMapImpl({ selectedState, onSelectState, statesWithInstallations }:
               />
             ))}
           </g>
-        ))}
+          )
+        })}
       </svg>
 
       {/* 2 · selected state's extruded glow PNG(s) */}
@@ -371,7 +380,7 @@ function IndiaMapImpl({ selectedState, onSelectState, statesWithInstallations }:
             pointerEvents: 'none',
           }}
         >
-          {selectedState}
+          {stateShortLabel(selectedState)}
         </div>
       )}
     </div>

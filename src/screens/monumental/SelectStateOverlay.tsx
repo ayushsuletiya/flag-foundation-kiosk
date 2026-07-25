@@ -9,14 +9,15 @@
  * #FFF8DB shadow 0 18px 48px rgba(0,0,0,0.5). Title (186,132) Poppins Bold
  * 44 gradient text; subtitle (186,196) Poppins 20 white55 — both counts
  * computed live from the Excel. Close 64px circle at (1650,128). Divider
- * (186,248) 1548×1 white12. Grid: 6 cols × 6 rows of 239×88 chips, origin
- * (186,300), pitch 261/106. Selected chip = gold gradient + glow + #211405
- * text. States with zero installations render disabled.
+ * (186,248) 1548×1 white12. Grid: 6 cols of 239×88 chips, origin (186,300),
+ * pitch 261/106, rows reflow to the count. Selected chip = gold gradient +
+ * glow + #211405 text. Only states WITH installations are listed — states
+ * with zero data are omitted entirely (user 2026-07-25).
  *
  * Scrim tap / ✕ dismiss WITHOUT applying; CONTINUE applies + closes.
  */
-import { useState } from 'react'
-import { CANONICAL_STATES } from '../../data/schema.ts'
+import { useMemo, useState } from 'react'
+import { CANONICAL_STATES, stateShortLabel } from '../../data/schema.ts'
 import { DynamicBackground } from '../../components/DynamicBackground.tsx'
 import { MONUMENTAL } from '../../assets/paths.ts'
 import './monumental.css'
@@ -37,6 +38,15 @@ export function SelectStateOverlay({
   onClose,
 }: SelectStateOverlayProps) {
   const [picked, setPicked] = useState(currentState)
+
+  // Only states that actually have installations in the Excel are offered —
+  // states with zero data are removed entirely (they used to render disabled,
+  // but the client wants them gone; user 2026-07-25). Keeps canonical
+  // (alphabetical) order, reflowing into the 6-column grid.
+  const states = useMemo(
+    () => CANONICAL_STATES.filter((s) => (countByState.get(s) ?? 0) > 0),
+    [countByState],
+  )
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 60 }}>
@@ -133,18 +143,17 @@ export function SelectStateOverlay({
           }}
         />
 
-        {/* 6×6 chip grid — origin (56,220) panel-local = (186,300) stage */}
-        {CANONICAL_STATES.map((state, i) => {
+        {/* 6-column chip grid (states with data only), origin (56,220)
+            panel-local = (186,300) stage. Rows reflow to fit the count. */}
+        {states.map((state, i) => {
           const col = i % 6
           const row = Math.floor(i / 6)
           const selected = state === picked
-          const disabled = (countByState.get(state) ?? 0) === 0
           return (
             <button
               key={state}
               type="button"
-              disabled={disabled}
-              className={disabled ? undefined : 'mon-pressable'}
+              className="mon-pressable"
               onClick={() => setPicked(state)}
               style={{
                 position: 'absolute',
@@ -165,12 +174,11 @@ export function SelectStateOverlay({
                 fontSize: 17,
                 lineHeight: 1.25,
                 color: selected ? '#211405' : '#FFFFFF',
-                opacity: disabled ? 0.35 : 1,
-                cursor: disabled ? 'default' : 'pointer',
+                cursor: 'pointer',
                 transition: 'background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
               }}
             >
-              <span style={{ maxWidth: 203 }}>{state}</span>
+              <span style={{ maxWidth: 203 }}>{stateShortLabel(state)}</span>
             </button>
           )
         })}
