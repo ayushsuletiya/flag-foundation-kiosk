@@ -5,6 +5,74 @@ Written for a fresh session with zero context. The 2026-07-18/19 handoff
 
 ## 0. THIS SESSION — what shipped (all pushed to `feat/chakra-assembly`)
 
+### 2026-07-25 (cont.) — UI polish pass: no-black, transitions, map, symbols, CINEMATIC history warp
+
+**All COMMITTED + PUSHED** to `origin/feat/chakra-assembly`, commits `6906cfd`
+… `879243e` (8 themed + 2 follow-ups). Tree clean apart from untracked `.claude/`.
+Repo: github.com/ayushsuletiya/flag-foundation-kiosk.
+
+**Kill the black screen + smooth transitions (app-wide).** Branded **boot splash**
+in `index.html` (warm gradient + wordmark, painted before React) faded out by
+`main.tsx` on first paint; `html/body/#root` + `Stage.tsx` backgrounds warmed
+from `#000` → `#2a1a0e` — a cold load or transition gap never flashes pure black
+again. `App.tsx AnimatedRoutes` now **cross-dissolves**: the arriving page fades
+in over the outgoing one (both kept alive ~300ms), so no dip through the stage.
+
+**Chakra entrance** — `ROLL_MS` 1800→1000, pre-roll beat 700→250ms, reveal
+fallback 7000→2600ms (was "lazy ~2s"); the black dip is gone — chakra bg uses
+`<DynamicBackground fadeIn={false}>` + the `.ck-screen` base is now the SAMPLED
+sunset (warm), not near-black. `DynamicBackground` gained a `fadeIn` opt-out.
+
+**Home** — tiles navigate **INSTANTLY** (removed the leave-fade that flashed the
+stage). Title is now the delivered **script lockup SVG** (`assets/0-home/
+title-lockup.svg`, from "Group 100.svg"), at left 34 / top 256.
+
+**Monumental map** — no-data states are `pointer-events:none` (UNTOUCHABLE — a
+tap no longer bounces the map to Andaman) and omitted from the Select State grid;
+long state names shortened via `stateShortLabel()` (schema.ts) in pills/chips.
+
+**Symbols** — stat cards: equal symmetric small cards, uniform heights, one shared
+content baseline (fixed value box); comparator counts (`< 5,000`) now gold
+(`isNumericMilestone`). Carousel title renders **"India" in the script face**.
+DYK photo box is now consistent: landscape covers it, portrait/square sit
+contained over a **blurred fill** copy (the Pashupati seal no longer looks ragged).
+
+**History Know More gallery** — thumbnail strip runs **edge-to-edge**; selected
+thumb gets an **inset** gold ring + gentle pop (no clipping, either edge);
+staggered entrance + smoother main-image swap.
+
+**★ History YEAR transition (`879243e`) — CINEMATIC WebGL "fast-forward".** New
+`warpGL.ts` (three.js, like `rewindGL`): a fullscreen shader that crossfades the
+outgoing→incoming era textures under a **directional HORIZONTAL motion blur**
+(11-tap trailing smear = true velocity blur, reads left→right) + chromatic split
++ film grain + warm flash + vignette. `WarpTransition.tsx` plays a one-shot
+eased ~1050ms pass (accelerate→crossfade→brake), **background-ONLY** (canvas has
+no z-index → sits behind the tint + all chrome; year/title/timeline stay crisp),
+lazy chunk, GL context released each jump. The big year now **COUNTS (odometer)**
+to the new era (`YearCounter`) instead of a blur reveal. A CSS/SVG `scaleX`+SVG-
+filter stopgap was tried first and REMOVED (couldn't do directional velocity blur;
+felt like it grew from the middle). Tuning knobs: smear `0.12` (warpGL), `WARP_MS`
+1050, the `speed`/`flash` bell curves (WarpTransition).
+
+**Content — pruned stray/watermarked National Symbols DYK photos.** A 14-agent
+audit workflow flagged 5; I verified each and removed 4 strays (ganga selfie,
+dolphin foreign survey-boat, banyan no-tree field, lion-capital generic pot) +
+cropped a watermark off a lotus; the mango **paisley shawl was KEPT** (it
+correctly illustrates the "paisley began as a mango" fact — a false positive).
+Removed files are in the scratchpad; galleries renumbered contiguous.
+
+**⚠ OPEN / NEXT SESSION:**
+- **Motion is NOT judgeable in this preview** (software WebGL — janky). The
+  chakra entrance, instant home nav, and especially the **history warp
+  smoothness/intensity** need verifying on the REAL Arc iGPU; tune the knobs above.
+- **tab 10 · Image Credits is now STALE** for the removed/renumbered ganga,
+  dolphin, banyan, lion-capital DYK images — reconcile provenance rows.
+- **Copy typography flagged, NOT applied** (client verbatim — awaiting user OK),
+  tab 03: `2 : 3`→`2:3`, `3,331 Entries`→`entries`, `Nearly Blind`→`nearly blind`,
+  mango `yrs`/lotus `years` inconsistency.
+- Still open from before: **cut v0.3.2 build** (release/ predates ALL of this),
+  2 DYK text/logo cards (Satyameva carving, AIR masthead).
+
 ### 2026-07-25 — audit fixes, home transition, client content, Did You Know photos
 
 **Everything below is COMMITTED + PUSHED** to `origin/feat/chakra-assembly`
