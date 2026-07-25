@@ -71,6 +71,16 @@
   color: transparent;
 }
 
+/* "India" script accent — Parisienne runs small, so bump the size to match the
+   Poppins cap height (same 87.89px the Chakra title uses for "Chakra"). The
+   gold gradient carries through via the inherited .btt-char rule above. */
+.sy-header-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 87.89px;
+  margin-left: 0.18em;
+}
+
 /* ---- Carousel -------------------------------------------------- */
 /* Swipe surface spans the podium area. */
 .sy-carousel {

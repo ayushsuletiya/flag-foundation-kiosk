@@ -148,8 +148,8 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  padding: 0 20px; /* Figma ~18-20px — 28px made "Estimated Wild Tigers" wrap */
+  gap: 6px;
+  padding: 0 22px; /* Figma ~18-20px — 28px made "Estimated Wild Tigers" wrap */
 }
 
 .syd-stat-label {
@@ -160,11 +160,19 @@
   white-space: nowrap;
 }
 
+/* Fixed value BOX height (text top-aligned in it) so every card — whatever its
+   value's font size — has the SAME total content height. Centred in the card,
+   that makes the labels line up and the value tops sit on one line across ALL
+   cards, including the side-by-side pair whose gold number + text value used to
+   drift apart (user 2026-07-25). */
 .syd-stat-value {
   font-family: var(--font-ui);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   white-space: nowrap;
+  height: 58px;
+  display: flex;
+  align-items: flex-start;
 }
 
 .syd-stat-gold {

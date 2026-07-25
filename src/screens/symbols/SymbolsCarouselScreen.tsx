@@ -274,7 +274,12 @@ export function SymbolsCarouselScreen() {
       {plainVeil && <div className="sy-veil" />}
 
       <h1 className="sy-header">
-        <BlurTypeText text="National Symbols of India" delay={400} stagger={34} budget={900} />
+        <BlurTypeText text="National Symbols of" delay={400} stagger={34} budget={680} />
+        {/* "India" in the script face — matches the script accent every other
+            category title carries (Monumental "Flags", Ashok "Chakra"). */}
+        <span className="sy-header-script">
+          <BlurTypeText text="India" delay={1050} stagger={34} budget={220} />
+        </span>
       </h1>
 
       <HomeButton

@@ -81,9 +81,12 @@ export function parseMilestone(raw: string): Milestone {
   return { label: raw.slice(0, i).trim(), value: raw.slice(i + 1).trim() }
 }
 
-/** Values that lead with a digit (or ~/₹ + digit) get the big gold treatment. */
+/** Values that lead with a digit — optionally behind an approximation/currency/
+ * comparator mark (~ ₹ < > ≈) — get the big gold treatment. Without the
+ * comparators, the dolphin's "< 5,000" rendered plain cream while every other
+ * count was gold (user 2026-07-25). */
 export function isNumericMilestone(value: string): boolean {
-  return /^[~₹]?\d/.test(value)
+  return /^[~₹<>≈]?\s*\d/.test(value)
 }
 
 /**

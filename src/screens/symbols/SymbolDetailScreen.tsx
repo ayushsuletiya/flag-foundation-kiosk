@@ -56,12 +56,16 @@ function podiumTargetHeight(slug: string): number {
   return slug === 'flag' ? FLAG_VISIBLE_H : PODIUM_SUBJECT_VISIBLE_H
 }
 
-/** The 4 milestone slots at audited Figma geometry (wide/small/small/wide). */
+/** The 4 milestone slots (wide / small / small / wide). Tuned off the Figma
+ * geometry for consistent alignment ACROSS all symbols (user 2026-07-25): the
+ * two small cards are now EQUAL width and symmetric (outer edges flush with the
+ * wide cards at x103 / x612, matched 21px inner gap), all four share one height,
+ * and the vertical gaps are a uniform 24px. */
 const STAT_SLOTS = [
-  { left: 103, top: 451, width: 509, height: 102 },
-  { left: 103, top: 578, width: 232, height: 122 },
-  { left: 356, top: 578, width: 256, height: 122 },
-  { left: 103, top: 725, width: 509, height: 100 },
+  { left: 103, top: 451, width: 509, height: 112 },
+  { left: 103, top: 587, width: 244, height: 112 },
+  { left: 368, top: 587, width: 244, height: 112 },
+  { left: 103, top: 723, width: 509, height: 112 },
 ] as const
 
 /** Gold circle chevron (audit: 45px visual, ≥80px hit area). */
