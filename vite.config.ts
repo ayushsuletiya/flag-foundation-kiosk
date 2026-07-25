@@ -100,7 +100,10 @@ export default defineConfig({
   // Relative base so the Electron production build can load dist/ via file://
   base: './',
   server: {
-    port: 5173,
+    // Honor a harness-assigned PORT (preview autoPort) so a busy 5173 or a
+    // squatted proxy port can't wedge the dev server; falls back to 5173 for a
+    // plain `npm run dev` / Electron dev.
+    port: Number(process.env.PORT) || 5173,
     strictPort: true,
     // Dev serves assets/ with no cache headers, so Chrome heuristically
     // caches media and a swapped-in file (bg-1.png etc.) keeps showing its
