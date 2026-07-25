@@ -129,7 +129,14 @@ export async function createWarpGL(
     antialias: false,
     powerPreference: 'high-performance',
   })
-  renderer.setSize(1920, 1080, false)
+  // Render the warp at 2/3 resolution: it's a ~1s motion-blurred whoosh (66
+  // texture taps/pixel) on a bandwidth-bound Arc iGPU, and the directional
+  // smear + chroma + grain fully hide the softness — plus the pass is dropped
+  // on landing to reveal the crisp DOM background, so the final frame is sharp
+  // anyway. Backing store 1280x720, CSS still stretches it to 1920x1080. This
+  // roughly halves the fragment work and keeps the frame budget under 16ms
+  // (user 2026-07-25: warp was jerky). updateStyle=false → leave the CSS size.
+  renderer.setSize(1280, 720, false)
   renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
@@ -151,6 +158,14 @@ export async function createWarpGL(
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material)
   quad.frustumCulled = false
   scene.add(quad)
+
+  // Pre-warm: compile the shader program AND draw one static frame (uSpeed 0)
+  // so the GLSL compile + both texture uploads happen NOW, before the timed
+  // rAF loop — otherwise the very first animated frame stalls a few hundred ms
+  // (compile + upload) and the timeline visibly jumps past it (user 2026-07-25:
+  // warp jerk). This lone frame is the "from" era at rest, matching the start.
+  renderer.compile(scene, camera)
+  renderer.render(scene, camera)
 
   return {
     render(progress: number, speed: number, flash: number, time: number) {

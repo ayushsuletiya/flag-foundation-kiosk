@@ -11,7 +11,7 @@
  * photos). Per current Figma: year + flag + title + Read More only — the
  * Main Slide Copy from Excel renders on the Know More screen instead.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
@@ -66,34 +66,52 @@ function BackgroundLoop({ images }: { images: string[] }) {
  */
 function YearCounter({ target }: { target: string }) {
   const targetNum = Number.parseInt(target, 10)
-  const [display, setDisplay] = useState(targetNum)
-  const [spinning, setSpinning] = useState(false)
+  const spanRef = useRef<HTMLSpanElement | null>(null)
   const fromRef = useRef(targetNum)
 
-  useEffect(() => {
+  // Drive the odometer by writing textContent DIRECTLY on the node each frame —
+  // NOT setState. During an era jump the WebGL warp runs its own rAF; a
+  // per-frame React re-render of the whole screen would fight it on the main
+  // thread and make both stutter. A layout effect keeps the first frame in sync
+  // (no flash of the final year before the spin) (user 2026-07-25: warp jerk).
+  useLayoutEffect(() => {
+    const el = spanRef.current
     const from = fromRef.current
     fromRef.current = targetNum
-    if (from === targetNum || Number.isNaN(targetNum)) return
-    setSpinning(true)
+    if (el === null) return
+    if (from === targetNum || Number.isNaN(targetNum)) {
+      el.textContent = String(targetNum)
+      return
+    }
+    el.classList.add('hy-year-spin')
+    el.textContent = String(from)
     const dur = Math.min(1200, Math.max(500, Math.abs(targetNum - from) * 16))
-    const t0 = performance.now()
+    let t0 = 0
     let raf = 0
     const tick = (now: number) => {
+      if (t0 === 0) t0 = now // start the clock on the first PAINTED frame
       const p = Math.min(1, (now - t0) / dur)
       const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic — fast, then settles
-      setDisplay(Math.round(from + (targetNum - from) * eased))
+      el.textContent = String(Math.round(from + (targetNum - from) * eased))
       if (p < 1) {
         raf = requestAnimationFrame(tick)
       } else {
-        setDisplay(targetNum)
-        setSpinning(false)
+        el.textContent = String(targetNum)
+        el.classList.remove('hy-year-spin')
       }
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(raf)
+      el.classList.remove('hy-year-spin')
+    }
   }, [targetNum])
 
-  return <span className={spinning ? 'hy-year hy-year-spin' : 'hy-year'}>{display}</span>
+  return (
+    <span ref={spanRef} className="hy-year">
+      {targetNum}
+    </span>
+  )
 }
 
 export function YearMainScreen() {

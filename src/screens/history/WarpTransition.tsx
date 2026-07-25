@@ -47,8 +47,9 @@ export function WarpTransition({
           return
         }
         gl = made
-        const t0 = performance.now()
+        let t0 = 0
         const loop = (now: number) => {
+          if (t0 === 0) t0 = now // clock starts on the first PAINTED frame
           const elapsed = now - t0
           const p = Math.min(1, elapsed / WARP_MS)
           // Accelerate in, brake out — a smooth cinematic bell (0→peak→0).
