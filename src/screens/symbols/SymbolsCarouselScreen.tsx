@@ -408,15 +408,34 @@ export function SymbolsCarouselScreen() {
         })}
       </div>
 
-      {/* Pagination dots on the podium face — count is Excel-driven.
-          Held back until the entry veil clears, then fade in. */}
+      {/* Slider controls on the podium face — prev/next arrows flank the
+          Excel-driven dots (‹ ••••• ›). Arrows step one symbol; dots jump to
+          any. One flex row so the arrows always hug the dots whatever the count.
+          Held back until the entry veil clears, then fade in (user 2026-07-25). */}
       {!plainVeil && (
-        <PaginationDots
-          count={count}
-          activeIndex={activeIndex}
-          onSelect={rotateTo}
-          className="sy-dots"
-        />
+        <div className="sy-nav">
+          <button
+            type="button"
+            className="sy-nav-btn"
+            aria-label="Previous symbol"
+            onClick={() => rotate(-1)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 4 L7 12 L15 20" />
+            </svg>
+          </button>
+          <PaginationDots count={count} activeIndex={activeIndex} onSelect={rotateTo} />
+          <button
+            type="button"
+            className="sy-nav-btn"
+            aria-label="Next symbol"
+            onClick={() => rotate(1)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 4 L17 12 L9 20" />
+            </svg>
+          </button>
+        </div>
       )}
 
       {/* Right text column — name, category, Know More (all Excel-driven).

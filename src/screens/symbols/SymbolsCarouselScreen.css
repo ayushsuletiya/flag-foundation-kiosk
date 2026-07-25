@@ -319,15 +319,61 @@
   opacity: 0;
 }
 
-/* ---- Pagination dots on the podium front face ------------------ */
-/* Figma strip is centered on the podium axis x=643.5, top 764. */
-.sy-dots {
+/* ---- Slider controls on the podium front face ------------------ */
+/* Prev/next arrows flank the Excel-driven dots (‹ ••••• ›), centered on the
+   podium axis x=643.5. Arrows step one symbol, dots jump to any. One flex row
+   keeps the arrows hugging the dots at any count. */
+.sy-nav {
   position: absolute;
   left: 643.5px;
-  top: 764px;
+  top: 742px;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 24px;
   /* mounts as the intro settles */
   animation: sy-soft-in 420ms ease both;
+}
+
+/* Glass pill matching the card recipe (navy tint + falloff + hairline + inset
+   light-catch), gold chevron. No backdrop blur — the cards own the blur budget
+   (perf guard); the tint reads as glass over the lit podium anyway. */
+.sy-nav-btn {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(6, 10, 27, 0.55);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 120ms ease,
+    background-color 160ms ease;
+}
+
+.sy-nav-btn:active {
+  transform: scale(0.9);
+  background-color: rgba(12, 18, 40, 0.72);
+}
+
+.sy-nav-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: #ffe08a;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 @keyframes sy-soft-in {
