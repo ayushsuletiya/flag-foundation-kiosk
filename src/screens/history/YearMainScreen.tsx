@@ -11,7 +11,7 @@
  * photos). Per current Figma: year + flag + title + Read More only — the
  * Main Slide Copy from Excel renders on the Know More screen instead.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useContent } from '../../data/ContentContext.tsx'
 import { BlurTypeText } from '../../components/BlurTypeText.tsx'
@@ -21,6 +21,7 @@ import { previousPathname } from '../../app/navTrace.ts'
 import { useHistoryYearAssets } from './historyAssets.ts'
 import { ChakraMark, FallbackBackdrop } from './HistoryFallback.tsx'
 import { RewindIntro } from './RewindIntro.tsx'
+import { WarpTransition } from './WarpTransition.tsx'
 import { VideoLoop } from '../../components/VideoLoop.tsx'
 import './YearMainScreen.css'
 
@@ -56,6 +57,45 @@ function BackgroundLoop({ images }: { images: string[] }) {
   )
 }
 
+/**
+ * Big year that COUNTS to the new year (odometer-style) instead of a blur
+ * reveal — a "spin through time" as the visitor jumps eras (user 2026-07-25).
+ * Persists across year switches so it can animate FROM the old value; a bigger
+ * era jump spins longer, and the digits blur while spinning, snapping crisp on
+ * landing.
+ */
+function YearCounter({ target }: { target: string }) {
+  const targetNum = Number.parseInt(target, 10)
+  const [display, setDisplay] = useState(targetNum)
+  const [spinning, setSpinning] = useState(false)
+  const fromRef = useRef(targetNum)
+
+  useEffect(() => {
+    const from = fromRef.current
+    fromRef.current = targetNum
+    if (from === targetNum || Number.isNaN(targetNum)) return
+    setSpinning(true)
+    const dur = Math.min(1200, Math.max(500, Math.abs(targetNum - from) * 16))
+    const t0 = performance.now()
+    let raf = 0
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / dur)
+      const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic — fast, then settles
+      setDisplay(Math.round(from + (targetNum - from) * eased))
+      if (p < 1) {
+        raf = requestAnimationFrame(tick)
+      } else {
+        setDisplay(targetNum)
+        setSpinning(false)
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [targetNum])
+
+  return <span className={spinning ? 'hy-year hy-year-spin' : 'hy-year'}>{display}</span>
+}
+
 export function YearMainScreen() {
   const navigate = useNavigate()
   const { year: yearParam } = useParams()
@@ -77,6 +117,24 @@ export function YearMainScreen() {
 
   const assets = useHistoryYearAssets(row?.year ?? null)
 
+  // WebGL "fast-forward through the timeline" warp: when the primary background
+  // resolves to a NEW era, play a one-shot directional time-stretch from the old
+  // bg to the new one (WarpTransition → warpGL). Triggered off the resolved bg
+  // url (not the year param) so both textures are known/cached before it runs;
+  // video-bg years give a null url and simply skip the warp.
+  const bgUrl = assets.ready ? (assets.backgrounds[0] ?? null) : null
+  const [warp, setWarp] = useState<{ from: string; to: string; id: number } | null>(null)
+  const prevBgRef = useRef<string | null>(null)
+  const warpIdRef = useRef(0)
+  useEffect(() => {
+    const prev = prevBgRef.current
+    if (bgUrl !== null && prev !== null && prev !== bgUrl) {
+      warpIdRef.current += 1
+      setWarp({ from: prev, to: bgUrl, id: warpIdRef.current })
+    }
+    if (bgUrl !== null) prevBgRef.current = bgUrl
+  }, [bgUrl])
+
   if (row === null) {
     // Content still loading (or empty workbook) — hold a dark frame.
     return <div className="hy-screen" />
@@ -95,7 +153,7 @@ export function YearMainScreen() {
 
   return (
     <div className="hy-screen">
-      {/* Background: era video, photo(s), or honest fallback, under tint + scrim */}
+      {/* Background: era video, photo(s), or honest fallback, under tint + scrim. */}
       <div className="hy-bg-layer" key={row.year}>
         {!assets.ready ? null : assets.backgroundVideo !== null ? (
           <VideoLoop src={assets.backgroundVideo} poster={assets.backgrounds[0]} />
@@ -105,6 +163,18 @@ export function YearMainScreen() {
           <FallbackBackdrop />
         )}
       </div>
+
+      {/* Fast-forward warp — a WebGL directional time-stretch from the old era to
+          the new one, laid over the bg for one shot then dropped (user 2026-07-25). */}
+      {warp !== null && (
+        <WarpTransition
+          key={warp.id}
+          fromUrl={warp.from}
+          toUrl={warp.to}
+          onDone={() => setWarp(null)}
+        />
+      )}
+
       <div className="hy-tint" />
       <div className="hy-left-scrim" />
 
@@ -123,13 +193,13 @@ export function YearMainScreen() {
 
       {/* Left hero column — year, flag, title, Read More (per current Figma:
           no subtitle line, no body copy on Main; copy lives on Know More) */}
-      <div className="hy-hero" key={`hero-${row.year}`}>
+      {/* No remount key: the YearCounter must PERSIST across year switches so it
+          can spin from the old value. Title + flag re-key on the year to re-enter. */}
+      <div className="hy-hero">
         <div className="hy-year-row">
-          <span className="hy-year">
-            <BlurTypeText text={row.year} delay={60} stagger={70} budget={300} />
-          </span>
+          <YearCounter target={row.year} />
           {assets.yearFlag !== null ? (
-            <img className="hy-year-flag" src={assets.yearFlag} alt="" />
+            <img className="hy-year-flag" key={row.year} src={assets.yearFlag} alt="" />
           ) : assets.ready ? (
             <span className="hy-year-flag hy-year-flag-ph">
               <ChakraMark size={64} color="#D8C287" style={{ opacity: 0.35 }} />
@@ -137,7 +207,7 @@ export function YearMainScreen() {
           ) : null}
         </div>
         <div className="hy-text-stack">
-          <p className="hy-title">
+          <p className="hy-title" key={row.year}>
             <BlurTypeText text={row.slideTitle} delay={300} stagger={24} budget={520} />
           </p>
           <button

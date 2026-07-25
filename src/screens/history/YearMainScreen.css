@@ -14,7 +14,34 @@
 .hy-bg-layer {
   position: absolute;
   inset: 0;
-  animation: hy-fade-in 350ms ease both; /* year-switch crossfade */
+  /* Quiet fade — the WebGL warp (WarpTransition) owns the era-jump motion; this
+     just settles the new bg underneath it. */
+  animation: hy-fade-in 350ms ease both;
+}
+
+/* The one-shot WebGL fast-forward pass covers only the BACKGROUND: it's placed
+   right after .hy-bg-layer in the DOM and carries NO z-index, so the tint,
+   scrim and all chrome (which come later) paint over it — the year, title and
+   timeline stay crisp while only the backdrop warps (user 2026-07-25). */
+.hy-warp-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+
+/* Year counter spin — the digits blur/stretch a touch while rolling, snapping
+   crisp when they land on the target era. */
+.hy-year-spin {
+  filter: blur(1.5px);
+  transform: scaleX(1.07);
+}
+.hy-year {
+  transition:
+    filter 220ms ease,
+    transform 220ms ease;
 }
 
 .hy-bg {
