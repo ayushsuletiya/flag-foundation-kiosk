@@ -231,6 +231,8 @@ export function KnowMoreScreen() {
             key={src}
             type="button"
             className={i === selected ? 'hk-thumb hk-thumb-selected' : 'hk-thumb'}
+            // Staggered entrance — the row assembles left-to-right on load.
+            style={{ animationDelay: `${120 + i * 70}ms` }}
             onClick={() => setSelected(i)}
           >
             <img
@@ -240,7 +242,6 @@ export function KnowMoreScreen() {
                 src.includes('/flag/') ? 'hk-thumb-img hk-thumb-img--flag' : 'hk-thumb-img'
               }
             />
-            {i === selected && <span className="hk-thumb-scrim" />}
           </button>
         ))}
         {Array.from({ length: placeholderThumbs }, (_, i) => (

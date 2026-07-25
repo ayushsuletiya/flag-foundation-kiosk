@@ -238,10 +238,20 @@
    (gallery-1..24.png); the scrollbar is hidden, touch-drag scrolls. */
 .hk-thumbs {
   position: absolute;
-  left: 1127px;
+  /* Shifted LEFT by 24px and given 24px left-padding: the first thumb still
+     lands at x1127 (aligned with the large frame + "Gallery" heading), but now
+     has clip-room so a SELECTED first thumb's scale-up isn't sliced by the
+     scroll container's left overflow edge (user 2026-07-25: "left one still
+     clipping"). */
+  left: 1103px;
   top: 816.5px;
-  height: 174.029px;
-  width: 712px; /* to the 1839px right content edge */
+  height: 180px;
+  /* Run the strip all the way to the RIGHT SCREEN EDGE (x1920) so it bleeds off
+     the panel instead of clipping mid-screen with a hard blur (user 2026-07-25).
+     End padding lets the first/last thumb breathe past the fold. */
+  width: 817px; /* 1103 → 1920: flush with the stage's right edge */
+  padding-left: 24px;
+  padding-right: 40px;
   display: flex;
   align-items: center;
   gap: 29px;
@@ -250,9 +260,11 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   touch-action: pan-x;
-  /* soft fade at the cut edge hints there's more to scroll */
-  -webkit-mask-image: linear-gradient(to right, #000 92%, transparent 100%);
-  mask-image: linear-gradient(to right, #000 92%, transparent 100%);
+  scroll-snap-type: x proximity;
+  /* A whisper of fade only at the TRUE screen edge — a gentle bleed, not a
+     mid-screen clip. Kept off the left so the first thumb stays crisp. */
+  -webkit-mask-image: linear-gradient(to right, #000 96%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 96%, transparent 100%);
 }
 
 .hk-thumbs::-webkit-scrollbar {
@@ -274,17 +286,53 @@
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 120ms ease;
+  scroll-snap-align: center;
+  /* Grow from the CENTRE (not bottom) and keep the pop small — a horizontal
+     scroll container forces overflow-y to clip, so an oversized scale-up (or
+     an OUTWARD ring) gets cut off at the row's top/bottom (user 2026-07-25:
+     "selected thumbnail is clipping"). */
+  transform-origin: center;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms ease,
+    filter 200ms ease;
+  filter: saturate(0.92) brightness(0.9);
+  /* fill BACKWARDS not both: the entrance animates `transform`, and `both`
+     would freeze that transform and clobber the selected/press scale below. */
+  animation: hk-thumb-in 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
+/* Gold ring drawn INSIDE the tile (a bordered overlay), so it hugs the photo
+   and can never be clipped by the scroll container's overflow the way an
+   outward box-shadow ring was. Transparent by default → fades to gold on
+   select. */
+.hk-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 3px solid transparent;
+  pointer-events: none;
+  transition: border-color 200ms ease;
+}
+
+/* Press feedback — quick tactile dip (wins over the selected pop via the
+   pseudo-class bump in specificity). */
 .hk-thumb:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }
 
+/* Selected = the one showing in the large frame: a gentle pop, full colour,
+   and the gold ring lights up. Small scale keeps it clear of the row clip. */
 .hk-thumb-selected {
-  width: auto;
-  height: 174.029px;
-  border-radius: 32.131px;
+  transform: scale(1.05);
+  filter: saturate(1) brightness(1);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.hk-thumb-selected::after {
+  border-color: #dca32e;
 }
 
 /* NEVER crop a gallery thumbnail: these are archival photographs of
@@ -308,12 +356,17 @@
   background: linear-gradient(160deg, rgba(40, 26, 8, 0.9), rgba(20, 12, 2, 0.9));
 }
 
-/* Selected-state scrim (Figma stacks rgba(0,0,0,0.4) on the active thumb) */
-.hk-thumb-scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 2; /* over the sharp image (z1) and its blur-fill */
+/* Staggered thumbnail entrance — the row assembles as it loads (per-tile
+   animation-delay set inline in KnowMoreScreen.tsx). */
+@keyframes hk-thumb-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Placeholder tile — used for the large slot and to pad thumbs to 3 */
@@ -341,8 +394,10 @@
 @keyframes hk-fade-in {
   from {
     opacity: 0;
+    transform: scale(1.03);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
