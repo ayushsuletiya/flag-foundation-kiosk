@@ -17,8 +17,10 @@ import {
 } from 'react-router-dom'
 import { Stage } from './app/Stage.tsx'
 import { recordNavigation } from './app/navTrace.ts'
-import { CHAKRA, HISTORY_BASE } from './assets/paths.ts'
-import { probeImageCached, probeVideoCached } from './assets/probe.ts'
+import { warmChakra } from './app/warmChakra.ts'
+import { warmAllSections } from './assets/warmAssets.ts'
+import { DEFAULT_HISTORY_YEAR } from './screens/history/YearMainScreen.tsx'
+import { HISTORY_BASE } from './assets/paths.ts'
 import { useContent } from './data/ContentContext.tsx'
 import { useIdleReset } from './app/useIdleReset.ts'
 import { SectionAudio } from './components/SectionAudio.tsx'
@@ -42,29 +44,31 @@ function IdleReset() {
 }
 
 /**
- * Warm the heavy chakra assets shortly after first paint: the ~575kB
- * three.js chunk (still ITS OWN chunk — only fetched early, perf guard
- * intact) and the 1.8MB sunset still. Without this, a cold visit to
- * /chakra shows a dark frame until chunk + decode land (user report:
- * "page comes black, then abruptly appears").
+ * Warm the whole kiosk shortly after first paint, so a tap never waits on a
+ * probe, a chunk or a decode:
+ *   • the ~575kB three.js chunk + the chakra sunset (warmChakra),
+ *   • EVERY section's first paint — background probes resolved and stills
+ *     decoded, in tile order, on idle (warmAssets), so arriving at a section
+ *     paints on its first frame instead of probing then fading in,
+ *   • the rewind GL chunk + each history year's still, which the intro
+ *     textures the moment History is tapped.
+ * All of it is cached by URL and idempotent, so the screens simply find the
+ * work already done.
  */
-function WarmChakra() {
+function WarmAssets() {
   const { content } = useContent()
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      void import('./screens/chakra/Chakra3D.tsx')
-      // Warm the chakra background PROBE cache (not only the decode): the
-      // /chakra DynamicBackground reuses these resolved probes, so its `ready`
-      // flips on the FIRST frame — the sunset paints immediately and the
-      // entrance never dips through a blank/black frame.
-      const ckBg = CHAKRA.background
-      void probeVideoCached(`${ckBg}/bg.mp4`)
-      void probeImageCached(`${ckBg}/poster.png`)
-      void probeImageCached(`${ckBg}/bg.png`)
-      for (let i = 1; i <= 5; i++) void probeImageCached(`${ckBg}/bg-${i}.png`)
+      // Chunk + background probes (shared with the Home tile's pointerdown
+      // warm, so whichever happens first pays the cost — see warmChakra.ts).
+      warmChakra()
+      // Every section's first paint, prioritised, one item per idle slot.
+      warmAllSections(DEFAULT_HISTORY_YEAR)
       // History rewind intro: warm its GL chunk + every year background so
       // the film has all its frames the moment the visitor taps History.
+      // Bytes only (no decode) — three.js uploads these as textures itself,
+      // and 9 decoded 1080p stills would cost ~75MB of RAM for nothing.
       void import('./screens/history/rewindGL.ts')
       for (const y of content?.historyYears ?? []) {
         const bg = new Image()
@@ -132,7 +136,6 @@ function AnimatedRoutes() {
   const [pages, setPages] = useState<PageEntry[]>([{ key: transitionKey, location }])
 
   useEffect(() => {
-    let changed = false
     setPages((prev) => {
       const top = prev[prev.length - 1]
       if (top.key === transitionKey) {
@@ -143,18 +146,26 @@ function AnimatedRoutes() {
         return next
       }
       // New page — append; the previous one(s) stay to fade out beneath it.
-      changed = true
       return [...prev.filter((p) => p.key !== transitionKey), { key: transitionKey, location }]
     })
-    // Fallback cleanup in case the animationend below is ever missed.
-    if (changed) {
-      const t = window.setTimeout(
-        () => setPages((prev) => (prev.length > 1 ? [prev[prev.length - 1]] : prev)),
-        PAGE_FADE_MS + 250,
-      )
-      return () => window.clearTimeout(t)
-    }
   }, [transitionKey, location])
+
+  // GUARANTEED cleanup of outgoing pages, on a wall clock.
+  //
+  // This used to be gated on a `changed` flag assigned INSIDE the setPages
+  // updater above — but React defers that updater to render time, so the flag
+  // always read false here and the timer was never scheduled. With `animationend`
+  // as the only path, a single missed event leaked the outgoing page FOREVER:
+  // every section a visitor opened stayed mounted (three screens alive at once
+  // in testing), including the chakra three.js scene still rendering behind the
+  // home screen. On weak hardware that alone would sink the frame rate.
+  useEffect(() => {
+    const t = window.setTimeout(
+      () => setPages((prev) => (prev.length > 1 ? [prev[prev.length - 1]] : prev)),
+      PAGE_FADE_MS + 250,
+    )
+    return () => window.clearTimeout(t)
+  }, [transitionKey])
 
   // Drop every outgoing page once the arriving page has finished fading in.
   const settle = () => setPages((prev) => (prev.length > 1 ? [prev[prev.length - 1]] : prev))
@@ -199,7 +210,7 @@ function App() {
     <Stage>
       <HashRouter>
         <IdleReset />
-        <WarmChakra />
+        <WarmAssets />
         <SectionAudio />
         <UiSounds />
         <QuickAccessProvider>
