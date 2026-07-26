@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react'
 import { HISTORY_BASE, SHARED } from '../../assets/paths.ts'
 import { probeImageCached } from '../../assets/probe.ts'
 import { playCue } from '../../audio/sectionAudio.ts'
+import { startRewindSound, type RewindSound } from '../../audio/sfx.ts'
 import type { RewindGL } from './rewindGL.ts'
 import './RewindIntro.css'
 
@@ -83,6 +84,7 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
     let alive = true
     let raf = 0
     let gl: RewindGL | null = null
+    let rewindSnd: RewindSound | null = null
     let fadeTimer: number | undefined
     let watchdog: number | undefined
 
@@ -90,6 +92,7 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
       if (doneRef.current) return
       doneRef.current = true
       cancelAnimationFrame(raf)
+      rewindSnd?.end()
       setFading(true)
       fadeTimer = window.setTimeout(() => {
         gl?.dispose()
@@ -198,7 +201,9 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
           const yFrom = yearNums[cut]!
           const yTo = yearNums[cut + 1]!
           const ease = cut === cuts - 1 ? 1 - (1 - local) * (1 - local) : local
-          showYear(String(Math.round(yFrom + (yTo - yFrom) * ease)))
+          const yr = Math.round(yFrom + (yTo - yFrom) * ease)
+          showYear(String(yr))
+          rewindSnd?.frame(yr, speed) // tick lands on each year as the counter rolls back
           state = {
             from: cut,
             to: cut + 1,
@@ -216,6 +221,7 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
           if (!landedShown) {
             landedShown = true
             setLanded(true)
+            rewindSnd?.land() // spin down + arrival thud on the oldest year
           }
           state = {
             from: cuts,
@@ -238,12 +244,14 @@ export function RewindIntro({ years, onDone }: RewindIntroProps) {
         }
         raf = requestAnimationFrame(tick)
       }
+      rewindSnd = startRewindSound() // counter ticks + reverse whir, synced to the timeline
       raf = requestAnimationFrame(tick)
     })()
 
     return () => {
       alive = false
       cancelAnimationFrame(raf)
+      rewindSnd?.end()
       if (fadeTimer !== undefined) window.clearTimeout(fadeTimer)
       if (watchdog !== undefined) window.clearTimeout(watchdog)
       gl?.dispose()
