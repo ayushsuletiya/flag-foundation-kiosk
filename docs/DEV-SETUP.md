@@ -1,8 +1,9 @@
 # Setting the project up on another PC
 
-The repo is self-contained: all 842 asset files, the fonts, and the client's
+The repo is self-contained: all 1,723 asset files, the fonts, and the client's
 `data/content.xlsx` are committed. There is **no `.env` file and no API keys** —
-nothing to configure after cloning.
+nothing to configure after cloning. `npm install` + `npm run dev` is the whole
+setup; nothing else has to be generated, downloaded or converted.
 
 ---
 
@@ -34,8 +35,9 @@ npm -v
 
 ## 2. Clone
 
-**Clone the `feat/chakra-assembly` branch.** `main` is 15 commits behind and
-does not have the chakra assembly animation or the Design tab rework.
+**Clone the `feat/chakra-assembly` branch.** `main` is **31 commits behind** and
+has none of the chakra assembly animation, the Design tab rework, the audio
+system, or the 2026-07-26 performance work.
 
 ```bash
 git clone -b feat/chakra-assembly https://github.com/ayushsuletiya/flag-foundation-kiosk.git
@@ -106,7 +108,8 @@ npm run dist:win
 
 Output lands in `release/`:
 
-- `Flag Foundation Kiosk Setup 0.1.0.exe` — one-click installer (~353 MB)
+- `Flag Foundation Kiosk Setup <version>.exe` — one-click installer (~353 MB;
+  the version comes from `package.json`, currently 0.3.1)
 - `win-unpacked/` — portable, run the `.exe` inside directly
 
 This cross-builds successfully from macOS as well as natively on Windows.
@@ -115,6 +118,27 @@ This cross-builds successfully from macOS as well as natively on Windows.
 > runs. The v0.1.0 installer passed every check on the build machine and still
 > died at launch on the target hardware. If you produce an installer, run it on
 > a real Windows machine before shipping it anywhere.
+
+---
+
+## About the WebP files — you do NOT need to do anything
+
+There is a `scripts/optimize-assets.mjs` that writes a `.webp` sibling next to
+every PNG/JPG (measured 388.8 MB → 81.8 MB, alpha preserved). **Ignore it.**
+
+- The `.webp` files are **not committed**, and **nothing loads them** — the app
+  requests `.png` only. A fresh clone is complete and correct without them.
+- Running the script is **optional and currently pointless**: it changes nothing
+  at runtime until the loader is wired to prefer `.webp` with a `.png` fallback.
+- It also shells out to **`cwebp`**, which is *not* a project dependency — it
+  only exists on a machine where someone installed libwebp (`brew install
+  webp`). It will simply fail elsewhere, which is harmless.
+
+So: **do not run it, and do not worry that your clone is missing anything.**
+When the loader is wired, the script should be ported to `sharp` (a normal npm
+dependency with prebuilt binaries for macOS/Windows/Linux) and hooked into
+`npm run build`, so every machine regenerates them automatically with no manual
+step and no 82 MB of binaries in git history.
 
 ---
 
@@ -147,7 +171,9 @@ and last-mounted-scene wins, so make sure the Design tab is the active one.
 | Symptom | Cause |
 |---|---|
 | `EBADENGINE` on install | Node too old — need ≥ 20.19, use 22 LTS or 24 |
-| Blank browser page | Wrong port. Vite pins 5173 via `strictPort`; free it |
+| Blank browser page | Wrong port. Vite pins 5173 via `strictPort`; free it, or start with `PORT=5180 npm run dev` |
+| Chakra wheel never appears | The three.js scene holds off-stage until its shaders link. If the tab is in the background, rAF is frozen so it waits — focus the window |
+| Audio silent until you tap | Browsers block autoplay; the first touch arms it. A background tab is muted on purpose |
 | Electron window opens white | Vite dev server not up yet — it retries 40× at 500 ms |
 | Missing images | Clone was incomplete. Assets ARE committed; re-clone |
 | `npm run lint` fails | Expected — see the pre-existing issue above |
