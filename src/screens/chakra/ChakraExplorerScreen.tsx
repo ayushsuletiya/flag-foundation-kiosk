@@ -54,7 +54,15 @@ import type { Chakra3DProps } from './Chakra3D.tsx'
 import { DynamicBackground, useDynamicBackground } from '../../components/DynamicBackground.tsx'
 import { previousPathname } from '../../app/navTrace.ts'
 import { CHAKRA } from '../../assets/paths.ts'
+import { playDock, playSpokeChime, startWheelRoll, type WheelRoll } from '../../audio/sfx.ts'
 import './ChakraExplorerScreen.css'
+
+/** The wheel always renders 24 tappable spokes — the pitch ladder spans them. */
+const CHAKRA_SPOKE_COUNT = 24
+
+/** Matches the page cross-dissolve (`.page-enter`, 300ms in App.tsx) plus a
+ *  frame, so the three.js scene is built once the transition is off screen. */
+const MOUNT_3D_AFTER_MS = 320
 
 const BG_BASE = CHAKRA.background
 
@@ -180,6 +188,7 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
           <button
             type="button"
             className="ck-cta"
+            data-sfx="off"
             onClick={() => onSelect(virtues[Math.floor(Math.random() * virtues.length)]?.spoke ?? null)}
           >
             Touch a Spoke
@@ -240,6 +249,7 @@ function ValuesTab({ virtues, spoke, onSelect }: ValuesTabProps) {
                 key={v.spoke}
                 type="button"
                 className={active ? 'ck-virtue-row is-active' : 'ck-virtue-row'}
+                data-sfx="off"
                 onClick={() => onSelect(active ? null : v.spoke)}
               >
                 {active && <span className="ck-virtue-row-pill" />}
@@ -418,7 +428,15 @@ export function ChakraExplorerScreen() {
     // (early return on leaveTo), so a quick second pill press did nothing
     // and the kiosk felt stuck. Now it retargets — the scene follows via
     // visTab and the timer restarts for the new destination.
-    if (next === (leaveTo ?? tab)) return
+    const from = leaveTo ?? tab
+    if (next === from) return
+    // The scene docks the wheel into the flag (or lifts it back out) on the
+    // flag tab — voice that motion with a low airy whoosh. This intentionally
+    // LAYERS over the pill's generic UiSounds tap (finger press + wheel motion):
+    // the flag pill is the only one that drives a scene transition, so it's the
+    // only one that sounds richer than a plain tap. (Values/Design just tap.)
+    if (next === 'flag') playDock(true)
+    else if (from === 'flag') playDock(false)
     window.clearTimeout(leaveTimer.current)
     setSpoke(null)
     setLeaveTo(next)
@@ -434,6 +452,31 @@ export function ChakraExplorerScreen() {
   // The scene drives this box during the rolling entrance (onRollFrame) —
   // translating the BOX keeps its edge-feather mask travelling with the wheel.
   const wheelRef = useRef<HTMLDivElement | null>(null)
+  // Entrance-roll sound: a rolling rumble whose body tracks the roll speed,
+  // landing on a settle thud. Lives only while the wheel actually rolls in.
+  const rollSndRef = useRef<WheelRoll | null>(null)
+  const rollLastX = useRef<number | null>(null)
+  const rollSndAt = useRef(0)
+
+  // Build the scene AFTER the page cross-dissolve, not during it.
+  //
+  // History, because this looks like a change that was already reverted once:
+  // deferring the mount was tried on 2026-07-26 and made the entrance stutter,
+  // because back then the roll's clock started on a wall clock — so the compile
+  // landed on the first frames of the roll and ate 30-60% of the travel.
+  // That cause is gone: Chakra3D now holds the wheel off-stage and only starts
+  // the roll once a frame has rendered AND every program is linked
+  // (bootDone && programsReady). So the build can no longer be "inside" the
+  // roll, and the remaining question is only which idle moment pays for it.
+  // During the dissolve is the worst possible moment — two full page trees are
+  // alive and the home tiles are animating out. Afterwards, the sunset is
+  // static on screen and nothing is animating, so the same work is invisible.
+  const [mount3D, setMount3D] = useState(false)
+  useEffect(() => {
+    if (mount3D) return
+    const t = window.setTimeout(() => setMount3D(true), MOUNT_3D_AFTER_MS)
+    return () => window.clearTimeout(t)
+  }, [mount3D])
 
   // Section entrance (user 2026-07-20): arriving from OUTSIDE /chakra, the
   // sunset background gets a beat alone, the finished wheel ROLLS in from
@@ -452,6 +495,7 @@ export function ChakraExplorerScreen() {
   // child <DynamicBackground> re-uses them, so this costs nothing extra.
   const reveal = () => setIntro((p) => (p === 'wait' || p === 'roll' ? 'reveal' : p))
 
+
   // Background ready → a short beat (the bg keeps fading in UNDER the rolling
   // wheel — 250ms feels immediate, not lazy — user 2026-07-25) → roll. If the
   // folder is empty/broken, don't stall the visitor: force the roll at 2.2s.
@@ -463,12 +507,30 @@ export function ChakraExplorerScreen() {
   }, [intro, bg.ready])
   // The kiosk must never dead-end behind the intro: if the wheel chunk (or
   // WebGL) never delivers onRollDone, force the reveal on wall-clock time.
-  // Sized just past the roll (250ms beat + 1000ms ROLL_MS) so a stalled scene
-  // reveals the UI fast instead of holding a near-empty stage for seconds.
+  // BUDGET (keep in sync with Chakra3D): the roll is ROLL_MS 1500, and its
+  // clock only starts once the shader programs are linked — worst case that
+  // hold runs to its own 1500ms backstop. So a normal entrance reveals via
+  // onRollDone at ~1.5s, and this timer must sit past the WORST case or it
+  // would raise the chrome while the wheel is still travelling. Still a long
+  // way below the 7000ms this used to be: a stalled GPU shows the UI in ~3.4s
+  // rather than holding a near-empty stage.
   useEffect(() => {
     if (intro !== 'roll') return
-    const t = window.setTimeout(reveal, 2600)
+    const t = window.setTimeout(reveal, 3400)
     return () => window.clearTimeout(t)
+  }, [intro])
+  // The rolling rumble lives exactly as long as the visual roll. 'roll' only
+  // happens on section-entry from outside /chakra, so this never fires on
+  // in-section tab hops. end() spins it down on skip / fallback / unmount.
+  useEffect(() => {
+    if (intro !== 'roll') return
+    const snd = startWheelRoll()
+    rollSndRef.current = snd
+    rollLastX.current = null
+    return () => {
+      snd.end()
+      rollSndRef.current = null
+    }
   }, [intro])
   useEffect(() => {
     if (intro !== 'reveal') return
@@ -484,7 +546,16 @@ export function ChakraExplorerScreen() {
   // intro). null always clears.
   const validSpokes = useMemo(() => new Set(virtues.map((v) => v.spoke)), [virtues])
   const selectSpoke = (s: number | null) => {
-    if (s === null || validSpokes.has(s)) setSpoke(s)
+    if (s === null || validSpokes.has(s)) {
+      // The single choke point for BOTH the 3D canvas tap (onSpokeTap) and the
+      // DOM virtue rows / CTA (onSelect). Chime only on a CHANGE of selection,
+      // so wheel-tap and list-tap sound identical: re-tapping the already-active
+      // spoke stays silent (the wheel never toggles-off, unlike the list's
+      // silent deselect) instead of spamming the chime. Deselect (null) is
+      // silent. Canvas taps aren't <button>s, so UiSounds can't voice them.
+      if (s !== null && s !== spoke) playSpokeChime(s, CHAKRA_SPOKE_COUNT)
+      setSpoke(s)
+    }
   }
 
   const colorCode = useMemo(() => chakraRowHex(chakra?.rows ?? []), [chakra])
@@ -559,6 +630,7 @@ export function ChakraExplorerScreen() {
         // both values keep the box fully past the stage's left edge.
         style={intro === 'wait' || intro === 'roll' ? { transform: 'translateX(-1500px)' } : undefined}
       >
+        {mount3D && (
         <LazyChakra3D
           width={1920}
           height={1080}
@@ -570,11 +642,30 @@ export function ChakraExplorerScreen() {
           entrance={intro === 'wait' ? 'hold' : intro === 'roll' ? 'roll' : 'none'}
           onRollFrame={(x) => {
             wheelRef.current?.style.setProperty('transform', `translateX(${x.toFixed(2)}px)`)
+            // Audio params are re-targeted at ~20Hz, NOT every frame: this
+            // callback runs on every frame of the entrance roll, and that is
+            // the one moment the GPU is busiest. setTargetAtTime glides between
+            // updates anyway, so the rumble sounds identical.
+            const snd = rollSndRef.current
+            if (snd === null) return
+            const last = rollLastX.current
+            const now = performance.now()
+            if (last !== null && now - rollSndAt.current >= 50) {
+              rollSndAt.current = now
+              snd.frame(Math.min(1, Math.abs(x - last) / 40)) // px/frame → 0..1 speed
+              rollLastX.current = x
+            } else if (last === null) {
+              rollLastX.current = x
+            }
           }}
-          onRollDone={reveal}
+          onRollDone={() => {
+            rollSndRef.current?.land() // settle thud only on the real roll-settle
+            reveal()
+          }}
           onSpokeTap={selectSpoke}
           onBackgroundTap={() => setSpoke(null)}
         />
+        )}
       </div>
 
       {/* Vignette OVER the light, UNDER all content (z2). During the intro

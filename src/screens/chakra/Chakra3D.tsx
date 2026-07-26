@@ -45,7 +45,6 @@
  */
 import { useEffect, useRef, type CSSProperties } from 'react'
 import * as THREE from 'three'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import {
   applyAssemblyTimeline,
@@ -138,7 +137,15 @@ const HIGHLIGHT = new THREE.Color(0xffb300)
    1420px clears the whole box past the stage's left edge with margin. The
    wheel rolls UPRIGHT (a leaned wheel translating reads as sliding — user
    2026-07-20) and only leans into the 3/4 hero pose after it has landed. */
-const ROLL_MS = 1000 // travel + settle rock-back (snappy: was 1800, felt lazy — user 2026-07-25)
+/* Travel + settle rock-back. History: 1800 originally, cut to 1000 on
+   2026-07-25 because the entrance "felt lazy" — but the real complaint then was
+   a ~2s BLACK screen, not the pace. With the stage now warm from the first
+   frame (sunset paints immediately) and the roll no longer losing its opening
+   frames to shader compile, the slower travel reads as graceful rather than
+   sluggish, so the user asked for it back on 2026-07-26. Kept below the old
+   1800 and comfortably inside the 2600ms reveal fallback in
+   ChakraExplorerScreen (250ms beat + 1500 + 650 lean = 2400). */
+const ROLL_MS = 1500
 const ROLL_TRAVEL_PX = 1420
 const ROLL_OVER = 0.023 // rolls ~33px past home before rocking back
 const ROLL_APEX = 0.8 // fraction of the timeline spent reaching that apex
@@ -183,7 +190,14 @@ function buildRimGeometry(depth: number, bevel: number): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape()
   shape.absarc(0, 0, SPEC.outerR, 0, Math.PI * 2, false)
   const hole = new THREE.Path()
-  const N = 1440
+  // Samples of the scalloped inner contour. Was 1440, which is ~1.36 px per
+  // segment on a 311px-radius screen circle — about 20x oversampled, and the
+  // single biggest synchronous cost of building the wheel (this extrude was
+  // ~49% of its vertices). Halving it drops the build a long way while the
+  // sagitta error stays at ~0.003 screen px, i.e. invisible. Each ⌀7 scallop
+  // still gets ~20 samples. Do NOT go lower without a screenshot diff of the
+  // scalloped edge against figma-refs/chakra-values.png.
+  const N = 720
   for (let i = 0; i <= N; i++) {
     const a = -(i / N) * Math.PI * 2 // clockwise ⇒ valid hole
     const r = innerContourRadius(a)
@@ -198,8 +212,8 @@ function buildRimGeometry(depth: number, bevel: number): THREE.ExtrudeGeometry {
     bevelEnabled: true,
     bevelThickness: bevel * 0.7,
     bevelSize: bevel * 0.6,
-    bevelSegments: 3,
-    curveSegments: 128,
+    bevelSegments: 3, // keep — the bevels are what roll the light
+    curveSegments: 96, // outer edge is a plain circle: sagitta 0.19px vs 0.11px
   })
   g.translate(0, 0, -depth / 2)
   return g
@@ -244,8 +258,8 @@ function buildHubGeometry(depth: number, bevel: number): THREE.ExtrudeGeometry {
     bevelEnabled: true,
     bevelThickness: bevel,
     bevelSize: bevel * 0.9,
-    bevelSegments: 4,
-    curveSegments: 64,
+    bevelSegments: 4, // keep — bevel roll
+    curveSegments: 32, // the hub is only ~62px radius on screen
   })
   g.translate(0, 0, -depth / 2)
   return g
@@ -642,6 +656,15 @@ function createChakraScene(
   renderer.toneMappingExposure = 1.28
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  // Shadows are re-rendered ONLY when something actually moved (gated in the
+  // animation loop). With autoUpdate on, every frame re-submitted all 28 caster
+  // meshes (~56k triangles) into the 10242 depth map — the wheel's whole
+  // geometry went down the pipe TWICE per frame, forever, even sitting still.
+  // Geometry-bound, so this costs the DPR-1 kiosk exactly what it costs a
+  // Retina Mac.
+  renderer.shadowMap.autoUpdate = false
+  /** Wheel angle the current shadow map was rendered at (NaN = never). */
+  let shadowRotZ = Number.NaN
 
   const scene = new THREE.Scene() // background stays transparent (alpha)
 
@@ -665,7 +688,18 @@ function createChakraScene(
   // the loader raises this to its authored value once the real env is ready,
   // so the change is a gain in sheen rather than a shift in hue.
   const pmrem = new THREE.PMREMGenerator(renderer)
-  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+  // BLACK placeholder probe, not RoomEnvironment. environmentIntensity is 0
+  // until the sunset PMREM lands, so this is displayed for exactly zero frames
+  // — yet RoomEnvironment cost a ~20-mesh scene render, 6 cube faces, a sigma
+  // blur and 10 GGX passes (80-250ms of blocked main thread on the Arc iGPU),
+  // right on the mount path that the entrance roll starts from.
+  // Do NOT "simplify" this to scene.environment = null: envMap is part of the
+  // program cache key, so null -> texture would force a full clearcoat shader
+  // recompile at the moment the sunset lands, mid-roll. Keeping a (black)
+  // CubeUV texture in place from frame 0 is what avoids that.
+  // size 128 must match the sunset PMREM below, or its ping-pong targets are
+  // reallocated and the 256-sample GGX shader links twice.
+  const envTex = pmrem.fromScene(new THREE.Scene(), 0, 0.1, 100, { size: 128 }).texture
   // Sunset env map built async below (captured for disposal); sceneDisposed
   // guards that async load against a teardown that races ahead of it.
   let sunsetEnv: THREE.Texture | null = null
@@ -798,11 +832,30 @@ function createChakraScene(
       t.dispose()
       return
     }
-    t.mapping = THREE.EquirectangularReflectionMapping
-    t.colorSpace = THREE.SRGBColorSpace
-    sunsetEnv = pmrem.fromEquirectangular(t).texture
+    // DOWNSAMPLE before the PMREM. fromEquirectangular sizes its working
+    // targets off the SOURCE, so the full 1672x941 plate produced a 256px cube:
+    // a second 6.3MB HalfFloat target plus a ~35.8M-tap GGX chain. And because
+    // bg.png is already decoded by the warm pass, this callback resolves almost
+    // instantly — dropping that whole burst INSIDE the entrance roll, which is
+    // exactly the jerk. 512x256 gives a 128px cube (~1.6MB, ~10.6M taps).
+    // The 128 MUST match the placeholder probe's { size: 128 } above, or the
+    // generator reallocates its ping-pong targets and re-links the 256-sample
+    // GGX shader a second time — trading one burst for two.
+    const cv = document.createElement('canvas')
+    cv.width = 512
+    cv.height = 256
+    const cx = cv.getContext('2d')
+    let envSource: THREE.Texture = t
+    if (cx !== null) {
+      cx.drawImage(t.image as CanvasImageSource, 0, 0, 512, 256)
+      envSource = new THREE.CanvasTexture(cv)
+    }
+    envSource.mapping = THREE.EquirectangularReflectionMapping
+    envSource.colorSpace = THREE.SRGBColorSpace
+    sunsetEnv = pmrem.fromEquirectangular(envSource).texture
     scene.environment = sunsetEnv
     scene.environmentIntensity = 0.5
+    if (envSource !== t) envSource.dispose()
     t.dispose()
   })
 
@@ -857,7 +910,8 @@ function createChakraScene(
   bakeRadialAO(hubGeo, (r) => 0.95 - 0.3 * smoothstep(10, 16, r))
   const hub = new THREE.Mesh(hubGeo, material)
   hub.name = 'Hub'
-  const bossGeo = new THREE.CapsuleGeometry(4.4, DEPTH * 1.15, 8, 32)
+  // The boss is a ~17px-radius part on screen — 8x32 was far past visible.
+  const bossGeo = new THREE.CapsuleGeometry(4.4, DEPTH * 1.15, 3, 16)
   bossGeo.rotateX(Math.PI / 2)
   bakeRadialAO(bossGeo, () => 0.92)
   const boss = new THREE.Mesh(bossGeo, material)
@@ -1005,7 +1059,15 @@ function createChakraScene(
   function startRoll(): void {
     if (roll === null || roll.started) return
     roll.started = true
-    roll.t0 = performance.now()
+    // SENTINEL, not a timestamp. three compiles its programs lazily on the
+    // FIRST render, and this scene links MeshPhysical (envMap + clearcoat +
+    // vertexColors, 7 lights) + MeshDepth + MeshBasic + ShadowMaterial in one
+    // synchronous burst. Stamping the clock here started a 1000ms time-based
+    // roll that the compile then ate 30-60% of, so the wheel appeared already
+    // mid-stage and only the tail of the travel was smooth — the "intro is
+    // stuttering" report. The loop stamps t0 on the first frame that actually
+    // rendered, so the full roll is spent on screen. ROLL_MS is unchanged.
+    roll.t0 = -1
   }
 
   /** Natural landing: home the box + axle, hand over — the lean-in and the
@@ -1570,6 +1632,26 @@ function createChakraScene(
   renderer.domElement.addEventListener('pointerup', onPointerUp)
   renderer.domElement.addEventListener('pointercancel', onPointerCancel)
 
+  /* --------------------------------------------- entrance pre-link -- */
+  // "Cache" the intro: link every GLSL program for the wheel BEFORE the roll is
+  // allowed to start. three compiles lazily on first render, so without this the
+  // roll's opening frames pay a synchronous MeshPhysical + MeshDepth + MeshBasic
+  // + ShadowMaterial link (~150-400ms on ANGLE/D3D11 + Arc) and the travel jerks.
+  // compileAsync goes through KHR_parallel_shader_compile where available, so
+  // the link happens off the critical path instead of inside the animation.
+  let programsReady = false
+  const markReady = (): void => {
+    programsReady = true
+  }
+  try {
+    void renderer.compileAsync(scene, camera).then(markReady, markReady)
+  } catch {
+    markReady() // no compileAsync in this runtime — fall back to the old path
+  }
+  // The entrance must NEVER be strandable by a compile that stalls or by a
+  // driver without parallel-compile: release it on wall clock regardless.
+  window.setTimeout(markReady, 1500)
+
   /* ----------------------------------------------------- main loop -- */
   renderer.setAnimationLoop(() => {
     const now = performance.now()
@@ -1581,9 +1663,21 @@ function createChakraScene(
     // Rolling entrance: box translation and axle spin from ONE number.
     const rolling = roll !== null && roll.doneAt < 0
     if (roll !== null && rolling && roll.started) {
-      const p = clamp01((now - roll.t0) / ROLL_MS)
-      applyRollPose(ROLL_TRAVEL_PX * (1 - rollEase(p)))
-      if (p >= 1) landRoll()
+      if (roll.t0 < 0) {
+        // Hold at the off-stage start pose until one frame has actually
+        // rendered (bootDone), so the lazy program link is paid BEFORE the
+        // clock starts — see startRoll(). Costs no wall-clock: this is the
+        // time the compile was already stealing, just no longer stolen from
+        // the visible travel.
+        applyRollPose(ROLL_TRAVEL_PX)
+        // Start the clock only once a frame has rendered AND every program is
+        // linked, so the whole 1000ms of travel is spent on a hot pipeline.
+        if (bootDone && programsReady) roll.t0 = now
+      } else {
+        const p = clamp01((now - roll.t0) / ROLL_MS)
+        applyRollPose(ROLL_TRAVEL_PX * (1 - rollEase(p)))
+        if (p >= 1) landRoll()
+      }
     }
     // …then the landed wheel turns from its upright rolling pose into the
     // 3/4 hero lean while the chrome rises around it.
@@ -1643,12 +1737,23 @@ function createChakraScene(
           if (goal !== null) {
             // Blend: momentum carries, the ease reels it back in as it decays.
             const target = nearestTurn(goal, chakra.rotation.z)
-            chakra.rotation.z += (target - chakra.rotation.z) * 0.05
+            // Same termination as below — this momentum blend also asymptotes.
+            const d = target - chakra.rotation.z
+            if (Math.abs(d) < 1e-4) chakra.rotation.z = target
+            else chakra.rotation.z += d * 0.05
           }
         } else if (goal !== null) {
           spinVel = 0
           const target = nearestTurn(goal, chakra.rotation.z)
-          chakra.rotation.z += (target - chakra.rotation.z) * (selectedIdx !== null ? 0.07 : 0.08)
+          // TERMINATE the ease. This is an exponential decay, so it asymptotes
+          // and never actually arrives: the wheel looks parked but is still
+          // being written every frame for the rest of the scene's life, which
+          // keeps the whole render permanently "dirty" and defeats the shadow
+          // gate below. Snapping at 1e-4 rad (0.0057deg ~ 0.009px at the rim)
+          // lands the spoke MORE exactly on its target than the decay did.
+          const d = target - chakra.rotation.z
+          if (Math.abs(d) < 1e-4) chakra.rotation.z = target
+          else chakra.rotation.z += d * (selectedIdx !== null ? 0.07 : 0.08)
         } else if (spinOn && now - lastInteraction > IDLE_RESUME_MS) {
           chakra.rotation.z -= IDLE_SPIN
         }
@@ -1695,6 +1800,27 @@ function createChakraScene(
     // the transparent canvas over the CSS background plate — the sunset
     // itself is the only backlight. This also removes the whole per-frame
     // ray cost from the kiosk. See renderGodRays() for the retired passes.
+
+    // Re-render the shadow map only when the pose actually changed (see
+    // shadowMap.autoUpdate = false at setup). 0.007 rad is two shadow texels at
+    // the rim, so the worst case is a shadow trailing the wheel by less than
+    // its own softness — while every fast motion stays exact.
+    // The flagGroup.visible term is NOT optional: the cloth is simulated every
+    // frame in flag mode and its shadow IS the beam pattern ("the cloth carves
+    // the sun into beams"), so the beams must keep re-rendering even though
+    // chakra.rotation.z is static there.
+    renderer.shadowMap.needsUpdate =
+      !bootDone ||
+      dragging ||
+      rolling ||
+      buildP < 1 ||
+      flagAnim !== null ||
+      camTween !== null ||
+      Math.abs(spinVel) > MIN_FLING ||
+      (flagGroup !== null && flagGroup.visible) ||
+      !(Math.abs(chakra.rotation.z - shadowRotZ) <= 0.007) // NaN-safe first pass
+    if (renderer.shadowMap.needsUpdate) shadowRotZ = chakra.rotation.z
+
     renderer.render(scene, camera)
     bootDone = true
   })
@@ -1884,6 +2010,7 @@ function createChakraScene(
       camera.position.lerpVectors(FLAG_CAM_HOME, FLAG_CAM_DOCK, ck)
       camTarget.lerpVectors(FLAG_TGT_HOME, FLAG_TGT_DOCK, ck)
       camera.lookAt(camTarget)
+      renderer.shadowMap.needsUpdate = true // gated in the loop; force it here
       renderer.render(scene, camera)
     }
     // Freeze the rolling entrance at progress v and render one frame — works
@@ -1896,6 +2023,7 @@ function createChakraScene(
       if (p >= 1) lean.rotation.set(LEAN_X, LEAN_Y, 0)
       else lean.rotation.set(0, 0, 0)
       cbs.onRollFrame(-remain)
+      renderer.shadowMap.needsUpdate = true // gated in the loop; force it here
       renderer.render(scene, camera)
     }
   }

@@ -78,10 +78,15 @@ screens never hardcode them.
   outside /chakra → a short background beat (250ms — the sunset keeps fading in UNDER the roll) →
   the finished wheel ROLLS in from stage left (Chakra3D entrance="roll": the scene drives the
   .ck-wheel box translateX AND the axle spin from one remaining-travel number, so it never slips),
-  settles with a small rock-back → chrome rises in staggered. Total hold ≈ 1.25s, NOT the old ~2.5s
-  (beat was 700ms, `ROLL_MS` was 1800ms — user 2026-07-25: "too lazy, black screen for ~2s"). The
-  reveal is gated on the roll's onRollDone with a 2600ms wall-clock fallback (was 7000) so a slow
-  GPU can't hold a near-empty stage. Keep it snappy — do not restore the long timings. Any touch
+  settles with a small rock-back → chrome rises in staggered. `ROLL_MS` is **1500** (user
+  2026-07-26: "slow the speed of chakra entrance"). It had been cut 1800→1000 on 2026-07-25 for
+  "too lazy, black screen for ~2s" — but that complaint was the BLACK SCREEN, not the pace; with
+  the stage warm from frame 1 and the roll no longer losing its opening frames to shader compile,
+  the slower travel reads as graceful. Don't go back above 1800. The roll's clock starts only once
+  a frame has rendered AND the GLSL programs are linked (Chakra3D `programsReady`, 1500ms backstop)
+  so the whole travel is spent on screen instead of being eaten by the lazy compile. The reveal is
+  gated on onRollDone with a **3400ms** wall-clock fallback (was 7000, then 2600) — it must stay
+  past the worst-case hold+roll or it raises the chrome mid-travel. Any touch
   skips; in-section tab hops never replay it (gated on navTrace previousPathname, like History).
   NO BLACK DIP (user 2026-07-25: "why that fucking black screen comes"). Two causes were killed:
   (1) the .ck-screen / .ck-intro-hold base is the sunset gradient SAMPLED from bg.png (warm amber,
