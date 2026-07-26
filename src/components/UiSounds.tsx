@@ -23,6 +23,11 @@ export function UiSounds() {
       const el = target.closest<HTMLElement>(HIT)
       if (el === null) return
 
+      // Opt-out: a control that voices itself elsewhere (e.g. the chakra spoke
+      // chime, fired from selectSpoke) marks data-sfx="off" so it doesn't also
+      // get the generic delegated tap on top.
+      if (el.dataset.sfx === 'off') return
+
       let kind: SfxKind | string | undefined = el.dataset.sfx
       if (kind === undefined || kind === '') {
         const aria = (el.getAttribute('aria-label') ?? '').toLowerCase()
