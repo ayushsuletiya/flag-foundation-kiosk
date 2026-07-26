@@ -105,6 +105,74 @@
   pointer-events: none;
 }
 
+/* ── Tile entrance / exit ──────────────────────────────────────────────────
+   The tiles stay INVISIBLE until their photos are decoded (HomeScreen gates on
+   useImagesReady), then rise in one after another — so the visitor sees a
+   composed screen assemble, never four photos loading in.
+
+   `--tile-i` (0..3) is set inline per card and drives the stagger.
+   NOTE: the in-animation is dropped again once it finishes (--settled). A
+   `forwards` fill keeps ownership of `transform` and would otherwise kill the
+   :active press-in below. */
+.home-tile {
+  opacity: 0;
+}
+
+.home-tile--in {
+  animation: home-tile-in 460ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
+  animation-delay: calc(var(--tile-i) * 90ms);
+}
+
+.home-tile--settled {
+  opacity: 1;
+}
+
+@keyframes home-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(44px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Leaving: the tapped card lifts toward the visitor while the rest sink away.
+   This plays UNDER the arriving page's 300ms cross-dissolve (App.tsx keeps the
+   home painted the whole time), so the background never blinks — this is not
+   the banned home-leave fade that used to expose the empty stage. */
+.home-tile--picked {
+  animation: home-tile-picked 300ms cubic-bezier(0.3, 0, 0.6, 1) both;
+}
+
+.home-tile--recede {
+  animation: home-tile-recede 260ms ease-in both;
+  animation-delay: calc(var(--tile-i) * 18ms);
+}
+
+@keyframes home-tile-picked {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-14px) scale(1.07);
+  }
+}
+
+@keyframes home-tile-recede {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(22px) scale(0.95);
+  }
+}
+
 /* Touch feedback (not designed — spec'd in the frame audit).
    A slightly deeper press than the visual default so the big tiles give a
    satisfying, snappy "give" under the finger. */
